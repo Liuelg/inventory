@@ -1,0 +1,34 @@
+version: '3.8'
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongo
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/inventory_db
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      # Connects directly to the mongodb service container using the credentials above
+      ME_CONFIG_MONGODB_URL: mongodb://mongo:27017/inventory_db
+      # Web login credentials to access the UI dashboard
+      ME_CONFIG_BASICAUTH_USERNAME: webuser
+      ME_CONFIG_BASICAUTH_PASSWORD: webpassword
+    depends_on:
+      - mongo
+
+volumes:
+  mongo-data:
