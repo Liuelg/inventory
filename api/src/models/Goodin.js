@@ -1,19 +1,57 @@
 const mongoose = require('mongoose');
+const { Schema } = mongoose;
+
+
+const GoodInItemSchema = new Schema({
+  item_id: {
+    type: Schema.Types.ObjectId,
+    ref: 'Product', 
+    required: true
+  },
+  quantity: { 
+    type: Number,
+    required: true,
+    min: 0
+  },
+  price: {
+    type: Number,
+    required: true,
+    min: 0
+  }
+}, { _id: false });
+
 
 const goodSchema = new mongoose.Schema({
-  product: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Product', 
-    required: true 
+  created_by: {
+    type: Schema.Types.ObjectId,
+    ref: 'User', 
+    required: true
   },
-  sku: { type: String, required: true, unique: true }, // Stock Keeping Unit
-  quantity: { type: Number, required: true, default: 0 },
-  warehouseLocation: { type: String, required: true }, // e.g., "Aisle 4, Shelf B"
-  status: { 
-    type: String, 
-    enum: ['in-stock', 'allocated', 'damaged', 'transit'], 
-    default: 'in-stock' 
+  date: {
+    type: Date,
+    default: Date.now,
+    required: true
+  },
+  store: {
+    type: Schema.Types.ObjectId,
+    ref: 'Store',
+    required: true
+  },
+  user: {
+    type: Schema.Types.ObjectId,
+    ref: 'User', 
+    required: true
+  },
+  items: [GoodInItemSchema], 
+  is_accepted: {
+    type: Boolean,
+    default: false
+  },
+  accepted_at: {
+    type: Date,
+    default: null
   }
+
 }, { timestamps: true });
 
 module.exports = mongoose.model('Goodin', goodSchema);

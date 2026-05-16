@@ -1,8 +1,8 @@
 const { Router } = require("express");
-
 const router = Router()
+const User = require('../models/User');
 
-app.post('/', async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const newUser = new User(req.body);
     const savedUser = await newUser.save();
@@ -12,7 +12,7 @@ app.post('/', async (req, res) => {
   }
 });
 
-app.get('/', async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const users = await User.find();
     res.json(users);

@@ -1,69 +1,47 @@
 const express = require('express'); 
 const mongoose = require('mongoose');
-const UserRoutes = require('./routes/users')
-const Product = require('./models/Products'); 
-const Transfer = require('./models/Transfer');
-const Sale = require('./models/Sale');
-const User = require('./models/User');
+
+// Route Imports
+const userRoutes = require('./routes/users');
+const salesRoutes = require('./routes/sales');
+const productRoutes = require('./routes/product');
+const goodInRoutes = require('./routes/goodIn');
+const transferRoutes = require('./routes/transfers');
+const storeRoutes = require('./routes/stores');
 
 const app = express();
+
+// Middleware
 app.use(express.json());
 
-mongoose.connect('mongodb://mongo:27017/inventory_db')
+// MongoDB Connection
+const dbURI = process.env.MONGO_URI || 'mongodb://localhost:27017/inventory_db';
+
+mongoose.connect(dbURI)
   .then(() => console.log('Successfully connected to MongoDB'))
-  .catch(err => console.error('Could not connect to MongoDB', err));
+  .catch(err => console.error('Initial MongoDB connection error:', err));
 
-app.post('/api/products', async (req, res) => {
-  try {
-    const newProduct = new Product(req.body);
-    const savedProduct = await newProduct.save();
-    res.status(201).json(savedProduct);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
+mongoose.connection.on('error', err => {
+  console.error('MongoDB runtime error:', err);
 });
 
-app.get('/api/products', async (req, res) => {
-  try {
-    const products = await Product.find(); 
-    res.json(products);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-app.post('/api/transfers', async (req, res) => {
-  try {
-    const transfer = new Transfer(req.body);
-    await transfer.save();
-    res.status(201).json(transfer);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
+app.use('/users', userRoutes);
+app.use('/sales', salesRoutes);
+app.use('/product', productRoutes);
+app.use('/goodIn', goodInRoutes);
+app.use('/transfers', transferRoutes);
+app.use('/stores', storeRoutes);
+
+app.use((req, res) => {
+  res.status(404).json({ message: 'Route not found' });
 });
 
-app.get('/api/transfers', async (req, res) => {
-  const transfers = await Transfer.find().populate('product');
-  res.json(transfers);
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: 'Something went wrong on the server' });
 });
 
-app.post('/api/sales', async (req, res) => {
-  try {
-    const sale = new Sale(req.body);
-    await sale.save();
-    res.status(201).json(sale);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
-});
-
-app.get('/api/sales', async (req, res) => {
-  const sales = await Sale.find().populate('product');
-  res.json(sales);
-});
-
-app.route('/users', userRoutes)
-
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server is sprinting on port ${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });

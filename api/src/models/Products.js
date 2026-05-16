@@ -8,9 +8,11 @@ const productSchema = new mongoose.Schema({
     amount: Number,
     currency: { type: String, default: 'USD' }
   },
+  description: String,
   previous_prices: Number,
   tags: [String],
-  image: String
+  image: String,
+  category: String
 });
 
 module.exports = mongoose.model('Product', productSchema);
