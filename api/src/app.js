@@ -4,7 +4,7 @@ const UserRoutes = require('./routes/users')
 const Product = require('./models/Products'); 
 const Transfer = require('./models/Transfer');
 const Sale = require('./models/Sale');
-const User = require('./models/User');
+// const User = require('./models/User');
 
 const app = express();
 app.use(express.json());
