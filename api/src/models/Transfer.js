@@ -1,9 +1,10 @@
-const mongoose = require('mongoose');
+import mongoose, { Schema } from "mongoose";
+import { GoodInItemSchema } from "./Goodin.js";
 
-const TransactionItemSchema = new Schema({
+export const TransactionItemSchema = Schema({
   item_id: {
     type: Schema.Types.ObjectId,
-    ref: 'Product',
+    ref: 'Products',
     required: true
   },
   quantity: {
@@ -18,11 +19,11 @@ const TransactionItemSchema = new Schema({
   }
 }, { _id: false });
 
-const transferSchema = new mongoose.Schema({
+export const transferSchema = new Schema({
   items: [GoodInItemSchema],
   origin: { type: String, required: true },       
   destination: { type: String, required: true },  
   
 }, { timestamps: true });
 
-module.exports = mongoose.model('Transfer', transferSchema);
+export default mongoose.model('Transfer', transferSchema);

@@ -1,9 +1,9 @@
-const mongoose = require('mongoose');
+import { Schema, model } from "mongoose"
 
-const StoreItemSchema = new mongoose.Schema({
+const StoreItemSchema = Schema({
   item_id: {
     type: Schema.Types.ObjectId,
-    ref: 'Product', 
+    ref: 'Products', 
     required: true
   },
   quantity: { 
@@ -18,11 +18,11 @@ const StoreItemSchema = new mongoose.Schema({
   }
 })
 
-const storeSchema = new mongoose.Schema({
+const storeSchema = Schema({
   name: { type: String, required: true },
-  address: String,
-  manager_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  address: {type: String, required: true},
+  manager_id: { type: Schema.Types.ObjectId, ref: 'User' },
   items: [StoreItemSchema]
 });
 
-module.exports = mongoose.model('Store', storeSchema);
+export default model('Store', storeSchema);

@@ -1,6 +1,6 @@
-const { Router } = require('express');
-const router = Router()
-const Transfer = require('../models/Transfer')
+import { Router } from 'express';
+const router = Router();
+import Transfer from '../models/Transfer.js';
 
 
 router.post('/', async (req, res) => {
@@ -18,4 +18,4 @@ router.get('/', async (req, res) => {
   res.json(transfers);
 });
 
-module.exports = router
+export default router;

@@ -1,9 +1,9 @@
-const mongoose = require('mongoose');
+import { Schema, model } from "mongoose"
 
-const SaleItemSchema = new mongoose.Schema({
+const SaleItemSchema = Schema({
   item_id: {
     type: Schema.Types.ObjectId,
-    ref: 'Product', 
+    ref: 'Products', 
     required: true
   },
   quantity: { 
@@ -18,7 +18,7 @@ const SaleItemSchema = new mongoose.Schema({
   }
 })
 
-const saleSchema = new mongoose.Schema({
+const saleSchema = Schema({
   items: [SaleItemSchema],
   totalAmount: { type: Number, required: true },
   customerName: { type: String},
@@ -28,7 +28,7 @@ const saleSchema = new mongoose.Schema({
     required: true
   },
   processedBy: { 
-    type: mongoose.Schema.Types.ObjectId, 
+    type: Schema.Types.ObjectId, 
     ref: 'User', 
     required: true 
   }, 
@@ -40,4 +40,4 @@ const saleSchema = new mongoose.Schema({
   invoiceNumber: { type: String, required: true, unique: true }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Sale', saleSchema);
+export default model('Sale', saleSchema);

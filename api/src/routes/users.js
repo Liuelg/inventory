@@ -1,6 +1,6 @@
-const { Router } = require("express");
-const router = Router()
-const User = require('../models/User');
+import { Router } from 'express';
+const router = Router();
+import User from '../models/User.js';
 
 router.post('/', async (req, res) => {
   try {
@@ -21,4 +21,4 @@ router.get('/', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

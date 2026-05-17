@@ -1,13 +1,13 @@
-const { Router } = require('express')
-const router = Router()
-const Product = require('../models/Products')
+import { Router } from "express"
+import Product from '../models/Products.js';
 
+const router = Router()
 
 router.post('/', async (req, res) => {
   try {
     const newProduct = new Product(req.body);
     const savedProduct = await newProduct.save();
-    res.status(201).json(savedProduct);
+    return res.status(201).json(savedProduct);
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
@@ -16,7 +16,7 @@ router.post('/', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const products = await Product.find();
-    res.json(products);
+    return res.json(products);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -24,14 +24,14 @@ router.get('/', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   try {
+    console.log({
+      id: req.params.id
+    })
     const product = await Product.findById(req.params.id);
-
-  
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
-
-    res.json(product);
+    return res.json(product);
   } catch (err) {
     if (err.kind === 'ObjectId') {
       return res.status(400).json({ message: 'Invalid Product ID format' });
@@ -81,4 +81,4 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-module.exports = router
+export default router;

@@ -1,20 +1,18 @@
-const express = require('express'); 
-const mongoose = require('mongoose');
+import express from 'express';
+import mongoose from 'mongoose';
 
-// Route Imports
-const userRoutes = require('./routes/users');
-const salesRoutes = require('./routes/sales');
-const productRoutes = require('./routes/product');
-const goodInRoutes = require('./routes/goodIn');
-const transferRoutes = require('./routes/transfers');
-const storeRoutes = require('./routes/stores');
+import userRoutes from './routes/users.js';
+import salesRoutes from './routes/sales.js';
+import productRoutes from './routes/product.js';
+import goodInRoutes from './routes/goodIn.js';
+import transferRoutes from './routes/transfers.js';
+import storeRoutes from './routes/stores.js';
 
 const app = express();
 
-// Middleware
+
 app.use(express.json());
 
-// MongoDB Connection
 const dbURI = process.env.MONGO_URI || 'mongodb://localhost:27017/inventory_db';
 
 mongoose.connect(dbURI)
@@ -27,8 +25,8 @@ mongoose.connection.on('error', err => {
 
 app.use('/users', userRoutes);
 app.use('/sales', salesRoutes);
-app.use('/product', productRoutes);
-app.use('/goodIn', goodInRoutes);
+app.use('/products', productRoutes);
+app.use('/goodIns', goodInRoutes);
 app.use('/transfers', transferRoutes);
 app.use('/stores', storeRoutes);
 

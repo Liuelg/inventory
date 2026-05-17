@@ -1,7 +1,8 @@
-const { Router } = require('express')
+import { Router } from 'express';
+import Sale from '../models/Sale.js';
 
-const router = Router()
-const Sale = require('../models/Sale')
+const router = Router();
+
 router.post('/', async (req, res) => {
   try {
     const sale = new Sale(req.body);
@@ -92,4 +93,4 @@ router.delete('/:id', async (req, res) => {
 });
 
 
-module.exports = router;
+export default router;

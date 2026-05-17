@@ -1,11 +1,9 @@
-const mongoose = require('mongoose');
-const { Schema } = mongoose;
+import {Schema, model} from "mongoose"
 
-
-const GoodInItemSchema = new Schema({
+export const GoodInItemSchema = new Schema({
   item_id: {
     type: Schema.Types.ObjectId,
-    ref: 'Product', 
+    ref: 'Products', 
     required: true
   },
   quantity: { 
@@ -21,7 +19,7 @@ const GoodInItemSchema = new Schema({
 }, { _id: false });
 
 
-const goodSchema = new mongoose.Schema({
+const goodSchema = Schema({
   created_by: {
     type: Schema.Types.ObjectId,
     ref: 'User', 
@@ -54,4 +52,4 @@ const goodSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-module.exports = mongoose.model('Goodin', goodSchema);
+export default model('GoodIn', goodSchema)
