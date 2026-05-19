@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react"
-import { HomeIcon, ListIcon } from "lucide-react"
+import { HomeIcon, ListIcon, Package } from "lucide-react"
 import { useLocation } from "react-router-dom"
 
 export type SidebarNavItem = {
@@ -18,6 +18,12 @@ const SIDEBAR_NAV_ITEMS: SidebarNavItem[] = [
     to: "/category",
     icon: ListIcon,
     tooltip: "Category",
+  },
+  {
+    title: "Products",
+    to: "/products",
+    icon: Package,
+    tooltip: "Products",
   },
 ]
 

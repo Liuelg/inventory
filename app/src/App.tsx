@@ -11,6 +11,7 @@ import { AppSidebarLayout } from "@/layout/app-sidebar-layout.tsx"
 import { AuthLayout } from "@/layout/auth-layout.tsx"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { CategoryPage } from "@/features/categories/pages/CategoryPage.tsx"
+import { ProductPage } from "@/features/products/pages/ProductPage.tsx"
 import { Home } from "@/pages/Home.tsx"
 import { LoginPage } from "@/pages/login.tsx"
 import { NotFound } from "@/pages/NotFound.tsx"
@@ -89,6 +90,7 @@ export function App() {
         >
           <Route path="/" element={<Home />} />
           <Route path="/category" element={<CategoryPage />} />
+          <Route path="/products" element={<ProductPage />} />
           <Route path="*" element={<NotFound />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
