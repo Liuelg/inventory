@@ -9,7 +9,7 @@ import {
 
 import { AppSidebarLayout } from "@/layout/app-sidebar-layout.tsx"
 import { AuthLayout } from "@/layout/auth-layout.tsx"
-import { authClient } from "@/lib/auth-client.ts"
+import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { CategoryPage } from "@/features/categories/pages/CategoryPage.tsx"
 import { Home } from "@/pages/Home.tsx"
 import { LoginPage } from "@/pages/login.tsx"
@@ -17,7 +17,7 @@ import { NotFound } from "@/pages/NotFound.tsx"
 import { SignupPage } from "@/pages/signup.tsx"
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { data: session, isPending } = authClient.useSession()
+  const { data: session, isPending } = useAuthSession()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -38,7 +38,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 }
 
 function RedirectIfAuthed({ children }: { children: React.ReactNode }) {
-  const { data: session, isPending } = authClient.useSession()
+  const { data: session, isPending } = useAuthSession()
   const navigate = useNavigate()
 
   useEffect(() => {

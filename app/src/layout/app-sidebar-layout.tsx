@@ -18,8 +18,10 @@ import {
   SidebarRail,
   SidebarTrigger,
 } from "@/components/ui/sidebar.tsx"
+import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useSidebarNavItems } from "@/hooks/useSidebar.ts"
-import { authClient } from "@/lib/auth-client.ts"
+import { clearAuthSession } from "@/lib/auth.ts"
+import { queryClient } from "@/lib/query-client.ts"
 import { LogOutIcon, UserIcon } from "lucide-react"
 
 export type AppSidebarLayoutProps = {
@@ -27,11 +29,12 @@ export type AppSidebarLayoutProps = {
 }
 
 function UserMenu() {
-  const { data: session } = authClient.useSession()
+  const { data: session } = useAuthSession()
   const navigate = useNavigate()
 
-  const handleLogout = async () => {
-    await authClient.signOut()
+  const handleLogout = () => {
+    clearAuthSession()
+    queryClient.setQueryData(["auth", "session"], null)
     navigate("/login", { replace: true })
   }
 
@@ -41,7 +44,7 @@ function UserMenu() {
       <div className="flex items-center gap-2 px-2 py-1">
         <UserIcon className="size-4 shrink-0 text-sidebar-foreground/70" />
         <span className="truncate text-sm text-sidebar-foreground">
-          {session?.user?.email ?? "User"}
+          {session?.email ?? "User"}
         </span>
       </div>
       <SidebarMenu>

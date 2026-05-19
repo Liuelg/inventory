@@ -1,9 +1,9 @@
-import { Router } from 'express';
-import Category from '../models/Category.js';
+import { Router } from "express";
+import Category from "../models/Category.js";
 
 const router = Router();
 
-router.get('/', async (req, res, next) => {
+router.get("/", async (_, res, next) => {
   try {
     const categories = await Category.find().sort({ createdAt: -1 });
     res.json({ success: true, data: categories });
@@ -12,7 +12,7 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-router.post('/', async (req, res) => {
+router.post("/", async (req, res) => {
   try {
     const category = new Category(req.body);
     await category.save();
@@ -22,11 +22,13 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.get('/:id', async (req, res) => {
+router.get("/:id", async (req, res) => {
   try {
     const category = await Category.findById(req.params.id);
     if (!category) {
-      return res.status(404).json({ success: false, message: 'Category not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Category not found" });
     }
     res.json({ success: true, data: category });
   } catch (err) {
@@ -34,15 +36,16 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.put('/:id', async (req, res, next) => {
+router.put("/:id", async (req, res) => {
   try {
-    const category = await Category.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
+    const category = await Category.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    });
     if (!category) {
-      return res.status(404).json({ success: false, message: 'Category not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Category not found" });
     }
     res.json({ success: true, data: category });
   } catch (err) {
@@ -50,11 +53,13 @@ router.put('/:id', async (req, res, next) => {
   }
 });
 
-router.delete('/:id', async (req, res, next) => {
+router.delete("/:id", async (req, res) => {
   try {
     const category = await Category.findByIdAndDelete(req.params.id);
     if (!category) {
-      return res.status(404).json({ success: false, message: 'Category not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Category not found" });
     }
     res.json({ success: true, data: category });
   } catch (err) {

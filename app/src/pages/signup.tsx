@@ -14,7 +14,8 @@ import {
 } from "@/components/ui/card.tsx"
 import { Input } from "@/components/ui/input.tsx"
 import { Label } from "@/components/ui/label.tsx"
-import { authClient } from "@/lib/auth-client.ts"
+import { useQueryClient } from "@tanstack/react-query"
+import { register as registerUser } from "@/lib/auth.ts"
 import {
   type SignupFormValues,
   signupSchema,
@@ -22,6 +23,7 @@ import {
 
 export function SignupPage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [serverError, setServerError] = useState<string | null>(null)
 
   const {
@@ -38,19 +40,21 @@ export function SignupPage() {
   })
 
   const onSubmit: SubmitHandler<SignupFormValues> = async (data) => {
-    setServerError(null)
-    const { error } = await authClient.signUp.email({
-      email: data.email,
-      password: data.password,
-      name: data.name
-    })
+    try {
+      setServerError(null)
+      const user = await registerUser({
+        email: data.email,
+        password: data.password,
+        name: data.name,
+      })
 
-    if (error) {
-      setServerError(error.message || "Failed to create account")
-      return
+      queryClient.setQueryData(["auth", "session"], user)
+      navigate("/", { replace: true })
+    } catch (error) {
+      setServerError(
+        error instanceof Error ? error.message : "Failed to create account"
+      )
     }
-
-    navigate("/", { replace: true })
   }
 
   return (
