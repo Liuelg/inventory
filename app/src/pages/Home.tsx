@@ -1,4 +1,3 @@
-import { TableDemo } from "@/components/Table"
 import { Button } from "@/components/ui/button"
 import { PlusIcon } from "lucide-react"
 
@@ -17,7 +16,6 @@ export function Home() {
           </Button>
         </div>
       </div>
-      <TableDemo />
     </div>
   )
 }

@@ -11,9 +11,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Plus, Pencil, Trash2 } from "lucide-react"
+import { Pencil, Trash2 } from "lucide-react"
 import { useDeleteGoodIn, useGoodIns } from "../hooks"
-import { GoodInForm } from "./GoodInForm"
 import type { GoodIn } from "../types"
 
 function getStoreName(store: GoodIn["store"]) {
@@ -26,28 +25,14 @@ function getTotalItems(goodIn: GoodIn) {
   return goodIn.items.reduce((sum, item) => sum + item.quantity, 0)
 }
 
-export function GoodInTable() {
+interface GoodInTableProps {
+  onEdit: (goodIn: GoodIn) => void
+}
+
+export function GoodInTable({ onEdit }: GoodInTableProps) {
   const { data: goodIns, isLoading } = useGoodIns()
   const remove = useDeleteGoodIn()
-
-  const [formOpen, setFormOpen] = useState(false)
-  const [editing, setEditing] = useState<GoodIn | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
-
-  function openAdd() {
-    setEditing(null)
-    setFormOpen(true)
-  }
-
-  function openEdit(goodIn: GoodIn) {
-    setEditing(goodIn)
-    setFormOpen(true)
-  }
-
-  function handleFormSuccess() {
-    setFormOpen(false)
-    setEditing(null)
-  }
 
   const columns: ColumnDef<GoodIn>[] = [
     {
@@ -80,7 +65,7 @@ export function GoodInTable() {
       className: "w-[120px] text-right",
       cell: (g) => (
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" size="sm" onClick={() => openEdit(g)}>
+          <Button variant="ghost" size="sm" onClick={() => onEdit(g)}>
             <Pencil />
           </Button>
           <Button
@@ -98,13 +83,6 @@ export function GoodInTable() {
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
-      <div className="flex justify-end">
-        <Button onClick={openAdd}>
-          <Plus data-icon="inline-start" />
-          Add Stock In
-        </Button>
-      </div>
-
       <DataTable
         data={goodIns ?? []}
         columns={columns}
@@ -112,16 +90,6 @@ export function GoodInTable() {
         loading={isLoading}
         emptyMessage="No stock entries found."
       />
-
-      {formOpen ? (
-        <GoodInForm
-          key={editing?._id ?? "new-goodin"}
-          open={formOpen}
-          onOpenChange={setFormOpen}
-          editing={editing}
-          onSuccess={handleFormSuccess}
-        />
-      ) : null}
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>

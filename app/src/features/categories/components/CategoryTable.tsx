@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -9,77 +9,57 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { DataTable, type ColumnDef } from "@/components/Table.tsx";
-import { useCategories, useDeleteCategory } from "../hooks";
-import { CategoryForm } from "./CategoryForm";
-import type { Category } from "../types";
-import { Pencil, Trash2, Plus } from "lucide-react";
+} from "@/components/ui/alert-dialog"
+import { DataTable, type ColumnDef } from "@/components/Table.tsx"
+import { useCategories, useDeleteCategory } from "../hooks"
+import type { Category } from "../types"
+import { Pencil, Trash2 } from "lucide-react"
 
-export function CategoryTable() {
-  const { data: categories, isLoading } = useCategories();
-  const remove = useDeleteCategory();
+interface CategoryTableProps {
+  onEdit: (category: Category) => void
+}
 
-  const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<Category | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-
-  function openAdd() {
-    setEditing(null);
-    setFormOpen(true);
-  }
-
-  function openEdit(category: Category) {
-    setEditing(category);
-    setFormOpen(true);
-  }
-
-  function handleFormSuccess() {
-    setFormOpen(false);
-    setEditing(null);
-  }
+export function CategoryTable({ onEdit }: CategoryTableProps) {
+  const { data: categories, isLoading } = useCategories()
+  const remove = useDeleteCategory()
+  const [deleteId, setDeleteId] = useState<string | null>(null)
 
   const columns: ColumnDef<Category>[] = [
-    { header: "ID", cell: (c) => <span className="font-medium">{c._id}</span>, className: "w-[80px]" },
+    {
+      header: "ID",
+      cell: (c) => <span className="font-medium">{c._id}</span>,
+      className: "w-[80px]",
+    },
     { header: "Name", cell: (c) => c.name },
     {
       header: "Actions",
       className: "w-[120px] text-right",
       cell: (c) => (
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" size="sm" onClick={() => openEdit(c)}>
+          <Button variant="ghost" size="sm" onClick={() => onEdit(c)}>
             <Pencil />
           </Button>
-          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setDeleteId(c._id)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive"
+            onClick={() => setDeleteId(c._id)}
+          >
             <Trash2 />
           </Button>
         </div>
       ),
     },
-  ];
+  ]
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
-      <div className="flex justify-end">
-        <Button onClick={openAdd}>
-          <Plus data-icon="inline-start" />
-          Add Category
-        </Button>
-      </div>
-
       <DataTable
         data={categories ?? []}
         columns={columns}
         keyExtractor={(c) => c._id}
         loading={isLoading}
         emptyMessage="No categories found."
-      />
-
-      <CategoryForm
-        open={formOpen}
-        onOpenChange={setFormOpen}
-        editing={editing}
-        onSuccess={handleFormSuccess}
       />
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
@@ -98,8 +78,8 @@ export function CategoryTable() {
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
-                if (deleteId) remove.mutate(deleteId);
-                setDeleteId(null);
+                if (deleteId) remove.mutate(deleteId)
+                setDeleteId(null)
               }}
             >
               Delete
@@ -108,5 +88,5 @@ export function CategoryTable() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  );
+  )
 }

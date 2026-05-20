@@ -11,46 +11,34 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Plus, Pencil, Trash2 } from "lucide-react"
+import { Pencil, Trash2 } from "lucide-react"
 import { useDeleteStore, useStores } from "../hooks"
-import { StoreForm } from "./StoreForm"
 import type { Store } from "../types"
 
 function getManagerLabel(store: Store) {
   const manager = store.manager_id
   if (!manager) return "-"
   if (typeof manager === "string") return manager
-  if (manager.name && manager.email) return `${manager.name} (${manager.email})`
+  if (manager.name && manager.email)
+    return `${manager.name} (${manager.email})`
   return manager.name || manager.email || manager._id || "-"
 }
 
-export function StoreTable() {
+interface StoreTableProps {
+  onEdit: (store: Store) => void
+}
+
+export function StoreTable({ onEdit }: StoreTableProps) {
   const { data: stores, isLoading } = useStores()
   const remove = useDeleteStore()
-
-  const [formOpen, setFormOpen] = useState(false)
-  const [editing, setEditing] = useState<Store | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
-
-  function openAdd() {
-    setEditing(null)
-    setFormOpen(true)
-  }
-
-  function openEdit(store: Store) {
-    setEditing(store)
-    setFormOpen(true)
-  }
-
-  function handleFormSuccess() {
-    setFormOpen(false)
-    setEditing(null)
-  }
 
   const columns: ColumnDef<Store>[] = [
     {
       header: "Name",
-      cell: (store) => <span className="font-medium">{store.name || "-"}</span>,
+      cell: (store) => (
+        <span className="font-medium">{store.name || "-"}</span>
+      ),
     },
     {
       header: "Address",
@@ -65,7 +53,7 @@ export function StoreTable() {
       className: "w-[120px] text-right",
       cell: (store) => (
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" size="sm" onClick={() => openEdit(store)}>
+          <Button variant="ghost" size="sm" onClick={() => onEdit(store)}>
             <Pencil />
           </Button>
           <Button
@@ -83,13 +71,6 @@ export function StoreTable() {
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
-      <div className="flex justify-end">
-        <Button onClick={openAdd}>
-          <Plus data-icon="inline-start" />
-          Add Store
-        </Button>
-      </div>
-
       <DataTable
         data={stores ?? []}
         columns={columns}
@@ -97,16 +78,6 @@ export function StoreTable() {
         loading={isLoading}
         emptyMessage="No stores found."
       />
-
-      {formOpen ? (
-        <StoreForm
-          key={editing?._id ?? "new-store"}
-          open={formOpen}
-          onOpenChange={setFormOpen}
-          editing={editing}
-          onSuccess={handleFormSuccess}
-        />
-      ) : null}
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>

@@ -11,9 +11,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Plus, Pencil, Trash2 } from "lucide-react"
+import { Pencil, Trash2 } from "lucide-react"
 import { useDeleteProduct, useProducts } from "../hooks"
-import { ProductForm } from "./ProductForm"
 import type { Product } from "../types"
 
 function formatPrice(product: Product) {
@@ -26,28 +25,14 @@ function formatPrice(product: Product) {
   return `${amount.toFixed(2)} ${currency}`
 }
 
-export function ProductTable() {
+interface ProductTableProps {
+  onEdit: (product: Product) => void
+}
+
+export function ProductTable({ onEdit }: ProductTableProps) {
   const { data: products, isLoading } = useProducts()
   const remove = useDeleteProduct()
-
-  const [formOpen, setFormOpen] = useState(false)
-  const [editing, setEditing] = useState<Product | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
-
-  function openAdd() {
-    setEditing(null)
-    setFormOpen(true)
-  }
-
-  function openEdit(product: Product) {
-    setEditing(product)
-    setFormOpen(true)
-  }
-
-  function handleFormSuccess() {
-    setFormOpen(false)
-    setEditing(null)
-  }
 
   const columns: ColumnDef<Product>[] = [
     {
@@ -75,7 +60,7 @@ export function ProductTable() {
       className: "w-[120px] text-right",
       cell: (product) => (
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" size="sm" onClick={() => openEdit(product)}>
+          <Button variant="ghost" size="sm" onClick={() => onEdit(product)}>
             <Pencil />
           </Button>
           <Button
@@ -93,13 +78,6 @@ export function ProductTable() {
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
-      <div className="flex justify-end">
-        <Button onClick={openAdd}>
-          <Plus data-icon="inline-start" />
-          Add Product
-        </Button>
-      </div>
-
       <DataTable
         data={products ?? []}
         columns={columns}
@@ -107,16 +85,6 @@ export function ProductTable() {
         loading={isLoading}
         emptyMessage="No products found."
       />
-
-      {formOpen ? (
-        <ProductForm
-          key={editing?._id ?? "new-product"}
-          open={formOpen}
-          onOpenChange={setFormOpen}
-          editing={editing}
-          onSuccess={handleFormSuccess}
-        />
-      ) : null}
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
