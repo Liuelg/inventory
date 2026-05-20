@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -187,6 +188,11 @@ export function GoodInForm({
           <DialogTitle>
             {editing ? "Edit Stock In" : "Add Stock In"}
           </DialogTitle>
+          <DialogDescription>
+            {editing
+              ? "Update the stock entry details."
+              : "Record goods received at a store."}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {error ? (
@@ -198,7 +204,7 @@ export function GoodInForm({
           <div className="grid gap-2">
             <Label>Store</Label>
             <Select
-              value={form.storeId || undefined}
+              value={form.storeId}
               onValueChange={(v) => setField("storeId", v)}
             >
               <SelectTrigger className="w-full">
@@ -237,7 +243,7 @@ export function GoodInForm({
               <div className="grid gap-1">
                 <Label className="text-xs">Product</Label>
                 <Select
-                  value={item.item_id || undefined}
+                  value={item.item_id}
                   onValueChange={(v) => setItemField(index, "item_id", v)}
                 >
                   <SelectTrigger className="w-full">

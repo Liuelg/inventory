@@ -13,6 +13,8 @@ import storeRoutes from "./routes/stores.js";
 import categoryRoutes from "./routes/categories.js";
 import subCategoryRoutes from "./routes/subCategories.js";
 import authRoutes from "./routes/auth.js";
+import dashboardRoutes from "./routes/dashboard.js";
+import stockRoutes from "./routes/stock.js";
 
 const app = express();
 
@@ -46,6 +48,8 @@ app.use("/transfers", authMiddleware, transferRoutes);
 app.use("/stores", authMiddleware, storeRoutes);
 app.use("/api/categories", authMiddleware, categoryRoutes);
 app.use("/api/sub-categories", authMiddleware, subCategoryRoutes);
+app.use("/api/dashboard", authMiddleware, dashboardRoutes);
+app.use("/api/stock", authMiddleware, stockRoutes);
 
 // Error and Fallback Handlers
 app.use((req, res) => {

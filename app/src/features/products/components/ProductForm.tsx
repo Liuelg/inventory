@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -177,7 +178,7 @@ export function ProductForm({
           <div className="grid gap-2">
             <Label>Category</Label>
             <Select
-              value={form.category || undefined}
+              value={form.category}
               onValueChange={(v) => setField("category", v)}
             >
               <SelectTrigger className="w-full">

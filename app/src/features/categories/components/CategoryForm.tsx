@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -52,6 +53,11 @@ export function CategoryForm({
           <DialogTitle>
             {editing ? "Edit Category" : "Add Category"}
           </DialogTitle>
+          <DialogDescription>
+            {editing
+              ? "Update the category name."
+              : "Enter a name for the new category."}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input

@@ -19,7 +19,7 @@ router.get('/', async (req, res) => {
       .populate('store')                  
       .populate({
         path: 'items.item_id',            
-        model: 'Product'                  
+        model: 'Products'                  
       });
     res.json(sales);
   } catch (err) {
@@ -34,7 +34,7 @@ router.get('/:id', async (req, res) => {
       .populate('store')
       .populate({
         path: 'items.item_id',
-        model: 'Product'
+        model: 'Products'
       });
 
     if (!sale) {
@@ -59,7 +59,7 @@ router.patch('/:id', async (req, res) => {
         new: true,         
         runValidators: true 
       }
-    ).populate('store').populate({ path: 'items.item_id', model: 'Product' });
+    ).populate('store').populate({ path: 'items.item_id', model: 'Products' });
 
     if (!updatedSale) {
       return res.status(404).json({ message: 'Sale record not found' });

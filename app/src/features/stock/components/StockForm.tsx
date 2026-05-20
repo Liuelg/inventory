@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -18,56 +18,58 @@ import {
 } from "@/components/ui/select"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
-import { useStores } from "@/features/stores/hooks"
-import { useCreateSale, useUpdateSale } from "../hooks"
-import type { Sale, SalePayload } from "../types"
+import { useCreateStock, useUpdateStock } from "../hooks"
+import type { Stock, StockPayload } from "../types"
 
-interface SalesFormProps {
+interface StockFormProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  editing?: Sale | null
+  editing?: Stock | null
   onSuccess?: () => void
 }
 
-type SaleItemForm = {
+type StockItemForm = {
   item_id: string
   quantity: string
   price: string
 }
 
-type SaleFormState = {
-  customerName: string
-  invoiceNumber: string
-  storeId: string
-  items: SaleItemForm[]
+type StockFormState = {
+  date: string
+  items: StockItemForm[]
+  description: string
+  note: string
 }
 
-const emptyItem: SaleItemForm = { item_id: "", quantity: "1", price: "" }
+const emptyItem: StockItemForm = { item_id: "", quantity: "1", price: "" }
 
-const initialState: SaleFormState = {
-  customerName: "",
-  invoiceNumber: "",
-  storeId: "",
+const initialState: StockFormState = {
+  date: new Date().toISOString().slice(0, 10),
   items: [{ ...emptyItem }],
+  description: "",
+  note: "",
 }
 
-function getInitialState(editing?: Sale | null): SaleFormState {
+function getInitialState(editing?: Stock | null): StockFormState {
   if (!editing) return { ...initialState }
   return {
-    customerName: editing.customerName ?? "",
-    invoiceNumber: editing.invoiceNumber ?? "",
-    storeId: typeof editing.store === "string" ? editing.store : editing.store?._id ?? "",
+    date: editing.date
+      ? new Date(editing.date).toISOString().slice(0, 10)
+      : new Date().toISOString().slice(0, 10),
     items: editing.items.length
       ? editing.items.map((i) => ({
-          item_id: i.item_id,
+          item_id:
+            typeof i.item_id === "string" ? i.item_id : i.item_id?._id ?? "",
           quantity: String(i.quantity),
           price: String(i.price),
         }))
       : [{ ...emptyItem }],
+    description: editing.description ?? "",
+    note: editing.note ?? "",
   }
 }
 
-function toPayload(form: SaleFormState, userId: string): SalePayload {
+function toPayload(form: StockFormState, userId: string): StockPayload {
   const items = form.items
     .filter((i) => i.item_id && i.quantity && i.price)
     .map((i) => ({
@@ -82,55 +84,45 @@ function toPayload(form: SaleFormState, userId: string): SalePayload {
   )
 
   return {
-    customerName: form.customerName.trim() || undefined,
-    invoiceNumber: form.invoiceNumber.trim(),
-    store: form.storeId,
-    processedBy: userId,
+    created_by: userId,
+    date: new Date(form.date).toISOString(),
     items,
     totalAmount,
-    date_time: new Date().toISOString(),
+    description: form.description.trim() || undefined,
+    note: form.note.trim() || undefined,
   }
 }
 
-export function SalesForm({
+export function StockForm({
   open,
   onOpenChange,
   editing,
   onSuccess,
-}: SalesFormProps) {
-  const [form, setForm] = useState<SaleFormState>(() =>
+}: StockFormProps) {
+  const [form, setForm] = useState<StockFormState>(() =>
     getInitialState(editing)
   )
   const [error, setError] = useState<string | null>(null)
   const { data: session } = useAuthSession()
   const { data: products } = useProducts()
-  const { data: stores } = useStores()
-  const create = useCreateSale()
-  const update = useUpdateSale()
+  const create = useCreateStock()
+  const update = useUpdateStock()
 
   useEffect(() => {
     setForm(getInitialState(editing))
     setError(null)
   }, [editing, open])
 
-  const totalAmount = useMemo(() => {
-    return form.items.reduce((sum, item) => {
-      const qty = Number(item.quantity) || 0
-      const price = Number(item.price) || 0
-      return sum + qty * price
-    }, 0)
-  }, [form.items])
-
-  function setField<Key extends keyof SaleFormState>(
+  function setField<Key extends keyof StockFormState>(
     key: Key,
-    value: SaleFormState[Key]
+    value: StockFormState[Key]
   ) {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
   function setItemField(
     index: number,
-    key: keyof SaleItemForm,
+    key: keyof StockItemForm,
     value: string
   ) {
     setForm((prev) => {
@@ -159,14 +151,6 @@ export function SalesForm({
     e.preventDefault()
     setError(null)
 
-    if (!form.storeId) {
-      setError("Please select a store.")
-      return
-    }
-    if (!form.invoiceNumber.trim()) {
-      setError("Invoice number is required.")
-      return
-    }
     const validItems = form.items.filter(
       (i) => i.item_id && Number(i.quantity) > 0 && i.price
     )
@@ -205,11 +189,13 @@ export function SalesForm({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-auto w-fit max-w-[95vw]">
         <DialogHeader>
-          <DialogTitle>{editing ? "Edit Sale" : "Add Sale"}</DialogTitle>
+          <DialogTitle>
+            {editing ? "Edit Stock Entry" : "Add Stock Entry"}
+          </DialogTitle>
           <DialogDescription>
             {editing
-              ? "Update the sale record."
-              : "Record a new sale with items and invoice details."}
+              ? "Update the stock entry details."
+              : "Record products received from the workshop."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -220,50 +206,16 @@ export function SalesForm({
           ) : null}
 
           <div className="grid gap-2">
-            <Label htmlFor="sale-invoice">Invoice Number</Label>
+            <Label htmlFor="stock-date">Date</Label>
             <Input
-              id="sale-invoice"
-              placeholder="INV-001"
-              value={form.invoiceNumber}
-              onChange={(e) => setField("invoiceNumber", e.target.value)}
+              id="stock-date"
+              type="date"
+              value={form.date}
+              onChange={(e) => setField("date", e.target.value)}
             />
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="sale-customer">Customer Name</Label>
-            <Input
-              id="sale-customer"
-              placeholder="Customer name"
-              value={form.customerName}
-              onChange={(e) => setField("customerName", e.target.value)}
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <Label>Store</Label>
-            <Select
-              value={form.storeId}
-              onValueChange={(v) => setField("storeId", v)}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select store" />
-              </SelectTrigger>
-              <SelectContent>
-                {stores?.map((s) => (
-                  <SelectItem key={s._id} value={s._id}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <Label>Items</Label>
-            <span className="text-sm font-medium">
-              Total: {totalAmount.toFixed(2)}
-            </span>
-          </div>
+          <Label>Items</Label>
 
           {form.items.map((item, index) => (
             <div
@@ -331,6 +283,26 @@ export function SalesForm({
           >
             + Add Item
           </Button>
+
+          <div className="grid gap-2">
+            <Label htmlFor="stock-description">Description</Label>
+            <Input
+              id="stock-description"
+              placeholder="What this stock entry is about"
+              value={form.description}
+              onChange={(e) => setField("description", e.target.value)}
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="stock-note">Note</Label>
+            <Input
+              id="stock-note"
+              placeholder="Optional note"
+              value={form.note}
+              onChange={(e) => setField("note", e.target.value)}
+            />
+          </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <Button

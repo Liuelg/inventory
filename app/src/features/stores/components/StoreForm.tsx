@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -104,6 +105,11 @@ export function StoreForm({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{editing ? "Edit Store" : "Add Store"}</DialogTitle>
+          <DialogDescription>
+            {editing
+              ? "Update the store details."
+              : "Fill in the details for the new store."}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {error ? (

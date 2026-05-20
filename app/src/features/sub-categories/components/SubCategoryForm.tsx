@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -65,6 +66,11 @@ export function SubCategoryForm({
           <DialogTitle>
             {editing ? "Edit Sub Category" : "Add Sub Category"}
           </DialogTitle>
+          <DialogDescription>
+            {editing
+              ? "Update the sub-category name and parent category."
+              : "Enter a name and select a parent category."}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input
