@@ -30,6 +30,7 @@ export function CategoryPage() {
       <TabsContent value="sub-categories" className="h-[calc(100%-100px)]">
         <SubCategoryTable />
       </TabsContent>
+      
     </Tabs>
   );
 }

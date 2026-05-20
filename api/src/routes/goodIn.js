@@ -14,7 +14,10 @@ router.post('/', async (req, res) => {
 
 router.get('/', async (req, res) => {
   try {
-    const goods = await Goodin.find().populate('product');
+    const goods = await Goodin.find()
+      .populate('store')
+      .populate('created_by', 'name email')
+      .populate('user', 'name email');
     res.json(goods);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -23,7 +26,10 @@ router.get('/', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   try {
-    const goodIn = await Goodin.findById(req.params.id).populate('product');
+    const goodIn = await Goodin.findById(req.params.id)
+      .populate('store')
+      .populate('created_by', 'name email')
+      .populate('user', 'name email');
 
     if (!goodIn) {
       return res.status(404).json({ message: 'Goodin record not found' });

@@ -65,6 +65,7 @@ export function StoreForm({
   const [form, setForm] = useState<StoreFormState>(() => getInitialState(editing))
   const create = useCreateStore()
   const update = useUpdateStore()
+  const [error, setError] = useState<string | null>(null)
 
   function setField<Key extends keyof StoreFormState>(
     key: Key,
@@ -75,18 +76,25 @@ export function StoreForm({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setError(null)
     if (!form.name.trim() || !form.address.trim()) return
 
     const payload = toPayload(form)
     if (editing) {
       update.mutate(
         { id: editing._id, payload },
-        { onSuccess: () => onSuccess?.() }
+        {
+          onSuccess: () => onSuccess?.(),
+          onError: (err) => setError(err.message),
+        }
       )
       return
     }
 
-    create.mutate(payload, { onSuccess: () => onSuccess?.() })
+    create.mutate(payload, {
+      onSuccess: () => onSuccess?.(),
+      onError: (err) => setError(err.message),
+    })
   }
 
   const isPending = create.isPending || update.isPending
@@ -98,6 +106,11 @@ export function StoreForm({
           <DialogTitle>{editing ? "Edit Store" : "Add Store"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {error ? (
+            <p className="text-destructive text-sm" role="alert">
+              {error}
+            </p>
+          ) : null}
           <div className="grid gap-2">
             <Label htmlFor="store-name">Name</Label>
             <Input

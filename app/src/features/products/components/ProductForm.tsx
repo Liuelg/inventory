@@ -8,6 +8,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { useCategories } from "@/features/categories/hooks"
 import { useCreateProduct, useUpdateProduct } from "../hooks"
 import type { Product, ProductPayload } from "../types"
 
@@ -78,9 +86,9 @@ function toPayload(form: ProductFormState): ProductPayload {
     price:
       amount !== undefined || form.currency.trim()
         ? {
-            amount,
-            currency: form.currency.trim() || "USD",
-          }
+          amount,
+          currency: form.currency.trim() || "USD",
+        }
         : undefined,
     previous_prices: previousPrice,
     tags: tags.length ? tags : undefined,
@@ -97,6 +105,8 @@ export function ProductForm({
   const [form, setForm] = useState<ProductFormState>(() =>
     getInitialState(editing)
   )
+  const [error, setError] = useState<string | null>(null)
+  const { data: categories } = useCategories()
   const create = useCreateProduct()
   const update = useUpdateProduct()
 
@@ -109,18 +119,25 @@ export function ProductForm({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setError(null)
     if (!form.name.trim()) return
 
     const payload = toPayload(form)
     if (editing) {
       update.mutate(
         { id: editing._id, payload },
-        { onSuccess: () => onSuccess?.() }
+        {
+          onSuccess: () => onSuccess?.(),
+          onError: (err) => setError(err.message),
+        }
       )
       return
     }
 
-    create.mutate(payload, { onSuccess: () => onSuccess?.() })
+    create.mutate(payload, {
+      onSuccess: () => onSuccess?.(),
+      onError: (err) => setError(err.message),
+    })
   }
 
   const isPending = create.isPending || update.isPending
@@ -132,6 +149,11 @@ export function ProductForm({
           <DialogTitle>{editing ? "Edit Product" : "Add Product"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {error ? (
+            <p className="text-destructive text-sm" role="alert">
+              {error}
+            </p>
+          ) : null}
           <div className="grid gap-2">
             <Label htmlFor="product-name">Name</Label>
             <Input
@@ -153,13 +175,22 @@ export function ProductForm({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="product-category">Category</Label>
-            <Input
-              id="product-category"
-              placeholder="Category name"
-              value={form.category}
-              onChange={(e) => setField("category", e.target.value)}
-            />
+            <Label>Category</Label>
+            <Select
+              value={form.category || undefined}
+              onValueChange={(v) => setField("category", v)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories?.map((c) => (
+                  <SelectItem key={c._id} value={c.name}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -177,28 +208,19 @@ export function ProductForm({
             </div>
             <div className="grid gap-2">
               <Label htmlFor="product-currency">Currency</Label>
-              <Input
+
+              <select
                 id="product-currency"
-                placeholder="USD"
                 value={form.currency}
                 onChange={(e) => setField("currency", e.target.value)}
-              />
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">Select currency</option>
+                <option value="USD">USD</option>
+                <option value="ETB">ETB</option>
+              </select>
             </div>
           </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="product-previous-price">Previous Price</Label>
-            <Input
-              id="product-previous-price"
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="Optional previous price"
-              value={form.previousPrice}
-              onChange={(e) => setField("previousPrice", e.target.value)}
-            />
-          </div>
-
           <div className="grid gap-2">
             <Label htmlFor="product-tags">Tags</Label>
             <Input

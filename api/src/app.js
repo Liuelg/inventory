@@ -18,12 +18,7 @@ const app = express();
 
 // CORS configuration for frontend API access
 app.use(
-  cors({
-    origin: "http://localhost:5173", // Adjust this to match your React Vite app's exact URL
-    credentials: true, // Allows cookies to travel back and forth across domains
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
+  cors()
 );
 
 app.use(express.json());

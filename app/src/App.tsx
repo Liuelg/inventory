@@ -13,6 +13,8 @@ import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { CategoryPage } from "@/features/categories/pages/CategoryPage.tsx"
 import { ProductPage } from "@/features/products/pages/ProductPage.tsx"
 import { StorePage } from "@/features/stores/pages/StorePage.tsx"
+import { SalesPage } from "@/features/sales/pages/SalesPage.tsx"
+import { GoodInPage } from "@/features/good-ins/pages/GoodInPage.tsx"
 import { Home } from "@/pages/Home.tsx"
 import { LoginPage } from "@/pages/login.tsx"
 import { NotFound } from "@/pages/NotFound.tsx"
@@ -93,6 +95,8 @@ export function App() {
           <Route path="/category" element={<CategoryPage />} />
           <Route path="/products" element={<ProductPage />} />
           <Route path="/stores" element={<StorePage />} />
+          <Route path="/sales" element={<SalesPage />} />
+          <Route path="/good-ins" element={<GoodInPage />} />
           <Route path="*" element={<NotFound />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
