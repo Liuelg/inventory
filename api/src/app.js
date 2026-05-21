@@ -15,6 +15,7 @@ import subCategoryRoutes from "./routes/subCategories.js";
 import authRoutes from "./routes/auth.js";
 import dashboardRoutes from "./routes/dashboard.js";
 import stockRoutes from "./routes/stock.js";
+import stockoutRoutes from "./routes/stockout.js";
 
 const app = express();
 
@@ -50,6 +51,7 @@ app.use("/api/categories", authMiddleware, categoryRoutes);
 app.use("/api/sub-categories", authMiddleware, subCategoryRoutes);
 app.use("/api/dashboard", authMiddleware, dashboardRoutes);
 app.use("/api/stock", authMiddleware, stockRoutes);
+app.use("/api/stockouts", authMiddleware, stockoutRoutes);
 
 // Error and Fallback Handlers
 app.use((req, res) => {

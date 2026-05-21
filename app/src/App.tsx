@@ -17,6 +17,7 @@ import { StoreDetailPage } from "@/features/stores/pages/StoreDetailPage.tsx"
 import { SalesPage } from "@/features/sales/pages/SalesPage.tsx"
 import { GoodInPage } from "@/features/good-ins/pages/GoodInPage.tsx"
 import { StockPage } from "@/features/stock/pages/StockPage.tsx"
+import { StockoutPage } from "@/features/stockouts/pages/StockoutPage.tsx"
 import { Home } from "@/pages/Home.tsx"
 import { LoginPage } from "@/pages/login.tsx"
 import { NotFound } from "@/pages/NotFound.tsx"
@@ -101,6 +102,7 @@ export function App() {
           <Route path="/sales" element={<SalesPage />} />
           <Route path="/stock" element={<StockPage />} />
           <Route path="/good-ins" element={<GoodInPage />} />
+          <Route path="/stockouts" element={<StockoutPage />} />
           <Route path="*" element={<NotFound />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

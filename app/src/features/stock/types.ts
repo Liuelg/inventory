@@ -13,7 +13,6 @@ export type Stock = {
   items: StockItem[]
   totalAmount: number
   description?: string
-  description?: string
   note?: string
   createdAt?: string
   updatedAt?: string

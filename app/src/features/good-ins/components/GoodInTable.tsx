@@ -1,120 +1,253 @@
 import { useState } from "react"
 import { DataTable, type ColumnDef } from "@/components/Table.tsx"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button.tsx"
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Pencil, Trash2 } from "lucide-react"
-import { useDeleteGoodIn, useGoodIns } from "../hooks"
-import type { GoodIn } from "../types"
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog.tsx"
+import { useAuthSession } from "@/hooks/use-auth-session.ts"
+import {
+  useAcceptStockout,
+  useRejectStockout,
+  useStockouts,
+} from "@/features/stockouts/hooks"
+import type { Stockout, StockoutItemPopulated } from "@/features/stockouts/types"
+import { Eye, Check, X } from "lucide-react"
 
-function getStoreName(store: GoodIn["store"]) {
+function getStoreName(store: Stockout["store"]) {
   if (!store) return "-"
   if (typeof store === "string") return store
   return store.name || store._id || "-"
 }
 
-function getTotalItems(goodIn: GoodIn) {
-  return goodIn.items.reduce((sum, item) => sum + item.quantity, 0)
+function getTotalItems(stockout: Stockout) {
+  return stockout.items.reduce((sum, item) => sum + item.quantity, 0)
 }
 
-interface GoodInTableProps {
-  onEdit: (goodIn: GoodIn) => void
+function getTotalAmount(stockout: Stockout) {
+  return stockout.items.reduce(
+    (sum, item) => sum + item.quantity * item.price,
+    0
+  )
 }
 
-export function GoodInTable({ onEdit }: GoodInTableProps) {
-  const { data: goodIns, isLoading } = useGoodIns()
-  const remove = useDeleteGoodIn()
-  const [deleteId, setDeleteId] = useState<string | null>(null)
+function StatusBadge({ status }: { status: Stockout["status"] }) {
+  const classes = {
+    pending:
+      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+    accepted:
+      "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+    rejected: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+  }
 
-  const columns: ColumnDef<GoodIn>[] = [
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${classes[status]}`}
+    >
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </span>
+  )
+}
+
+function ItemRow({ item }: { item: StockoutItemPopulated }) {
+  const name =
+    typeof item.item_id === "string" ? item.item_id : item.item_id.name
+  return (
+    <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+      <span className="font-medium">{name}</span>
+      <span className="text-muted-foreground">
+        {item.quantity} × {item.price.toFixed(2)}
+      </span>
+    </div>
+  )
+}
+
+export function GoodInTable() {
+  const { data: stockouts, isLoading } = useStockouts()
+  const { data: session } = useAuthSession()
+  const accept = useAcceptStockout()
+  const reject = useRejectStockout()
+  const [viewing, setViewing] = useState<Stockout | null>(null)
+
+  const columns: ColumnDef<Stockout>[] = [
     {
       header: "ID",
-      cell: (g) => <span className="font-medium">{g._id.slice(-6)}</span>,
+      cell: (s) => <span className="font-medium">{s._id.slice(-6)}</span>,
       className: "w-[80px]",
     },
     {
       header: "Store",
-      cell: (g) => getStoreName(g.store),
+      cell: (s) => getStoreName(s.store),
     },
     {
       header: "Items",
-      cell: (g) => getTotalItems(g),
+      cell: (s) => getTotalItems(s),
       className: "w-[60px] text-right",
     },
     {
-      header: "Accepted",
-      cell: (g) => (g.is_accepted ? "Yes" : "No"),
-      className: "w-[80px]",
+      header: "Total",
+      cell: (s) => getTotalAmount(s).toFixed(2),
+      className: "w-[100px] text-right whitespace-nowrap",
+    },
+    {
+      header: "Status",
+      cell: (s) => <StatusBadge status={s.status} />,
+      className: "w-[100px]",
     },
     {
       header: "Date",
-      cell: (g) =>
-        g.date ? new Date(g.date).toLocaleDateString() : "-",
+      cell: (s) =>
+        s.date ? new Date(s.date).toLocaleDateString() : "-",
       className: "w-[120px]",
     },
     {
       header: "Actions",
-      className: "w-[120px] text-right",
-      cell: (g) => (
-        <div className="flex justify-end gap-2">
-          <Button variant="ghost" size="sm" onClick={() => onEdit(g)}>
-            <Pencil />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-destructive"
-            onClick={() => setDeleteId(g._id)}
-          >
-            <Trash2 />
-          </Button>
-        </div>
-      ),
+      className: "w-[140px] text-right",
+      cell: (s) => {
+        const isPending = s.status === "pending"
+        return (
+          <div className="flex justify-end gap-2">
+            {isPending ? (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-green-600"
+                  title="Accept"
+                  onClick={() => {
+                    if (session?.id) {
+                      accept.mutate({ id: s._id, accepted_by: session.id })
+                    }
+                  }}
+                >
+                  <Check />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive"
+                  title="Reject"
+                  onClick={() => reject.mutate(s._id)}
+                >
+                  <X />
+                </Button>
+              </>
+            ) : null}
+            <Button
+              variant="ghost"
+              size="sm"
+              title="View Details"
+              onClick={() => setViewing(s)}
+            >
+              <Eye />
+            </Button>
+          </div>
+        )
+      },
     },
   ]
+
+  const viewingTotal = viewing
+    ? viewing.items.reduce(
+        (sum, item) => sum + item.quantity * item.price,
+        0
+      )
+    : 0
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
       <DataTable
-        data={goodIns ?? []}
+        data={stockouts ?? []}
         columns={columns}
-        keyExtractor={(g) => g._id}
+        keyExtractor={(s) => s._id}
         loading={isLoading}
-        emptyMessage="No stock entries found."
+        emptyMessage="No incoming stock requests."
       />
 
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action permanently deletes this stock entry.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setDeleteId(null)}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                if (deleteId) remove.mutate(deleteId)
-                setDeleteId(null)
-              }}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Dialog open={!!viewing} onOpenChange={() => setViewing(null)}>
+        <DialogContent className="max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>Stock In Request</DialogTitle>
+            <DialogDescription>
+              Details of the stock transfer from the warehouse.
+            </DialogDescription>
+          </DialogHeader>
+
+          {viewing ? (
+            <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Store</p>
+                  <p className="font-medium">{getStoreName(viewing.store)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Status</p>
+                  <StatusBadge status={viewing.status} />
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Date</p>
+                  <p className="font-medium">
+                    {viewing.date
+                      ? new Date(viewing.date).toLocaleDateString()
+                      : "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Total Amount</p>
+                  <p className="font-medium">{viewingTotal.toFixed(2)}</p>
+                </div>
+              </div>
+
+              {viewing.note ? (
+                <div className="text-sm">
+                  <p className="text-muted-foreground">Note</p>
+                  <p className="font-medium">{viewing.note}</p>
+                </div>
+              ) : null}
+
+              <div className="flex flex-col gap-2">
+                <p className="text-sm font-medium">Items</p>
+                {viewing.items.map((item, idx) => (
+                  <ItemRow key={idx} item={item} />
+                ))}
+              </div>
+
+              {viewing.status === "pending" ? (
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    className="text-destructive"
+                    onClick={() => {
+                      reject.mutate(viewing._id)
+                      setViewing(null)
+                    }}
+                  >
+                    <X className="mr-1 size-4" />
+                    Reject
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      if (session?.id) {
+                        accept.mutate({
+                          id: viewing._id,
+                          accepted_by: session.id,
+                        })
+                        setViewing(null)
+                      }
+                    }}
+                  >
+                    <Check className="mr-1 size-4" />
+                    Accept
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -1,75 +1,70 @@
 import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button.tsx"
+import { Input } from "@/components/ui/input.tsx"
+import { Label } from "@/components/ui/label.tsx"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog.tsx"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select.tsx"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
-import { useCreateStock, useUpdateStock } from "../hooks"
-import type { Stock, StockPayload } from "../types"
+import { useStores } from "@/features/stores/hooks"
+import { useCreateStockout, useUpdateStockout } from "../hooks"
+import type { Stockout, StockoutPayload } from "../types"
 
-interface StockFormProps {
+interface StockoutFormProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  editing?: Stock | null
+  editing?: Stockout | null
   onSuccess?: () => void
 }
 
-type StockItemForm = {
+type StockoutItemForm = {
   item_id: string
   quantity: string
   price: string
 }
 
-type StockFormState = {
-  date: string
-  items: StockItemForm[]
-  description: string
+type StockoutFormState = {
+  storeId: string
+  items: StockoutItemForm[]
   note: string
 }
 
-const emptyItem: StockItemForm = { item_id: "", quantity: "1", price: "" }
+const emptyItem: StockoutItemForm = { item_id: "", quantity: "1", price: "" }
 
-const initialState: StockFormState = {
-  date: new Date().toISOString().slice(0, 10),
+const initialState: StockoutFormState = {
+  storeId: "",
   items: [{ ...emptyItem }],
-  description: "",
   note: "",
 }
 
-function getInitialState(editing?: Stock | null): StockFormState {
+function getInitialState(editing?: Stockout | null): StockoutFormState {
   if (!editing) return { ...initialState }
   return {
-    date: editing.date
-      ? new Date(editing.date).toISOString().slice(0, 10)
-      : new Date().toISOString().slice(0, 10),
+    storeId: typeof editing.store === "string" ? editing.store : editing.store?._id ?? "",
     items: editing.items.length
       ? editing.items.map((i) => ({
-          item_id:
-            typeof i.item_id === "string" ? i.item_id : i.item_id?._id ?? "",
+          item_id: typeof i.item_id === "string" ? i.item_id : i.item_id._id,
           quantity: String(i.quantity),
           price: String(i.price),
         }))
       : [{ ...emptyItem }],
-    description: editing.description ?? "",
     note: editing.note ?? "",
   }
 }
 
-function toPayload(form: StockFormState, userId: string): StockPayload {
+function toPayload(form: StockoutFormState, userId: string): StockoutPayload {
   const items = form.items
     .filter((i) => i.item_id && i.quantity && i.price)
     .map((i) => ({
@@ -78,50 +73,46 @@ function toPayload(form: StockFormState, userId: string): StockPayload {
       price: Number(i.price),
     }))
 
-  const totalAmount = items.reduce(
-    (sum, i) => sum + i.quantity * i.price,
-    0
-  )
-
   return {
     created_by: userId,
-    date: new Date(form.date).toISOString(),
+    store: form.storeId,
     items,
-    totalAmount,
-    note: form.note.trim() || undefined,
+    date: new Date().toISOString(),
+    note: form.note || undefined,
   }
 }
 
-export function StockForm({
+export function StockoutForm({
   open,
   onOpenChange,
   editing,
   onSuccess,
-}: StockFormProps) {
-  const [form, setForm] = useState<StockFormState>(() =>
+}: StockoutFormProps) {
+  const [form, setForm] = useState<StockoutFormState>(() =>
     getInitialState(editing)
   )
   const [error, setError] = useState<string | null>(null)
   const { data: session } = useAuthSession()
   const { data: products } = useProducts()
-  const create = useCreateStock()
-  const update = useUpdateStock()
+  const { data: stores } = useStores()
+  const create = useCreateStockout()
+  const update = useUpdateStockout()
 
   useEffect(() => {
     setForm(getInitialState(editing))
     setError(null)
   }, [editing, open])
 
-  function setField<Key extends keyof StockFormState>(
+  function setField<Key extends keyof StockoutFormState>(
     key: Key,
-    value: StockFormState[Key]
+    value: StockoutFormState[Key]
   ) {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
   function setItemField(
     index: number,
-    key: keyof StockItemForm,
+    key: keyof StockoutItemForm,
     value: string
   ) {
     setForm((prev) => {
@@ -150,6 +141,11 @@ export function StockForm({
     e.preventDefault()
     setError(null)
 
+    if (!form.storeId) {
+      setError("Please select a store.")
+      return
+    }
+
     const validItems = form.items.filter(
       (i) => i.item_id && Number(i.quantity) > 0 && i.price
     )
@@ -161,6 +157,12 @@ export function StockForm({
     const userId = session?.id
     if (!userId) {
       setError("You must be logged in.")
+      return
+    }
+
+    // Only allow editing pending stockouts
+    if (editing && editing.status !== "pending") {
+      setError("Only pending stockouts can be edited.")
       return
     }
 
@@ -189,12 +191,12 @@ export function StockForm({
       <DialogContent className="max-h-[90vh] overflow-auto w-fit max-w-[95vw]">
         <DialogHeader>
           <DialogTitle>
-            {editing ? "Edit Stock Entry" : "Add Stock Entry"}
+            {editing ? "Edit Stockout" : "Add Stockout"}
           </DialogTitle>
           <DialogDescription>
             {editing
-              ? "Update the stock entry details."
-              : "Record products received from the workshop."}
+              ? "Update the stockout details."
+              : "Send stock items to a store."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -205,12 +207,31 @@ export function StockForm({
           ) : null}
 
           <div className="grid gap-2">
-            <Label htmlFor="stock-date">Date</Label>
+            <Label>Store</Label>
+            <Select
+              value={form.storeId}
+              onValueChange={(v) => setField("storeId", v)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select store" />
+              </SelectTrigger>
+              <SelectContent>
+                {stores?.map((s) => (
+                  <SelectItem key={s._id} value={s._id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-2">
+            <Label>Note</Label>
             <Input
-              id="stock-date"
-              type="date"
-              value={form.date}
-              onChange={(e) => setField("date", e.target.value)}
+              type="text"
+              placeholder="Optional note"
+              value={form.note}
+              onChange={(e) => setField("note", e.target.value)}
             />
           </div>
 
@@ -282,26 +303,6 @@ export function StockForm({
           >
             + Add Item
           </Button>
-
-          <div className="grid gap-2">
-            <Label htmlFor="stock-description">Description</Label>
-            <Input
-              id="stock-description"
-              placeholder="What this stock entry is about"
-              value={form.description}
-              onChange={(e) => setField("description", e.target.value)}
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="stock-note">Note</Label>
-            <Input
-              id="stock-note"
-              placeholder="Optional note"
-              value={form.note}
-              onChange={(e) => setField("note", e.target.value)}
-            />
-          </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <Button

@@ -5,7 +5,6 @@ import { Label } from "@/components/ui/label"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -222,15 +221,7 @@ export function ProductForm({
               </select>
             </div>
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="product-tags">Tags</Label>
-            <Input
-              id="product-tags"
-              placeholder="tag1, tag2, tag3"
-              value={form.tags}
-              onChange={(e) => setField("tags", e.target.value)}
-            />
-          </div>
+          
 
           <div className="grid gap-2">
             <Label htmlFor="product-image">Image URL</Label>
