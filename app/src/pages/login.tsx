@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { yupResolver } from "@hookform/resolvers/yup"
 import { useForm, type SubmitHandler } from "react-hook-form"
-import { Link, useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button.tsx"
 import {
@@ -30,7 +30,7 @@ export function LoginPage() {
   } = useForm<LoginFormValues>({
     resolver: yupResolver(loginSchema),
     defaultValues: {
-      email: "",
+      identifier: "",
       password: "",
     },
   })
@@ -39,7 +39,7 @@ export function LoginPage() {
     try {
       setServerError(null)
       const user = await login({
-        email: data.email,
+        identifier: data.identifier,
         password: data.password,
       })
 
@@ -57,7 +57,7 @@ export function LoginPage() {
       <CardHeader className="border-b pb-4">
         <CardTitle>Welcome back</CardTitle>
         <CardDescription>
-          Sign in with your email and password.
+          Sign in with your email or phone number.
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -68,18 +68,18 @@ export function LoginPage() {
             </p>
           ) : null}
           <div className="grid gap-2">
-            <Label htmlFor="login-email">Email</Label>
+            <Label htmlFor="login-identifier">Email or Phone</Label>
             <Input
-              id="login-email"
-              type="email"
-              autoComplete="email"
-              placeholder="you@example.com"
-              aria-invalid={Boolean(errors.email)}
-              {...register("email")}
+              id="login-identifier"
+              type="text"
+              autoComplete="username"
+              placeholder="you@example.com or +2519..."
+              aria-invalid={Boolean(errors.identifier)}
+              {...register("identifier")}
             />
-            {errors.email ? (
+            {errors.identifier ? (
               <p className="text-destructive text-sm" role="alert">
-                {errors.email.message}
+                {errors.identifier.message}
               </p>
             ) : null}
           </div>
@@ -103,15 +103,6 @@ export function LoginPage() {
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? "Signing in..." : "Sign in"}
           </Button>
-          <p className="text-muted-foreground text-center text-sm">
-            Need an account?{" "}
-            <Link
-              to="/signup"
-              className="text-primary font-medium underline-offset-4 hover:underline"
-            >
-              Create one
-            </Link>
-          </p>
         </CardFooter>
       </form>
     </Card>

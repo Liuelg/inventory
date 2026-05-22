@@ -8,6 +8,7 @@ import {
   ShoppingCart,
   Store,
   Truck,
+  Users,
   Warehouse,
 } from "lucide-react"
 import { useLocation } from "react-router-dom"
@@ -39,6 +40,13 @@ const SIDEBAR_NAV_ITEMS: SidebarNavItem[] = [
     icon: HomeIcon,
     tooltip: "Home",
     end: true,
+    roles: ["admin"],
+  },
+  {
+    title: "Accounts",
+    to: "/accounts",
+    icon: Users,
+    tooltip: "Accounts",
     roles: ["admin"],
   },
   {

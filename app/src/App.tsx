@@ -23,7 +23,7 @@ import { MyStorePage } from "@/features/my-store/pages/MyStorePage.tsx"
 import { Home } from "@/pages/Home.tsx"
 import { LoginPage } from "@/pages/login.tsx"
 import { NotFound } from "@/pages/NotFound.tsx"
-import { SignupPage } from "@/pages/signup.tsx"
+import { AccountsPage } from "@/features/accounts/pages/AccountsPage.tsx"
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { data: session, isPending } = useAuthSession()
@@ -112,14 +112,7 @@ export function App() {
               </RedirectIfAuthed>
             }
           />
-          <Route
-            path="/signup"
-            element={
-              <RedirectIfAuthed>
-                <SignupPage />
-              </RedirectIfAuthed>
-            }
-          />
+
         </Route>
         <Route
           element={
@@ -134,6 +127,14 @@ export function App() {
             element={
               <RequireRole allowedRoles={["admin"]}>
                 <Home />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/accounts"
+            element={
+              <RequireRole allowedRoles={["admin"]}>
+                <AccountsPage />
               </RequireRole>
             }
           />

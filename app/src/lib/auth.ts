@@ -1,6 +1,7 @@
 export type AuthUser = {
   id: string
   email: string
+  phone?: string
   name: string
   role: string
   store?: string
@@ -11,17 +12,23 @@ type AuthResponse = {
   user: AuthUser
 }
 
-type LoginPayload = {
-  email: string
+export type LoginPayload = {
+  identifier: string
   password: string
 }
 
-type RegisterPayload = {
+export type RegisterPayload = {
   name: string
   email: string
+  phone?: string
   password: string
   role: string
   store?: string
+}
+
+export type ChangePasswordPayload = {
+  currentPassword: string
+  newPassword: string
 }
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000"
@@ -92,6 +99,27 @@ export async function login(payload: LoginPayload) {
   })
   setAuthSession(data.token, data.user)
   return data.user
+}
+
+export async function changePassword(payload: ChangePasswordPayload) {
+  const token = getAuthToken()
+  const response = await fetch(`${API_BASE}/api/auth/change-password`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  })
+
+  const data = await response.json().catch(() => null)
+  if (!response.ok) {
+    const message =
+      data?.message || data?.error || `Request failed: ${response.status}`
+    throw new Error(message)
+  }
+
+  return data
 }
 
 export async function fetchCurrentUser() {

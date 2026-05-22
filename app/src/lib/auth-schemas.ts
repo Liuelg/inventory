@@ -1,10 +1,17 @@
 import * as yup from "yup"
 
+function isEmailOrPhone(value: string | undefined): boolean {
+  if (!value) return false
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  const phoneRegex = /^\+?[0-9\s\-]{7,20}$/
+  return emailRegex.test(value) || phoneRegex.test(value)
+}
+
 export const loginSchema = yup.object({
-  email: yup
+  identifier: yup
     .string()
-    .email("Enter a valid email address")
-    .required("Email is required"),
+    .required("Email or phone is required")
+    .test("is-email-or-phone", "Enter a valid email or phone number", isEmailOrPhone),
   password: yup.string().required("Password is required"),
 })
 

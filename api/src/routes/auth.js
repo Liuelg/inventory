@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import process from 'node:process';
 import User from '../models/User.js';
+import { authMiddleware } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -25,19 +26,30 @@ function buildToken(user) {
   return jwt.sign(payload, jwtSecret, { expiresIn: process.env.JWT_EXPIRES_IN || '1d' });
 }
 
-router.post('/register', async (req, res, next) => {
+router.post('/register', authMiddleware, async (req, res, next) => {
   try {
-    const { email, password, name, role, store } = req.body;
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can create accounts' });
+    }
+
+    const { email, phone, password, name, role, store } = req.body;
     if (!email || !password || !name) {
       return res.status(400).json({ message: 'Name, email and password are required' });
     }
 
-    const existing = await User.findOne({ email });
-    if (existing) {
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
       return res.status(400).json({ message: 'Email already registered' });
     }
 
-    const allowedRoles = ['admin', 'sales', 'stock'];
+    if (phone) {
+      const existingPhone = await User.findOne({ phone });
+      if (existingPhone) {
+        return res.status(400).json({ message: 'Phone number already registered' });
+      }
+    }
+
+    const allowedRoles = ['sales', 'stock'];
     const userRole = allowedRoles.includes(role) ? role : 'stock';
 
     const userData = {
@@ -48,6 +60,7 @@ router.post('/register', async (req, res, next) => {
       is_active: true,
     };
 
+    if (phone) userData.phone = phone;
     if (store && userRole === 'sales') {
       userData.store = store;
     }
@@ -56,7 +69,7 @@ router.post('/register', async (req, res, next) => {
     await user.save();
     const token = buildToken(user);
 
-    const userResponse = { id: user._id.toString(), email: user.email, name: user.name, role: user.role };
+    const userResponse = { id: user._id.toString(), email: user.email, phone: user.phone, name: user.name, role: user.role };
     if (user.store) userResponse.store = user.store.toString();
     res.json({ token, user: userResponse });
   } catch (err) {
@@ -66,26 +79,63 @@ router.post('/register', async (req, res, next) => {
 
 router.post('/login', async (req, res, next) => {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required' });
+    const { identifier, password } = req.body;
+    if (!identifier || !password) {
+      return res.status(400).json({ message: 'Email or phone and password are required' });
     }
 
-    const user = await User.findOne({ email });
+    let user = await User.findOne({ email: identifier });
     if (!user) {
-      return res.status(401).json({ message: 'Invalid email or password' });
+      user = await User.findOne({ phone: identifier });
+    }
+
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid email, phone or password' });
+    }
+
+    if (user.is_active === false) {
+      return res.status(403).json({ message: 'Account is inactive. Contact your administrator.' });
     }
 
     const passwordMatches = await bcrypt.compare(password, user.password);
     if (!passwordMatches) {
-      return res.status(401).json({ message: 'Invalid email or password' });
+      return res.status(401).json({ message: 'Invalid email, phone or password' });
     }
 
     const token = buildToken(user);
 
-    const userResponse = { id: user._id.toString(), email: user.email, name: user.name, role: user.role };
+    const userResponse = { id: user._id.toString(), email: user.email, phone: user.phone, name: user.name, role: user.role };
     if (user.store) userResponse.store = user.store.toString();
     res.json({ token, user: userResponse });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/change-password', authMiddleware, async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Current password and new password are required' });
+    }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ message: 'New password must be at least 8 characters' });
+    }
+
+    const user = await User.findById(req.user.sub);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const passwordMatches = await bcrypt.compare(currentPassword, user.password);
+    if (!passwordMatches) {
+      return res.status(401).json({ message: 'Current password is incorrect' });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    res.json({ message: 'Password changed successfully' });
   } catch (err) {
     next(err);
   }
@@ -116,7 +166,7 @@ router.get('/me', async (req, res, next) => {
     if (!user) {
       return res.status(401).json({ message: 'User not found' });
     }
-    const userResponse = { id: user._id.toString(), email: user.email, name: user.name, role: user.role };
+    const userResponse = { id: user._id.toString(), email: user.email, phone: user.phone, name: user.name, role: user.role };
     if (user.store) userResponse.store = user.store.toString();
     res.json({ user: userResponse });
   } catch (err) {
