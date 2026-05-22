@@ -15,7 +15,7 @@ router.post('/', async (req, res) => {
 
 router.get('/', async (req, res) => {
   try {
-    const products = await Product.find();
+    const products = await Product.find().populate('category');
     return res.json(products);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -27,7 +27,7 @@ router.get('/:id', async (req, res) => {
     console.log({
       id: req.params.id
     })
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findById(req.params.id).populate('category');
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }

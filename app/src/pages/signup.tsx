@@ -14,8 +14,16 @@ import {
 } from "@/components/ui/card.tsx"
 import { Input } from "@/components/ui/input.tsx"
 import { Label } from "@/components/ui/label.tsx"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select.tsx"
 import { useQueryClient } from "@tanstack/react-query"
 import { register as registerUser } from "@/lib/auth.ts"
+import { useStores } from "@/features/stores/hooks"
 import {
   type SignupFormValues,
   signupSchema,
@@ -25,19 +33,27 @@ export function SignupPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [serverError, setServerError] = useState<string | null>(null)
+  const { data: stores } = useStores()
 
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<SignupFormValues>({
     resolver: yupResolver(signupSchema),
     defaultValues: {
+      name: "",
       email: "",
       password: "",
       confirmPassword: "",
+      role: "stock",
+      store: "",
     },
   })
+
+  const selectedRole = watch("role")
 
   const onSubmit: SubmitHandler<SignupFormValues> = async (data) => {
     try {
@@ -46,6 +62,8 @@ export function SignupPage() {
         email: data.email,
         password: data.password,
         name: data.name,
+        role: data.role,
+        store: data.role === "sales" ? data.store : undefined,
       })
 
       queryClient.setQueryData(["auth", "session"], user)
@@ -88,6 +106,52 @@ export function SignupPage() {
               </p>
             ) : null}
           </div>
+          <div className="grid gap-2">
+            <Label htmlFor="signup-role">Role</Label>
+            <Select
+              value={watch("role") || "stock"}
+              onValueChange={(v) => setValue("role", v as "admin" | "sales" | "stock", { shouldValidate: true })}
+            >
+              <SelectTrigger id="signup-role" aria-invalid={Boolean(errors.role)}>
+                <SelectValue placeholder="Select role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="sales">Sales (Store)</SelectItem>
+                <SelectItem value="stock">Stock (Warehouse)</SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.role ? (
+              <p className="text-destructive text-sm" role="alert">
+                {errors.role.message}
+              </p>
+            ) : null}
+          </div>
+          {selectedRole === "sales" ? (
+            <div className="grid gap-2">
+              <Label htmlFor="signup-store">Store</Label>
+              <Select
+                value={watch("store") || ""}
+                onValueChange={(v) => setValue("store", v, { shouldValidate: true })}
+              >
+                <SelectTrigger id="signup-store" aria-invalid={Boolean(errors.store)}>
+                  <SelectValue placeholder="Select your store" />
+                </SelectTrigger>
+                <SelectContent>
+                  {stores?.map((s) => (
+                    <SelectItem key={s._id} value={s._id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.store ? (
+                <p className="text-destructive text-sm" role="alert">
+                  {errors.store.message}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           <div className="grid gap-2">
             <Label htmlFor="signup-email">Email</Label>
             <Input

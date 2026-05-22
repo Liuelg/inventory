@@ -43,7 +43,10 @@ export function ProductTable({ onEdit }: ProductTableProps) {
     },
     {
       header: "Category",
-      cell: (product) => product.category || "-",
+      cell: (product) =>
+        typeof product.category === "string"
+          ? product.category || "-"
+          : product.category?.name || "-",
     },
     {
       header: "Price",

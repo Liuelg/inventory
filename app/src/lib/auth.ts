@@ -3,6 +3,7 @@ export type AuthUser = {
   email: string
   name: string
   role: string
+  store?: string
 }
 
 type AuthResponse = {
@@ -19,6 +20,8 @@ type RegisterPayload = {
   name: string
   email: string
   password: string
+  role: string
+  store?: string
 }
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000"

@@ -12,20 +12,22 @@ function buildToken(user) {
     throw new Error('JWT_SECRET is not configured');
   }
 
-  return jwt.sign(
-    {
-      sub: user._id.toString(),
-      email: user.email,
-      role: user.role,
-    },
-    jwtSecret,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '1d' }
-  );
+  const payload = {
+    sub: user._id.toString(),
+    email: user.email,
+    role: user.role,
+  };
+
+  if (user.store) {
+    payload.store = user.store.toString();
+  }
+
+  return jwt.sign(payload, jwtSecret, { expiresIn: process.env.JWT_EXPIRES_IN || '1d' });
 }
 
 router.post('/register', async (req, res, next) => {
   try {
-    const { email, password, name } = req.body;
+    const { email, password, name, role, store } = req.body;
     if (!email || !password || !name) {
       return res.status(400).json({ message: 'Name, email and password are required' });
     }
@@ -35,21 +37,28 @@ router.post('/register', async (req, res, next) => {
       return res.status(400).json({ message: 'Email already registered' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({
+    const allowedRoles = ['admin', 'sales', 'stock'];
+    const userRole = allowedRoles.includes(role) ? role : 'stock';
+
+    const userData = {
       email,
-      password: hashedPassword,
+      password: await bcrypt.hash(password, 10),
       name,
-      role: 'staff',
+      role: userRole,
       is_active: true,
-    });
+    };
+
+    if (store && userRole === 'sales') {
+      userData.store = store;
+    }
+
+    const user = new User(userData);
     await user.save();
     const token = buildToken(user);
 
-    res.json({
-      token,
-      user: { id: user._id.toString(), email: user.email, name: user.name, role: user.role },
-    });
+    const userResponse = { id: user._id.toString(), email: user.email, name: user.name, role: user.role };
+    if (user.store) userResponse.store = user.store.toString();
+    res.json({ token, user: userResponse });
   } catch (err) {
     next(err);
   }
@@ -74,10 +83,9 @@ router.post('/login', async (req, res, next) => {
 
     const token = buildToken(user);
 
-    res.json({
-      token,
-      user: { id: user._id.toString(), email: user.email, name: user.name, role: user.role },
-    });
+    const userResponse = { id: user._id.toString(), email: user.email, name: user.name, role: user.role };
+    if (user.store) userResponse.store = user.store.toString();
+    res.json({ token, user: userResponse });
   } catch (err) {
     next(err);
   }
@@ -108,9 +116,9 @@ router.get('/me', async (req, res, next) => {
     if (!user) {
       return res.status(401).json({ message: 'User not found' });
     }
-    res.json({
-      user: { id: user._id.toString(), email: user.email, name: user.name, role: user.role },
-    });
+    const userResponse = { id: user._id.toString(), email: user.email, name: user.name, role: user.role };
+    if (user.store) userResponse.store = user.store.toString();
+    res.json({ user: userResponse });
   } catch (err) {
     if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
       return res.status(401).json({ message: 'Invalid or expired token' });

@@ -9,6 +9,14 @@ export function useStores() {
   })
 }
 
+export function useStore(id: string) {
+  return useQuery({
+    queryKey: ["stores", id],
+    queryFn: () => storeApi.get(id),
+    enabled: !!id,
+  })
+}
+
 export function useCreateStore() {
   const qc = useQueryClient()
 

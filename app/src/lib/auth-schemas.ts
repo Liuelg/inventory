@@ -24,6 +24,18 @@ export const signupSchema = yup.object({
     .string()
     .required("Please confirm your password")
     .oneOf([yup.ref("password")], "Passwords must match"),
+  role: yup
+    .string()
+    .oneOf(["admin", "sales", "stock"], "Select a valid role")
+    .required("Role is required"),
+  store: yup
+    .string()
+    .default("")
+    .when("role", {
+      is: "sales",
+      then: (schema) => schema.required("Store is required for sales users"),
+      otherwise: (schema) => schema.optional(),
+    }),
 })
 
 export type SignupFormValues = yup.InferType<typeof signupSchema>

@@ -10,6 +10,7 @@ import {
 import { AppSidebarLayout } from "@/layout/app-sidebar-layout.tsx"
 import { AuthLayout } from "@/layout/auth-layout.tsx"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
+import { getDefaultRouteForRole, type UserRole } from "@/hooks/useSidebar.ts"
 import { CategoryPage } from "@/features/categories/pages/CategoryPage.tsx"
 import { ProductPage } from "@/features/products/pages/ProductPage.tsx"
 import { StorePage } from "@/features/stores/pages/StorePage.tsx"
@@ -18,6 +19,7 @@ import { SalesPage } from "@/features/sales/pages/SalesPage.tsx"
 import { GoodInPage } from "@/features/good-ins/pages/GoodInPage.tsx"
 import { StockPage } from "@/features/stock/pages/StockPage.tsx"
 import { StockoutPage } from "@/features/stockouts/pages/StockoutPage.tsx"
+import { MyStorePage } from "@/features/my-store/pages/MyStorePage.tsx"
 import { Home } from "@/pages/Home.tsx"
 import { LoginPage } from "@/pages/login.tsx"
 import { NotFound } from "@/pages/NotFound.tsx"
@@ -50,7 +52,8 @@ function RedirectIfAuthed({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isPending && session) {
-      navigate("/", { replace: true })
+      const defaultRoute = getDefaultRouteForRole(session.role)
+      navigate(defaultRoute, { replace: true })
     }
   }, [isPending, session, navigate])
 
@@ -63,6 +66,37 @@ function RedirectIfAuthed({ children }: { children: React.ReactNode }) {
   }
 
   return !session ? <>{children}</> : null
+}
+
+function RequireRole({
+  children,
+  allowedRoles,
+}: {
+  children: React.ReactNode
+  allowedRoles: UserRole[]
+}) {
+  const { data: session } = useAuthSession()
+  const navigate = useNavigate()
+  const role = (session?.role as UserRole) || "stock"
+
+  useEffect(() => {
+    if (session && !allowedRoles.includes(role)) {
+      const defaultRoute = getDefaultRouteForRole(role)
+      navigate(defaultRoute, { replace: true })
+    }
+  }, [session, role, allowedRoles, navigate])
+
+  if (!session || !allowedRoles.includes(role)) {
+    return null
+  }
+
+  return <>{children}</>
+}
+
+function RoleRedirect() {
+  const { data: session } = useAuthSession()
+  const defaultRoute = getDefaultRouteForRole(session?.role || "stock")
+  return <Navigate to={defaultRoute} replace />
 }
 
 export function App() {
@@ -94,18 +128,95 @@ export function App() {
             </RequireAuth>
           }
         >
-          <Route path="/" element={<Home />} />
-          <Route path="/category" element={<CategoryPage />} />
-          <Route path="/products" element={<ProductPage />} />
-          <Route path="/stores" element={<StorePage />} />
-          <Route path="/stores/:id" element={<StoreDetailPage />} />
-          <Route path="/sales" element={<SalesPage />} />
-          <Route path="/stock" element={<StockPage />} />
-          <Route path="/good-ins" element={<GoodInPage />} />
-          <Route path="/stockouts" element={<StockoutPage />} />
+          {/* admin */}
+          <Route
+            path="/"
+            element={
+              <RequireRole allowedRoles={["admin"]}>
+                <Home />
+              </RequireRole>
+            }
+          />
+
+          {/* sales */}
+          <Route
+            path="/my-store"
+            element={
+              <RequireRole allowedRoles={["sales"]}>
+                <MyStorePage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/sales"
+            element={
+              <RequireRole allowedRoles={["admin", "sales"]}>
+                <SalesPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/good-ins"
+            element={
+              <RequireRole allowedRoles={["admin", "sales"]}>
+                <GoodInPage />
+              </RequireRole>
+            }
+          />
+
+          {/* admin + stock */}
+          <Route
+            path="/category"
+            element={
+              <RequireRole allowedRoles={["admin", "stock"]}>
+                <CategoryPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/products"
+            element={
+              <RequireRole allowedRoles={["admin", "stock"]}>
+                <ProductPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/stock"
+            element={
+              <RequireRole allowedRoles={["admin", "stock"]}>
+                <StockPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/stores"
+            element={
+              <RequireRole allowedRoles={["admin", "stock"]}>
+                <StorePage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/stores/:id"
+            element={
+              <RequireRole allowedRoles={["admin", "stock"]}>
+                <StoreDetailPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/stockouts"
+            element={
+              <RequireRole allowedRoles={["admin", "stock"]}>
+                <StockoutPage />
+              </RequireRole>
+            }
+          />
+
           <Route path="*" element={<NotFound />} />
         </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<RoleRedirect />} />
       </Routes>
     </BrowserRouter>
   )

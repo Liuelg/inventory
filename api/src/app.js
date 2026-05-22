@@ -46,7 +46,7 @@ app.use("/sales", authMiddleware, salesRoutes);
 app.use("/products", authMiddleware, productRoutes);
 app.use("/goodIns", authMiddleware, goodInRoutes);
 app.use("/transfers", authMiddleware, transferRoutes);
-app.use("/stores", authMiddleware, storeRoutes);
+app.use("/stores", storeRoutes);
 app.use("/api/categories", authMiddleware, categoryRoutes);
 app.use("/api/sub-categories", authMiddleware, subCategoryRoutes);
 app.use("/api/dashboard", authMiddleware, dashboardRoutes);

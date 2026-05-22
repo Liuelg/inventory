@@ -53,10 +53,15 @@ function getInitialState(editing?: Product | null): ProductFormState {
     return initialState
   }
 
+  const categoryId =
+    typeof editing.category === "string"
+      ? editing.category
+      : editing.category?._id ?? ""
+
   return {
     name: editing.name ?? "",
     description: editing.description ?? "",
-    category: editing.category ?? "",
+    category: categoryId,
     amount:
       editing.price?.amount !== undefined ? String(editing.price.amount) : "",
     currency: editing.price?.currency ?? "USD",
@@ -185,7 +190,7 @@ export function ProductForm({
               </SelectTrigger>
               <SelectContent>
                 {categories?.map((c) => (
-                  <SelectItem key={c._id} value={c.name}>
+                  <SelectItem key={c._id} value={c._id}>
                     {c.name}
                   </SelectItem>
                 ))}

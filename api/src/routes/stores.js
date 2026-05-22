@@ -1,9 +1,10 @@
 import { Router } from 'express';
 const router = Router();
 import Store from '../models/Stores.js';
+import { authMiddleware } from '../middleware/auth.js';
 
 
-router.post('/', async (req, res) => {
+router.post('/', authMiddleware, async (req, res) => {
   try {
     const store = new Store(req.body);
     await store.save();
@@ -37,7 +38,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const updatedStore = await Store.findByIdAndUpdate(
       req.params.id, 
@@ -51,7 +52,7 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const store = await Store.findByIdAndDelete(req.params.id);
     if (!store) return res.status(404).json({ message: 'Store not found' });

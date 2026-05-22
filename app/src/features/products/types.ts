@@ -3,11 +3,16 @@ export type ProductPrice = {
   currency?: string
 }
 
+export type ProductCategory = {
+  _id: string
+  name: string
+}
+
 export type Product = {
   _id: string
   name: string
   description?: string
-  category?: string
+  category?: string | ProductCategory
   price?: ProductPrice
   previous_prices?: number
   tags?: string[]

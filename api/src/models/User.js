@@ -6,10 +6,11 @@ const userSchema = new Schema({
   password: { type: String, required: true }, 
   role: { 
     type: String, 
-    enum: ['admin', 'manager', 'staff'], 
-    default: 'staff' 
+    enum: ['admin', 'sales', 'stock'], 
+    default: 'stock' 
   },
-  is_active: {type: Boolean}
+  is_active: {type: Boolean},
+  store: { type: Schema.Types.ObjectId, ref: 'Store' }
 }, { timestamps: true });
 
 export default model('User', userSchema);
