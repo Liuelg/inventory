@@ -203,7 +203,8 @@ export function SalesForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-auto w-fit max-w-[95vw]">
+      {/* CHANGED: Swapped w-fit max-w-[95vw] out for w-full sm:max-w-[650px] */}
+      <DialogContent className="max-h-[90vh] overflow-auto w-full sm:max-w-[650px]">
         <DialogHeader>
           <DialogTitle>{editing ? "Edit Sale" : "Add Sale"}</DialogTitle>
           <DialogDescription>
@@ -266,9 +267,10 @@ export function SalesForm({
           </div>
 
           {form.items.map((item, index) => (
+            /* CHANGED: The grid now gives the Product column (1fr) all the extra wide space */
             <div
               key={index}
-              className="grid grid-cols-[auto_90px_90px_36px] gap-3 items-end"
+              className="grid grid-cols-[1fr_90px_90px_36px] gap-3 items-end"
             >
               <div className="grid gap-1">
                 <Label className="text-xs">Product</Label>

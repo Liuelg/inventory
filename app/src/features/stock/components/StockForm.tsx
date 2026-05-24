@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Trash2 } from "lucide-react" // Added for a cleaner delete icon if you use lucide-react
 import {
   Dialog,
   DialogContent,
@@ -186,7 +187,8 @@ export function StockForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-auto w-fit max-w-[95vw]">
+      {/* CHANGED: Swapped w-fit max-w-[95vw] for explicit md widths so it spans out cleanly */}
+      <DialogContent className="max-h-[90vh] overflow-auto sm:max-w-[600px] md:max-w-[700px] w-full">
         <DialogHeader>
           <DialogTitle>
             {editing ? "Edit Stock Entry" : "Add Stock Entry"}
@@ -197,15 +199,17 @@ export function StockForm({
               : "Record products received from the workshop."}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+
+        {/* CHANGED: Removed w-96 so the form scales up to match the widened dialog */}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5 w-full mt-2">
           {error ? (
-            <p className="text-destructive text-sm" role="alert">
+            <p className="text-destructive text-sm font-medium" role="alert">
               {error}
             </p>
           ) : null}
 
-          <div className="grid gap-2">
-            <Label htmlFor="stock-date">Date</Label>
+          <div className="grid gap-2 max-w-[240px]">
+            <Label htmlFor="stock-date" className="font-semibold">Date</Label>
             <Input
               id="stock-date"
               type="date"
@@ -214,96 +218,120 @@ export function StockForm({
             />
           </div>
 
-          <Label>Items</Label>
-
-          {form.items.map((item, index) => (
-            <div
-              key={index}
-              className="grid grid-cols-[auto_90px_90px_36px] gap-3 items-end"
-            >
-              <div className="grid gap-1">
-                <Label className="text-xs">Product</Label>
-                <Select
-                  value={item.item_id}
-                  onValueChange={(v) => setItemField(index, "item_id", v)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select product" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {products?.map((p) => (
-                      <SelectItem key={p._id} value={p._id}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-1">
-                <Label className="text-xs">Qty</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={item.quantity}
-                  onChange={(e) =>
-                    setItemField(index, "quantity", e.target.value)
-                  }
-                />
-              </div>
-              <div className="grid gap-1">
-                <Label className="text-xs">Price</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={item.price}
-                  onChange={(e) =>
-                    setItemField(index, "price", e.target.value)
-                  }
-                />
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => removeItem(index)}
-                disabled={form.items.length <= 1}
-              >
-                <span className="text-destructive">×</span>
-              </Button>
+          <div className="space-y-3">
+            <Label className="font-semibold text-sm block border-b pb-1.5">Items</Label>
+            
+            {/* CHANGED: Added a dedicated header line for the inputs so we don't repeat labels inside the map */}
+            <div className="grid grid-cols-[1fr_100px_120px_40px] gap-3 px-1 text-xs font-medium text-muted-foreground hidden sm:grid">
+              <div>Product</div>
+              <div>Qty</div>
+              <div>Price</div>
+              <div></div>
             </div>
-          ))}
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addItem}
-          >
-            + Add Item
-          </Button>
+            <div className="flex flex-col gap-3">
+              {form.items.map((item, index) => (
+                <div
+                  key={index}
+                  /* CHANGED: Adjusted grid template fractions to maximize Product space */
+                  className="grid grid-cols-1 sm:grid-cols-[1fr_100px_120px_40px] gap-3 items-center border p-3 rounded-lg sm:border-0 sm:p-0 sm:rounded-none"
+                >
+                  <div className="grid gap-1">
+                    <span className="text-xs font-medium text-muted-foreground sm:hidden">Product</span>
+                    <Select
+                      value={item.item_id}
+                      onValueChange={(v) => setItemField(index, "item_id", v)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select product" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {products?.map((p) => (
+                          <SelectItem key={p._id} value={p._id}>
+                            {p.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="stock-description">Description</Label>
-            <Input
-              id="stock-description"
-              placeholder="What this stock entry is about"
-              value={form.description}
-              onChange={(e) => setField("description", e.target.value)}
-            />
+                  <div className="grid gap-1">
+                    <span className="text-xs font-medium text-muted-foreground sm:hidden">Qty</span>
+                    <Input
+                      type="number"
+                      min="1"
+                      placeholder="0"
+                      value={item.quantity}
+                      onChange={(e) =>
+                        setItemField(index, "quantity", e.target.value)
+                      }
+                    />
+                  </div>
+
+                  <div className="grid gap-1">
+                    <span className="text-xs font-medium text-muted-foreground sm:hidden">Price</span>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={item.price}
+                      onChange={(e) =>
+                        setItemField(index, "price", e.target.value)
+                      }
+                    />
+                  </div>
+
+                  <div className="flex justify-end pt-3 sm:pt-0">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 text-muted-foreground hover:text-destructive"
+                      onClick={() => removeItem(index)}
+                      disabled={form.items.length <= 1}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-1"
+              onClick={addItem}
+            >
+              + Add Item
+            </Button>
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="stock-note">Note</Label>
-            <Input
-              id="stock-note"
-              placeholder="Optional note"
-              value={form.note}
-              onChange={(e) => setField("note", e.target.value)}
-            />
+          <div className="grid gap-4 sm:grid-cols-2 border-t pt-4">
+            <div className="grid gap-2">
+              <Label htmlFor="stock-description" className="font-semibold">Description</Label>
+              <Input
+                id="stock-description"
+                placeholder="What this stock entry is about"
+                value={form.description}
+                onChange={(e) => setField("description", e.target.value)}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="stock-note" className="font-semibold">Note</Label>
+              <Input
+                id="stock-note"
+                placeholder="Optional notes or context"
+                value={form.note}
+                onChange={(e) => setField("note", e.target.value)}
+              />
+            </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-2 pt-4 border-t mt-2">
             <Button
               type="button"
               variant="outline"
@@ -312,7 +340,7 @@ export function StockForm({
               Cancel
             </Button>
             <Button type="submit" disabled={isPending}>
-              {editing ? "Update" : "Create"}
+              {editing ? "Update" : "Create Entry"}
             </Button>
           </div>
         </form>
