@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react"
 import {
   ArrowUpFromLine,
+  BarChart3,
   Building2,
   HomeIcon,
   ListIcon,
@@ -75,7 +76,7 @@ const SIDEBAR_NAV_ITEMS: SidebarNavItem[] = [
     to: "/stores",
     icon: Building2,
     tooltip: "Stores",
-    roles: ["admin", "stock"],
+    roles: ["admin"],
   },
   {
     title: "Sales",
@@ -97,6 +98,13 @@ const SIDEBAR_NAV_ITEMS: SidebarNavItem[] = [
     icon: ArrowUpFromLine,
     tooltip: "Stockout",
     roles: ["admin", "stock"],
+  },
+  {
+    title: "Reports",
+    to: "/reports",
+    icon: BarChart3,
+    tooltip: "Reports",
+    roles: ["admin"],
   },
 ]
 

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
+import type { Product } from "@/features/products/types"
 import { useCreateStock, useUpdateStock } from "../hooks"
 import type { Stock, StockPayload } from "../types"
 
@@ -70,14 +71,29 @@ function getInitialState(editing?: Stock | null): StockFormState {
   }
 }
 
-function toPayload(form: StockFormState, userId: string): StockPayload {
-  const items = form.items
-    .filter((i) => i.item_id && i.quantity && i.price)
-    .map((i) => ({
+function getProductPrice(products: Product[] | undefined, itemId: string): number | undefined {
+  const product = products?.find((p) => p._id === itemId)
+  return product?.price?.amount
+}
+
+function toPayload(
+  form: StockFormState,
+  userId: string,
+  products: Product[] | undefined,
+  isAdmin: boolean
+): StockPayload {
+  const rawItems = form.items.filter((i) => i.item_id && Number(i.quantity) > 0)
+
+  const items = rawItems.map((i) => {
+    const price = isAdmin
+      ? Number(i.price)
+      : getProductPrice(products, i.item_id) ?? 0
+    return {
       item_id: i.item_id,
       quantity: Number(i.quantity),
-      price: Number(i.price),
-    }))
+      price,
+    }
+  })
 
   const totalAmount = items.reduce(
     (sum, i) => sum + i.quantity * i.price,
@@ -105,6 +121,7 @@ export function StockForm({
   const [error, setError] = useState<string | null>(null)
   const { data: session } = useAuthSession()
   const { data: products } = useProducts()
+  const isAdmin = session?.role === "admin"
   const create = useCreateStock()
   const update = useUpdateStock()
 
@@ -151,12 +168,28 @@ export function StockForm({
     e.preventDefault()
     setError(null)
 
-    const validItems = form.items.filter(
-      (i) => i.item_id && Number(i.quantity) > 0 && i.price
-    )
+    const validItems = form.items.filter((i) => {
+      const hasProduct = i.item_id && Number(i.quantity) > 0
+      if (!hasProduct) return false
+      if (isAdmin) return !!i.price
+      // Non-admin: price comes from product, just check product exists
+      return true
+    })
     if (validItems.length === 0) {
       setError("Please add at least one valid item.")
       return
+    }
+
+    // Non-admin: validate that selected products have a price set by admin
+    if (!isAdmin) {
+      for (const item of validItems) {
+        const price = getProductPrice(products, item.item_id)
+        if (price === undefined || price === null) {
+          const productName = products?.find((p) => p._id === item.item_id)?.name || item.item_id
+          setError(`${productName} does not have a price set. Contact an admin to set the price before adding stock.`)
+          return
+        }
+      }
     }
 
     const userId = session?.id
@@ -165,7 +198,7 @@ export function StockForm({
       return
     }
 
-    const payload = toPayload(form, userId)
+    const payload = toPayload(form, userId, products, isAdmin)
     if (editing) {
       update.mutate(
         { id: editing._id, payload },
@@ -222,10 +255,10 @@ export function StockForm({
             <Label className="font-semibold text-sm block border-b pb-1.5">Items</Label>
             
             {/* CHANGED: Added a dedicated header line for the inputs so we don't repeat labels inside the map */}
-            <div className="grid grid-cols-[1fr_100px_120px_40px] gap-3 px-1 text-xs font-medium text-muted-foreground hidden sm:grid">
+            <div className={`grid gap-3 px-1 text-xs font-medium text-muted-foreground hidden sm:grid ${isAdmin ? "grid-cols-[1fr_100px_120px_40px]" : "grid-cols-[1fr_100px_40px]"}`}>
               <div>Product</div>
               <div>Qty</div>
-              <div>Price</div>
+              {isAdmin && <div>Price</div>}
               <div></div>
             </div>
 
@@ -233,8 +266,7 @@ export function StockForm({
               {form.items.map((item, index) => (
                 <div
                   key={index}
-                  /* CHANGED: Adjusted grid template fractions to maximize Product space */
-                  className="grid grid-cols-1 sm:grid-cols-[1fr_100px_120px_40px] gap-3 items-center border p-3 rounded-lg sm:border-0 sm:p-0 sm:rounded-none"
+                  className={`grid grid-cols-1 gap-3 items-center border p-3 rounded-lg sm:border-0 sm:p-0 sm:rounded-none ${isAdmin ? "sm:grid-cols-[1fr_100px_120px_40px]" : "sm:grid-cols-[1fr_100px_40px]"}`}
                 >
                   <div className="grid gap-1">
                     <span className="text-xs font-medium text-muted-foreground sm:hidden">Product</span>
@@ -268,19 +300,21 @@ export function StockForm({
                     />
                   </div>
 
-                  <div className="grid gap-1">
-                    <span className="text-xs font-medium text-muted-foreground sm:hidden">Price</span>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={item.price}
-                      onChange={(e) =>
-                        setItemField(index, "price", e.target.value)
-                      }
-                    />
-                  </div>
+                  {isAdmin && (
+                    <div className="grid gap-1">
+                      <span className="text-xs font-medium text-muted-foreground sm:hidden">Price</span>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={item.price}
+                        onChange={(e) =>
+                          setItemField(index, "price", e.target.value)
+                        }
+                      />
+                    </div>
+                  )}
 
                   <div className="flex justify-end pt-3 sm:pt-0">
                     <Button

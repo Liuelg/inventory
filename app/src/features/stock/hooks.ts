@@ -9,6 +9,13 @@ export function useStocks() {
   })
 }
 
+export function useAvailableStock() {
+  return useQuery({
+    queryKey: ["stock", "available"],
+    queryFn: () => stockApi.available(),
+  })
+}
+
 export function useCreateStock() {
   const qc = useQueryClient()
 

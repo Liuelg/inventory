@@ -5,8 +5,18 @@ type DeleteStockResponse = {
   message: string
 }
 
+export type AvailableStockItem = {
+  product: { _id: string; name: string }
+  available: number
+}
+
 export const stockApi = {
   list: () => fetcher<Stock[]>("/api/stock"),
+
+  available: () =>
+    fetcher<{ success: boolean; data: AvailableStockItem[] }>(
+      "/api/stock/available"
+    ),
 
   get: (id: string) => fetcher<Stock>(`/api/stock/${id}`),
 

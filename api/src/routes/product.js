@@ -5,7 +5,13 @@ const router = Router()
 
 router.post('/', async (req, res) => {
   try {
-    const newProduct = new Product(req.body);
+    const body = { ...req.body };
+    // Only admins can set prices
+    if (req.user?.role !== 'admin') {
+      delete body.price;
+      delete body.previous_prices;
+    }
+    const newProduct = new Product(body);
     const savedProduct = await newProduct.save();
     return res.status(201).json(savedProduct);
   } catch (err) {
@@ -42,12 +48,18 @@ router.get('/:id', async (req, res) => {
 
 router.patch('/:id', async (req, res) => {
   try {
+    const body = { ...req.body };
+    // Only admins can update prices
+    if (req.user?.role !== 'admin') {
+      delete body.price;
+      delete body.previous_prices;
+    }
     const updatedProduct = await Product.findByIdAndUpdate(
       req.params.id,
-      { $set: req.body }, 
+      { $set: body },
       {
-        new: true,          
-        runValidators: true 
+        new: true,
+        runValidators: true
       }
     );
 

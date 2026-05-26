@@ -1,21 +1,43 @@
 import { Router } from 'express'
 import Stock from '../models/Stock.js'
+import Product from '../models/Products.js'
 
 const router = Router()
 
 router.post('/', async (req, res, next) => {
   try {
     const body = req.body
-    const stock = new Stock({
-      created_by: body.created_by,
-      date: body.date,
-      items: body.items.map((i) => ({
+    const isAdmin = req.user?.role === 'admin'
+
+    // If non-admin, enforce product prices from database
+    let items = body.items
+    if (!isAdmin) {
+      items = await Promise.all(body.items.map(async (i) => {
+        const product = await Product.findById(i.item_id)
+        const price = product?.price?.amount ?? 0
+        return {
+          item_id: i.item_id,
+          quantity: i.quantity,
+          remaining: i.remaining ?? i.quantity,
+          price,
+        }
+      }))
+    } else {
+      items = body.items.map((i) => ({
         item_id: i.item_id,
         quantity: i.quantity,
         remaining: i.remaining ?? i.quantity,
         price: i.price,
-      })),
-      totalAmount: body.totalAmount,
+      }))
+    }
+
+    const totalAmount = items.reduce((sum, i) => sum + (i.quantity * i.price), 0)
+
+    const stock = new Stock({
+      created_by: body.created_by,
+      date: body.date,
+      items,
+      totalAmount,
       description: body.description,
       note: body.note,
     })
@@ -57,18 +79,36 @@ router.get('/:id', async (req, res, next) => {
 router.patch('/:id', async (req, res, next) => {
   try {
     const body = req.body
+    const isAdmin = req.user?.role === 'admin'
     const update = {}
+
     if (body.date !== undefined) update.date = body.date
     if (body.description !== undefined) update.description = body.description
     if (body.note !== undefined) update.note = body.note
-    if (body.totalAmount !== undefined) update.totalAmount = body.totalAmount
+
     if (body.items !== undefined) {
-      update.items = body.items.map((i) => ({
-        item_id: i.item_id,
-        quantity: i.quantity,
-        remaining: i.remaining ?? i.quantity,
-        price: i.price,
-      }))
+      let items
+      if (!isAdmin) {
+        items = await Promise.all(body.items.map(async (i) => {
+          const product = await Product.findById(i.item_id)
+          const price = product?.price?.amount ?? 0
+          return {
+            item_id: i.item_id,
+            quantity: i.quantity,
+            remaining: i.remaining ?? i.quantity,
+            price,
+          }
+        }))
+      } else {
+        items = body.items.map((i) => ({
+          item_id: i.item_id,
+          quantity: i.quantity,
+          remaining: i.remaining ?? i.quantity,
+          price: i.price,
+        }))
+      }
+      update.items = items
+      update.totalAmount = items.reduce((sum, i) => sum + (i.quantity * i.price), 0)
     }
 
     const stock = await Stock.findByIdAndUpdate(
@@ -95,6 +135,47 @@ router.delete('/:id', async (req, res, next) => {
       return res.status(404).json({ message: 'Stock entry not found' })
     }
     res.json({ message: 'Stock entry deleted successfully' })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Get available stock per product (sum of remaining across all stock records)
+router.get('/available', async (req, res, next) => {
+  try {
+    const stocks = await Stock.find()
+
+    const availableMap = new Map()
+
+    for (const stock of stocks) {
+      for (const item of stock.items || []) {
+        const productId = item.item_id?.toString?.()
+        if (!productId) continue
+
+        const remaining = item.remaining || 0
+        const existing = availableMap.get(productId) || 0
+        availableMap.set(productId, existing + remaining)
+      }
+    }
+
+    // Convert to array and populate product names
+    const productIds = Array.from(availableMap.keys())
+    const Products = (await import('../models/Products.js')).default
+    const products = await Products.find({ _id: { $in: productIds } }).select('name')
+
+    const data = productIds.map((productId) => {
+      const product = products.find((p) => p._id.toString() === productId)
+      return {
+        product: {
+          _id: productId,
+          name: product?.name || 'Unknown Product',
+        },
+        available: availableMap.get(productId),
+      }
+    }).filter((item) => item.available > 0)
+      .sort((a, b) => b.available - a.available)
+
+    res.json({ success: true, data })
   } catch (err) {
     next(err)
   }

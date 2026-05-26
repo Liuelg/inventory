@@ -16,6 +16,7 @@ import authRoutes from "./routes/auth.js";
 import dashboardRoutes from "./routes/dashboard.js";
 import stockRoutes from "./routes/stock.js";
 import stockoutRoutes from "./routes/stockout.js";
+import reportRoutes from "./routes/reports.js";
 
 const app = express();
 
@@ -52,8 +53,8 @@ app.use("/api/sub-categories", authMiddleware, subCategoryRoutes);
 app.use("/api/dashboard", authMiddleware, dashboardRoutes);
 app.use("/api/stock", authMiddleware, stockRoutes);
 app.use("/api/stockouts", authMiddleware, stockoutRoutes);
+app.use("/api/reports", authMiddleware, reportRoutes);
 
-// Error and Fallback Handlers
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });
 });

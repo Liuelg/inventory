@@ -12,6 +12,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Pencil, Trash2 } from "lucide-react"
+import { useAuthSession } from "@/hooks/use-auth-session"
 import { useDeleteProduct, useProducts } from "../hooks"
 import type { Product } from "../types"
 
@@ -31,6 +32,8 @@ interface ProductTableProps {
 
 export function ProductTable({ onEdit }: ProductTableProps) {
   const { data: products, isLoading } = useProducts()
+  const { data: session } = useAuthSession()
+  const isAdmin = session?.role === "admin"
   const remove = useDeleteProduct()
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
@@ -66,14 +69,16 @@ export function ProductTable({ onEdit }: ProductTableProps) {
           <Button variant="ghost" size="sm" onClick={() => onEdit(product)}>
             <Pencil />
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-destructive"
-            onClick={() => setDeleteId(product._id)}
-          >
-            <Trash2 />
-          </Button>
+          {isAdmin && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-destructive"
+              onClick={() => setDeleteId(product._id)}
+            >
+              <Trash2 />
+            </Button>
+          )}
         </div>
       ),
     },

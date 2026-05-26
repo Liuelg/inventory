@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useAuthSession } from "@/hooks/use-auth-session"
 import { useCategories } from "@/features/categories/hooks"
 import { useCreateProduct, useUpdateProduct } from "../hooks"
 import type { Product, ProductPayload } from "../types"
@@ -112,6 +113,8 @@ export function ProductForm({
   )
   const [error, setError] = useState<string | null>(null)
   const { data: categories } = useCategories()
+  const { data: session } = useAuthSession()
+  const isAdmin = session?.role === "admin"
   const create = useCreateProduct()
   const update = useUpdateProduct()
 
@@ -198,46 +201,37 @@ export function ProductForm({
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-2">
-              <Label htmlFor="product-amount">Price Amount</Label>
-              <Input
-                id="product-amount"
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                value={form.amount}
-                onChange={(e) => setField("amount", e.target.value)}
-              />
+          {isAdmin && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-2">
+                <Label htmlFor="product-amount">Price Amount</Label>
+                <Input
+                  id="product-amount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={form.amount}
+                  onChange={(e) => setField("amount", e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="product-currency">Currency</Label>
+
+                <select
+                  id="product-currency"
+                  value={form.currency}
+                  onChange={(e) => setField("currency", e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">Select currency</option>
+                  <option value="USD">USD</option>
+                  <option value="ETB">ETB</option>
+                </select>
+              </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="product-currency">Currency</Label>
-
-              <select
-                id="product-currency"
-                value={form.currency}
-                onChange={(e) => setField("currency", e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="">Select currency</option>
-                <option value="USD">USD</option>
-                <option value="ETB">ETB</option>
-              </select>
-            </div>
-          </div>
-          
-
-          <div className="grid gap-2">
-            <Label htmlFor="product-image">Image URL</Label>
-            <Input
-              id="product-image"
-              placeholder="https://..."
-              value={form.image}
-              onChange={(e) => setField("image", e.target.value)}
-            />
-          </div>
-
+          )}
+ 
           <div className="flex justify-end gap-2">
             <Button
               type="button"

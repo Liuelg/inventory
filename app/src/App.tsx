@@ -24,6 +24,7 @@ import { Home } from "@/pages/Home.tsx"
 import { LoginPage } from "@/pages/login.tsx"
 import { NotFound } from "@/pages/NotFound.tsx"
 import { AccountsPage } from "@/features/accounts/pages/AccountsPage.tsx"
+import { ReportsPage } from "@/features/reports/pages/ReportsPage.tsx"
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { data: session, isPending } = useAuthSession()
@@ -193,7 +194,7 @@ export function App() {
           <Route
             path="/stores"
             element={
-              <RequireRole allowedRoles={["admin", "stock"]}>
+              <RequireRole allowedRoles={["admin"]}>
                 <StorePage />
               </RequireRole>
             }
@@ -201,7 +202,7 @@ export function App() {
           <Route
             path="/stores/:id"
             element={
-              <RequireRole allowedRoles={["admin", "stock"]}>
+              <RequireRole allowedRoles={["admin"]}>
                 <StoreDetailPage />
               </RequireRole>
             }
@@ -211,6 +212,14 @@ export function App() {
             element={
               <RequireRole allowedRoles={["admin", "stock"]}>
                 <StockoutPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/reports"
+            element={
+              <RequireRole allowedRoles={["admin"]}>
+                <ReportsPage />
               </RequireRole>
             }
           />

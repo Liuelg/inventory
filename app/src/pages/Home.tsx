@@ -1,5 +1,8 @@
 import { Link } from "react-router-dom"
+import { BarChart3 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { DataTable, type ColumnDef } from "@/components/Table"
+import { useAuthSession } from "@/hooks/use-auth-session"
 import { useDailySales } from "@/features/dashboard/hooks"
 import type { DailySalesRow } from "@/features/dashboard/types"
 
@@ -54,6 +57,8 @@ const columns: ColumnDef<DailySalesRow>[] = [
 
 export function Home() {
   const { data: rows, isLoading } = useDailySales()
+  const { data: session } = useAuthSession()
+  const isAdmin = session?.role === "admin"
 
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -69,6 +74,14 @@ export function Home() {
           <h1 className="text-2xl font-bold">Dashboard</h1>
           <p className="text-sm text-gray-500">{today}</p>
         </div>
+        {isAdmin && (
+          <Button asChild>
+            <Link to="/reports">
+              <BarChart3 className="mr-2 h-4 w-4" />
+              Generate Report
+            </Link>
+          </Button>
+        )}
       </div>
       <DataTable
         data={rows ?? []}
