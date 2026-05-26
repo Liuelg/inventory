@@ -13,6 +13,7 @@ export type Product = {
   name: string
   description?: string
   category?: string | ProductCategory
+  subCategory?: string | ProductCategory
   price?: ProductPrice
   previous_prices?: number
   tags?: string[]
@@ -23,6 +24,7 @@ export type ProductPayload = {
   name: string
   description?: string
   category?: string
+  subCategory?: string
   price?: ProductPrice
   previous_prices?: number
   tags?: string[]

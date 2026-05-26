@@ -11,6 +11,18 @@ export function useSubCategories() {
   });
 }
 
+export function useSubCategoriesByCategory(categoryId: string | undefined) {
+  return useQuery({
+    queryKey: ["sub-categories", "category", categoryId],
+    queryFn: async () => {
+      if (!categoryId) return [];
+      const res = await subCategoryApi.listByCategory(categoryId);
+      return res.data;
+    },
+    enabled: !!categoryId,
+  });
+}
+
 export function useCreateSubCategory() {
   const qc = useQueryClient();
   return useMutation({

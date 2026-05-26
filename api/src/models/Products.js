@@ -4,6 +4,7 @@ const productSchema = new Schema({
   name: { type: String, required: true },
   description: String,
   category: { type: Schema.Types.ObjectId, ref: 'Category' },
+  subCategory: { type: Schema.Types.ObjectId, ref: 'SubCategory' },
   price: {
     amount: Number,
     currency: { type: String, default: 'USD' }

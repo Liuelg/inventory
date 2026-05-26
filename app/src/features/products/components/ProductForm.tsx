@@ -16,7 +16,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useAuthSession } from "@/hooks/use-auth-session"
+import { ImagePlus, X } from "lucide-react"
 import { useCategories } from "@/features/categories/hooks"
+import { useSubCategoriesByCategory } from "@/features/sub-categories/hooks"
 import { useCreateProduct, useUpdateProduct } from "../hooks"
 import type { Product, ProductPayload } from "../types"
 
@@ -31,6 +33,7 @@ type ProductFormState = {
   name: string
   description: string
   category: string
+  subCategory: string
   amount: string
   currency: string
   previousPrice: string
@@ -42,6 +45,7 @@ const initialState: ProductFormState = {
   name: "",
   description: "",
   category: "",
+  subCategory: "",
   amount: "",
   currency: "USD",
   previousPrice: "",
@@ -49,20 +53,22 @@ const initialState: ProductFormState = {
   image: "",
 }
 
+function getId(value: string | { _id: string } | undefined | null): string {
+  if (!value) return ""
+  if (typeof value === "string") return value
+  return value._id ?? ""
+}
+
 function getInitialState(editing?: Product | null): ProductFormState {
   if (!editing) {
     return initialState
   }
 
-  const categoryId =
-    typeof editing.category === "string"
-      ? editing.category
-      : editing.category?._id ?? ""
-
   return {
     name: editing.name ?? "",
     description: editing.description ?? "",
-    category: categoryId,
+    category: getId(editing.category),
+    subCategory: getId(editing.subCategory),
     amount:
       editing.price?.amount !== undefined ? String(editing.price.amount) : "",
     currency: editing.price?.currency ?? "USD",
@@ -89,6 +95,7 @@ function toPayload(form: ProductFormState): ProductPayload {
     name: form.name.trim(),
     description: form.description.trim() || undefined,
     category: form.category.trim() || undefined,
+    subCategory: form.subCategory.trim() || undefined,
     price:
       amount !== undefined || form.currency.trim()
         ? {
@@ -113,6 +120,7 @@ export function ProductForm({
   )
   const [error, setError] = useState<string | null>(null)
   const { data: categories } = useCategories()
+  const { data: subCategories } = useSubCategoriesByCategory(form.category)
   const { data: session } = useAuthSession()
   const isAdmin = session?.role === "admin"
   const create = useCreateProduct()
@@ -122,7 +130,14 @@ export function ProductForm({
     key: Key,
     value: ProductFormState[Key]
   ) {
-    setForm((prev) => ({ ...prev, [key]: value }))
+    setForm((prev) => {
+      const next = { ...prev, [key]: value }
+      // Clear subCategory when category changes
+      if (key === "category") {
+        next.subCategory = ""
+      }
+      return next
+    })
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -199,6 +214,77 @@ export function ProductForm({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="grid gap-2">
+            <Label>Sub Category</Label>
+            <Select
+              value={form.subCategory}
+              onValueChange={(v) => setField("subCategory", v)}
+              disabled={!form.category}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue
+                  placeholder={
+                    form.category
+                      ? "Select sub category"
+                      : "Select a category first"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {subCategories?.map((sc) => (
+                  <SelectItem key={sc._id} value={sc._id}>
+                    {sc.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="product-image">Product Image</Label>
+            <div className="flex items-center gap-3">
+              {form.image ? (
+                <div className="relative">
+                  <img
+                    src={form.image}
+                    alt="Preview"
+                    className="h-20 w-20 rounded-md object-cover border"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setField("image", "")}
+                    className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : null}
+              <label className="flex cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm hover:bg-accent">
+                <ImagePlus className="h-4 w-4" />
+                {form.image ? "Change Image" : "Upload Image"}
+                <input
+                  id="product-image"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    if (file.size > 2 * 1024 * 1024) {
+                      setError("Image must be smaller than 2MB")
+                      return
+                    }
+                    const reader = new FileReader()
+                    reader.onloadend = () => {
+                      setField("image", reader.result as string)
+                    }
+                    reader.readAsDataURL(file)
+                  }}
+                />
+              </label>
+            </div>
           </div>
 
           {isAdmin && (

@@ -39,6 +39,20 @@ export function ProductTable({ onEdit }: ProductTableProps) {
 
   const columns: ColumnDef<Product>[] = [
     {
+      header: "Image",
+      className: "w-[72px]",
+      cell: (product) =>
+        product.image ? (
+          <img
+            src={product.image}
+            alt={product.name}
+            className="h-10 w-10 rounded-md object-cover border"
+          />
+        ) : (
+          <div className="h-10 w-10 rounded-md border bg-muted" />
+        ),
+    },
+    {
       header: "Name",
       cell: (product) => (
         <span className="font-medium">{product.name || "-"}</span>
@@ -50,6 +64,13 @@ export function ProductTable({ onEdit }: ProductTableProps) {
         typeof product.category === "string"
           ? product.category || "-"
           : product.category?.name || "-",
+    },
+    {
+      header: "Sub Category",
+      cell: (product) =>
+        typeof product.subCategory === "string"
+          ? product.subCategory || "-"
+          : product.subCategory?.name || "-",
     },
     {
       header: "Price",
