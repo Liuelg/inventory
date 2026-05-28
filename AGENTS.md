@@ -41,7 +41,7 @@ The repository is located at `C:\Users\HP\Documents\My-Project\Inventory Managem
 | UI Components | shadcn/ui | v4 (radix-nova style) |
 | Icons | Lucide React | ^1.7.0 |
 | Data Fetching | TanStack Query (React Query) | ^5.100.5 |
-| Authentication | better-auth | ^1.6.9 |
+| Authentication | Custom JWT | via jsonwebtoken |
 | Forms | React Hook Form | ^7.72.1 |
 | Validation | Yup | ^1.7.1 |
 | Linter | ESLint | ^9.39.4 |
@@ -63,25 +63,41 @@ The repository is located at `C:\Users\HP\Documents\My-Project\Inventory Managem
 │   ├── src/
 │   │   ├── app.js                # Entry point: Express setup, DB connection, route mounting
 │   │   ├── models/               # Mongoose schemas
+│   │   │   ├── Category.js
 │   │   │   ├── Goodin.js
+│   │   │   ├── InvoiceCounter.js
 │   │   │   ├── Products.js
 │   │   │   ├── Sale.js
+│   │   │   ├── Stock.js
+│   │   │   ├── Stockout.js
 │   │   │   ├── Stores.js
+│   │   │   ├── SubCategory.js
 │   │   │   ├── Transfer.js
 │   │   │   └── User.js
-│   │   └── routes/               # Express route handlers (business logic lives here)
-│   │       ├── goodIn.js
-│   │       ├── product.js
-│   │       ├── sales.js
-│   │       ├── stores.js
-│   │       ├── transfers.js
-│   │       └── users.js
-│   ├── .env                      # Environment variables (PORT, MONGO_URI)
+│   │   ├── routes/               # Express route handlers (business logic lives here)
+│   │   │   ├── auth.js
+│   │   │   ├── categories.js
+│   │   │   ├── dashboard.js
+│   │   │   ├── goodIn.js
+│   │   │   ├── product.js
+│   │   │   ├── reports.js
+│   │   │   ├── sales.js
+│   │   │   ├── stock.js
+│   │   │   ├── stockout.js
+│   │   │   ├── stores.js
+│   │   │   ├── subCategories.js
+│   │   │   ├── transfers.js
+│   │   │   └── users.js
+│   │   └── scripts/
+│   │       └── migrate-product-categories.js
+│   ├── .env                      # Environment variables (PORT, MONGO_URI, JWT_SECRET)
 │   ├── Dockerfile
 │   ├── docker-compose.yml
+│   ├── ecosystem.config.cjs      # PM2 production process config
 │   ├── eslint.config.mjs
 │   ├── package.json
-│   └── package-lock.json
+│   ├── package-lock.json
+│   └── seed-admin.js
 │
 ├── app/                          # Frontend React application
 │   ├── src/
@@ -93,22 +109,18 @@ The repository is located at `C:\Users\HP\Documents\My-Project\Inventory Managem
 │   │   │   ├── Table.tsx
 │   │   │   └── theme-provider.tsx
 │   │   ├── features/             # Feature-based modules
-│   │   │   ├── categories/       # Category management feature
-│   │   │   │   ├── api.ts
-│   │   │   │   ├── hooks.ts
-│   │   │   │   ├── types.ts
-│   │   │   │   ├── components/
-│   │   │   │   │   ├── CategoryForm.tsx
-│   │   │   │   │   └── CategoryTable.tsx
-│   │   │   │   └── pages/
-│   │   │   │       └── CategoryPage.tsx
-│   │   │   └── sub-categories/   # Sub-category management feature
-│   │   │       ├── api.ts
-│   │   │       ├── hooks.ts
-│   │   │       ├── types.ts
-│   │   │       └── components/
-│   │   │           ├── SubCategoryForm.tsx
-│   │   │           └── SubCategoryTable.tsx
+│   │   │   ├── accounts/         # User account management
+│   │   │   ├── categories/       # Category management
+│   │   │   ├── dashboard/        # Dashboard / daily sales
+│   │   │   ├── good-ins/         # Stock In (review stockouts)
+│   │   │   ├── my-store/         # Sales user store view
+│   │   │   ├── products/         # Product catalog
+│   │   │   ├── reports/          # Sales/stock reports
+│   │   │   ├── sales/            # Sales records
+│   │   │   ├── stock/            # Central stock (warehouse)
+│   │   │   ├── stockouts/        # Stock transfers to stores
+│   │   │   ├── stores/           # Store management
+│   │   │   └── sub-categories/   # Sub-category management
 │   │   ├── hooks/                # Global custom hooks
 │   │   │   ├── use-mobile.ts
 │   │   │   └── useSidebar.ts
@@ -126,7 +138,8 @@ The repository is located at `C:\Users\HP\Documents\My-Project\Inventory Managem
 │   │   │   ├── signup.tsx
 │   │   │   └── NotFound.tsx
 │   │   └── assets/
-│   ├── .env                      # Frontend env variables (VITE_API_URL)
+│   ├── .env                      # Frontend dev env (VITE_API_URL)
+│   ├── .env.production           # Frontend production env (VITE_API_URL=/api)
 │   ├── .env.example
 │   ├── index.html
 │   ├── vite.config.ts
@@ -140,6 +153,7 @@ The repository is located at `C:\Users\HP\Documents\My-Project\Inventory Managem
 │   └── package-lock.json
 │
 ├── .gitignore
+├── DEPLOY.md                     # DigitalOcean VPS deployment guide
 ├── README.md
 └── AGENTS.md                     # This file
 ```
@@ -235,12 +249,19 @@ All routes are mounted in `api/src/app.js` and prefixed as follows:
 
 | Prefix | Route File | Supported Methods |
 |--------|-----------|-------------------|
-| `/users` | `routes/users.js` | `POST`, `GET` |
+| `/api/auth` | `routes/auth.js` | `POST /register`, `POST /login`, `POST /change-password`, `GET /me` |
+| `/users` | `routes/users.js` | `POST`, `GET`, `PATCH /:id`, `DELETE /:id` |
 | `/products` | `routes/product.js` | `POST`, `GET`, `GET /:id`, `PATCH /:id`, `DELETE /:id` |
 | `/sales` | `routes/sales.js` | `POST`, `GET`, `GET /:id`, `PATCH /:id`, `DELETE /:id` |
 | `/goodIns` | `routes/goodIn.js` | `POST`, `GET`, `GET /:id`, `PATCH /:id`, `DELETE /:id` |
 | `/stores` | `routes/stores.js` | `POST`, `GET`, `GET /:id`, `PUT /:id`, `DELETE /:id` |
 | `/transfers` | `routes/transfers.js` | `POST`, `GET` |
+| `/api/categories` | `routes/categories.js` | `GET`, `POST`, `GET /:id`, `PUT /:id`, `DELETE /:id` |
+| `/api/sub-categories` | `routes/subCategories.js` | `GET`, `POST`, `GET /:id`, `PUT /:id`, `DELETE /:id`, `GET /category/:categoryId` |
+| `/api/dashboard` | `routes/dashboard.js` | `GET /daily-sales`, `GET /store/:storeId` |
+| `/api/stock` | `routes/stock.js` | `POST`, `GET`, `GET /:id`, `PATCH /:id`, `DELETE /:id`, `GET /available` |
+| `/api/stockouts` | `routes/stockout.js` | `POST`, `GET`, `GET /:id`, `PATCH /:id`, `DELETE /:id`, `PATCH /:id/accept`, `PATCH /:id/reject` |
+| `/api/reports` | `routes/reports.js` | `GET` |
 
 ### Global Error Handling
 
@@ -255,16 +276,19 @@ All routes are mounted in `api/src/app.js` and prefixed as follows:
 
 - `name` (String, required)
 - `email` (String, required, unique)
-- `password` (String, required) — stored as plain text
-- `role` (String, enum: `['admin', 'manager', 'staff']`, default: `'staff'`)
+- `phone` (String, unique, sparse)
+- `password` (String, required) — hashed with bcrypt
+- `role` (String, enum: `['admin', 'sales', 'stock']`, default: `'stock'`)
 - `is_active` (Boolean)
+- `store` (ObjectId ref Store)
 - Timestamps enabled
 
 ### Products
 
 - `name` (String, required)
 - `description` (String)
-- `category` (String)
+- `category` (ObjectId ref Category)
+- `subCategory` (ObjectId ref SubCategory)
 - `price` — subdocument `{ amount: Number, currency: String (default 'USD') }`
 - `previous_prices` (Number)
 - `tags` (Array of String)
@@ -295,16 +319,48 @@ All routes are mounted in `api/src/app.js` and prefixed as follows:
 ### Store
 
 - `name` (String, required)
+- `code` (String, required, unique, uppercase, trimmed)
 - `address` (String, required)
 - `manager_id` (ObjectId ref User)
 - `items` — array of `{ item_id: ObjectId ref Products, quantity: Number, price: Number }`
 
-### Transfer
+### Category
 
-- `items` — array reusing `GoodInItemSchema`
-- `origin` (String, required)
-- `destination` (String, required)
+- `name` (String, required)
 - Timestamps enabled
+
+### SubCategory
+
+- `name` (String, required)
+- `category` (ObjectId ref Category, required)
+- Timestamps enabled
+
+### Stock
+
+- `created_by` (ObjectId ref User, required)
+- `date` (Date, default `Date.now`, required)
+- `items` — array of `{ item_id: ObjectId ref Products, quantity: Number, remaining: Number, price: Number }`
+- `totalAmount` (Number, required)
+- `description` (String)
+- `note` (String)
+- Timestamps enabled
+
+### Stockout
+
+- `created_by` (ObjectId ref User, required)
+- `date` (Date, default `Date.now`, required)
+- `store` (ObjectId ref Store, required)
+- `items` — array of `{ item_id: ObjectId ref Products, quantity: Number, price: Number }`
+- `status` (String, enum: `['pending', 'accepted', 'rejected']`, default: `'pending'`)
+- `accepted_by` (ObjectId ref User)
+- `accepted_at` (Date)
+- `note` (String)
+- Timestamps enabled
+
+### InvoiceCounter
+
+- `store` (ObjectId ref Store, required, unique)
+- `sequence` (Number, default `0`)
 
 ---
 
@@ -314,17 +370,27 @@ All routes are mounted in `api/src/app.js` and prefixed as follows:
 
 React Router v7 (`BrowserRouter`) is used. Route definitions live in `app/src/App.tsx`.
 
-| Route | Layout | Auth Required | Component |
-|-------|--------|---------------|-----------|
-| `/` | AppSidebarLayout | Yes | `Home` |
-| `/category` | AppSidebarLayout | Yes | `CategoryPage` |
-| `/login` | AuthLayout | No (redirects if authed) | `LoginPage` |
-| `/signup` | AuthLayout | No (redirects if authed) | `SignupPage` |
-| `*` | AppSidebarLayout | Yes | `NotFound` |
+| Route | Layout | Roles | Component |
+|-------|--------|-------|-----------|
+| `/` | AppSidebarLayout | `admin` | `Home` (Dashboard) |
+| `/accounts` | AppSidebarLayout | `admin` | `AccountsPage` |
+| `/category` | AppSidebarLayout | `admin`, `stock` | `CategoryPage` |
+| `/products` | AppSidebarLayout | `admin`, `stock` | `ProductPage` |
+| `/stock` | AppSidebarLayout | `admin`, `stock` | `StockPage` |
+| `/stockouts` | AppSidebarLayout | `admin`, `stock` | `StockoutPage` |
+| `/stores` | AppSidebarLayout | `admin` | `StorePage` |
+| `/stores/:id` | AppSidebarLayout | `admin` | `StoreDetailPage` |
+| `/sales` | AppSidebarLayout | `admin`, `sales` | `SalesPage` |
+| `/good-ins` | AppSidebarLayout | `admin`, `sales` | `GoodInPage` |
+| `/my-store` | AppSidebarLayout | `sales` | `MyStorePage` |
+| `/reports` | AppSidebarLayout | `admin` | `ReportsPage` |
+| `/login` | AuthLayout | Public | `LoginPage` |
+| `*` | AppSidebarLayout | Any authed | `NotFound` / role redirect |
 
 Auth guards:
 - `RequireAuth` — redirects unauthenticated users to `/login`.
-- `RedirectIfAuthed` — redirects authenticated users to `/`.
+- `RedirectIfAuthed` — redirects authenticated users to their role's default route.
+- `RequireRole` — redirects users without the required role to their default route.
 
 ### State Management & Data Fetching
 
@@ -334,9 +400,10 @@ Auth guards:
 
 ### Authentication
 
-- **better-auth** (`auth-client.ts`) provides `signIn.email`, `signUp.email`, `signOut`, and `useSession`.
-- The auth client is configured with `baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000"`.
-- **Important:** The backend does not currently implement better-auth endpoints. The frontend expects an auth-compatible API, but the backend only has basic CRUD user routes.
+- **Custom JWT auth** (`lib/auth.ts`) provides `login`, `register`, `changePassword`, `fetchCurrentUser`, and session management via localStorage.
+- The `fetcher` in `lib/api-client.ts` injects the `Bearer` token on every request.
+- `useAuthSession()` is a TanStack Query hook that validates the token via `GET /api/auth/me`.
+- The backend implements JWT auth in `routes/auth.js` with bcrypt-hashed passwords.
 
 ### Feature-Based Folder Structure
 
@@ -398,24 +465,22 @@ features/<name>/
 
 ## Known Issues & Gaps
 
-1. **Plain-Text Passwords** — The `User` model stores passwords in plain text. There is no hashing middleware or authentication layer on the backend.
-2. **No Authentication / Authorization Middleware** — Despite having a `role` field on users, every backend endpoint is publicly accessible.
-3. **Frontend / Backend Auth Mismatch** — The frontend uses `better-auth`, but the backend does not implement better-auth endpoints. Auth will not function end-to-end until the backend adds `better-auth` (or the frontend switches to the existing basic user routes).
-4. **Missing Category / Sub-Category Backend Routes** — The frontend defines `categories` and `sub-categories` API modules (`/api/categories`, `/api/sub-categories`), but the backend has no corresponding routes or models.
-5. **Missing Input Validation** — No middleware (e.g., Joi, Zod, express-validator) validates request bodies on the backend before they reach Mongoose. Validation relies solely on schema-level rules.
-6. **ESLint Configuration Uses Browser Globals for Backend** — `api/eslint.config.mjs` sets `globals: globals.browser` for a Node.js backend. It should use `globals.node` instead.
-7. **No Tests** — There is no testing framework, test directory, or test scripts configured in either workspace.
-8. **No CI/CD** — No GitHub Actions, pre-commit hooks, or deployment pipelines are configured.
+1. **Some routes missing `authMiddleware`** — `/products`, `/sales`, `/goodIns`, `/transfers` do not have `authMiddleware` applied at the router level in `app.js`, though individual route handlers may check `req.user`.
+2. **Missing Input Validation** — No middleware (e.g., Joi, Zod, express-validator) validates request bodies on the backend before they reach Mongoose. Validation relies solely on schema-level rules.
+3. **ESLint Configuration Uses Browser Globals for Backend** — `api/eslint.config.mjs` sets `globals: globals.browser` for a Node.js backend. It should use `globals.node` instead.
+4. **No Tests** — There is no testing framework, test directory, or test scripts configured in either workspace.
+5. **No CI/CD** — No GitHub Actions, pre-commit hooks, or deployment pipelines are configured.
+6. **No automated backups** — MongoDB backups are not configured.
 
 ---
 
 ## Security Considerations
 
-- **Passwords are stored in plain text** in the database.
-- **No JWT, session, or API-key authentication** on backend routes.
+- **Passwords are hashed with bcrypt** via `routes/auth.js`. The legacy `/users` `POST` route still accepts raw passwords — avoid using it directly.
+- **JWT authentication** is implemented via `middleware/auth.js` and `routes/auth.js`.
 - **Mongo Express** is exposed with basic HTTP authentication (`ME_CONFIG_BASICAUTH_USERNAME` / `ME_CONFIG_BASICAUTH_PASSWORD`) in the Docker Compose setup. Do not deploy the compose file to production without changing these defaults and adding TLS.
-- **`.env` files** contain connection strings and secrets. Ensure both `api/.env` and `app/.env` are protected from accidental commits (`.gitignore` at the repo root only ignores `node_modules`; verify `.env` files are also ignored if secrets are present).
-- **CORS is not configured** on the backend. If the frontend and backend are served from different origins in production, CORS handling must be added.
+- **`.env` files** contain connection strings and secrets. Both `api/.env` and `app/.env` are ignored in `.gitignore`.
+- **CORS is configured** on the backend (`app.use(cors())`) for local development. In production, both frontend and backend are served from the same domain via Nginx, so CORS is not needed.
 
 ---
 
@@ -425,3 +490,6 @@ features/<name>/
 - The backend server binds to `0.0.0.0` explicitly (see `src/app.js`), which is required for Docker container accessibility.
 - MongoDB data is persisted via a named Docker volume (`mongo-data`).
 - The frontend is a static Vite build. Run `npm run build` in `app/` to produce a `dist/` folder that can be served by any static file server.
+- For production VPS deployment, see `DEPLOY.md` which covers Ubuntu + Nginx + PM2 + MongoDB Atlas + Let's Encrypt.
+- `api/ecosystem.config.cjs` is the PM2 process configuration for production.
+- `app/.env.production` sets `VITE_API_URL=/api` for same-domain deployment behind Nginx.
