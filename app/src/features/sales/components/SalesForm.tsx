@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
-import { useStores } from "@/features/stores/hooks"
+import { useStore } from "@/features/stores/hooks"
 import { useCreateSale, useUpdateSale } from "../hooks"
 import type { Sale, SalePayload } from "../types"
 
@@ -32,22 +32,17 @@ interface SalesFormProps {
 type SaleItemForm = {
   item_id: string
   quantity: string
-  price: string
 }
 
 type SaleFormState = {
   customerName: string
-  invoiceNumber: string
-  storeId: string
   items: SaleItemForm[]
 }
 
-const emptyItem: SaleItemForm = { item_id: "", quantity: "1", price: "" }
+const emptyItem: SaleItemForm = { item_id: "", quantity: "1" }
 
 const initialState: SaleFormState = {
   customerName: "",
-  invoiceNumber: "",
-  storeId: "",
   items: [{ ...emptyItem }],
 }
 
@@ -55,25 +50,40 @@ function getInitialState(editing?: Sale | null): SaleFormState {
   if (!editing) return { ...initialState }
   return {
     customerName: editing.customerName ?? "",
-    invoiceNumber: editing.invoiceNumber ?? "",
-    storeId: typeof editing.store === "string" ? editing.store : editing.store?._id ?? "",
     items: editing.items.length
       ? editing.items.map((i) => ({
           item_id: i.item_id,
           quantity: String(i.quantity),
-          price: String(i.price),
         }))
       : [{ ...emptyItem }],
   }
 }
 
-function toPayload(form: SaleFormState, userId: string): SalePayload {
+function getProductPrice(
+  products: { _id: string; price?: { amount?: number } }[] | undefined,
+  itemId: string
+): number {
+  return products?.find((p) => p._id === itemId)?.price?.amount ?? 0
+}
+
+function getProductImage(
+  products: { _id: string; image?: string }[] | undefined,
+  itemId: string
+): string | undefined {
+  return products?.find((p) => p._id === itemId)?.image
+}
+
+function toPayload(
+  form: SaleFormState,
+  userId: string,
+  products: { _id: string; price?: { amount?: number } }[] | undefined
+): SalePayload {
   const items = form.items
-    .filter((i) => i.item_id && i.quantity && i.price)
+    .filter((i) => i.item_id && Number(i.quantity) > 0)
     .map((i) => ({
       item_id: i.item_id,
       quantity: Number(i.quantity),
-      price: Number(i.price),
+      price: getProductPrice(products, i.item_id),
     }))
 
   const totalAmount = items.reduce(
@@ -83,8 +93,6 @@ function toPayload(form: SaleFormState, userId: string): SalePayload {
 
   return {
     customerName: form.customerName.trim() || undefined,
-    invoiceNumber: form.invoiceNumber.trim(),
-    store: form.storeId,
     processedBy: userId,
     items,
     totalAmount,
@@ -104,22 +112,55 @@ export function SalesForm({
   const [error, setError] = useState<string | null>(null)
   const { data: session } = useAuthSession()
   const { data: products } = useProducts()
-  const { data: stores } = useStores()
+  const { data: userStore } = useStore(session?.store || "")
   const create = useCreateSale()
   const update = useUpdateSale()
 
-  useEffect(() => {
-    setForm(getInitialState(editing))
-    setError(null)
-  }, [editing, open])
+  // Build map of available quantities from store inventory
+  const storeItemsMap = useMemo(() => {
+    const map = new Map<string, number>()
+    const items = (userStore?.items || []) as Array<{
+      item_id: string | { _id: string; name?: string }
+      quantity: number
+    }>
+    for (const item of items) {
+      const id =
+        typeof item.item_id === "string"
+          ? item.item_id
+          : item.item_id?._id ?? ""
+      if (id) {
+        map.set(id, item.quantity)
+      }
+    }
+    return map
+  }, [userStore])
+
+  // Track products already in the editing sale so they remain selectable
+  const editingItemIds = useMemo(() => {
+    return new Set(editing?.items.map((i) => i.item_id) || [])
+  }, [editing])
+
+  // Filter products to only those in store with stock > 0 (or already in sale)
+  const availableProducts = useMemo(() => {
+    return (
+      products?.filter((p) => {
+        const available = storeItemsMap.get(p._id)
+        if (available !== undefined && available > 0) return true
+        if (editingItemIds.has(p._id)) return true
+        return false
+      }) || []
+    )
+  }, [products, storeItemsMap, editingItemIds])
+
+  const userStoreName = userStore?.name ?? session?.store ?? "Not assigned"
 
   const totalAmount = useMemo(() => {
     return form.items.reduce((sum, item) => {
       const qty = Number(item.quantity) || 0
-      const price = Number(item.price) || 0
+      const price = getProductPrice(products, item.item_id)
       return sum + qty * price
     }, 0)
-  }, [form.items])
+  }, [form.items, products])
 
   function setField<Key extends keyof SaleFormState>(
     key: Key,
@@ -159,20 +200,40 @@ export function SalesForm({
     e.preventDefault()
     setError(null)
 
-    if (!form.storeId) {
-      setError("Please select a store.")
-      return
-    }
-    if (!form.invoiceNumber.trim()) {
-      setError("Invoice number is required.")
+    if (!session?.store) {
+      setError("Your account is not assigned to a store. Contact an admin.")
       return
     }
     const validItems = form.items.filter(
-      (i) => i.item_id && Number(i.quantity) > 0 && i.price
+      (i) => i.item_id && Number(i.quantity) > 0
     )
     if (validItems.length === 0) {
       setError("Please add at least one valid item.")
       return
+    }
+
+    // Validate that selected products have a price set and enough stock
+    for (const item of validItems) {
+      const price = getProductPrice(products, item.item_id)
+      if (!price) {
+        const productName =
+          products?.find((p) => p._id === item.item_id)?.name || item.item_id
+        setError(
+          `${productName} does not have a price set. Contact an admin to set the price before recording a sale.`
+        )
+        return
+      }
+
+      const available = storeItemsMap.get(item.item_id) || 0
+      const requested = Number(item.quantity)
+      if (requested > available) {
+        const productName =
+          products?.find((p) => p._id === item.item_id)?.name || item.item_id
+        setError(
+          `${productName}: requested ${requested} but only ${available} available in store.`
+        )
+        return
+      }
     }
 
     const userId = session?.id
@@ -181,7 +242,7 @@ export function SalesForm({
       return
     }
 
-    const payload = toPayload(form, userId)
+    const payload = toPayload(form, userId, products)
     if (editing) {
       update.mutate(
         { id: editing._id, payload },
@@ -203,7 +264,6 @@ export function SalesForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* CHANGED: Swapped w-fit max-w-[95vw] out for w-full sm:max-w-[650px] */}
       <DialogContent className="max-h-[90vh] overflow-auto w-full sm:max-w-[650px]">
         <DialogHeader>
           <DialogTitle>{editing ? "Edit Sale" : "Add Sale"}</DialogTitle>
@@ -221,13 +281,10 @@ export function SalesForm({
           ) : null}
 
           <div className="grid gap-2">
-            <Label htmlFor="sale-invoice">Invoice Number</Label>
-            <Input
-              id="sale-invoice"
-              placeholder="INV-001"
-              value={form.invoiceNumber}
-              onChange={(e) => setField("invoiceNumber", e.target.value)}
-            />
+            <Label>Branch</Label>
+            <div className="rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
+              {userStoreName}
+            </div>
           </div>
 
           <div className="grid gap-2">
@@ -240,25 +297,6 @@ export function SalesForm({
             />
           </div>
 
-          <div className="grid gap-2">
-            <Label>Store</Label>
-            <Select
-              value={form.storeId}
-              onValueChange={(v) => setField("storeId", v)}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select store" />
-              </SelectTrigger>
-              <SelectContent>
-                {stores?.map((s) => (
-                  <SelectItem key={s._id} value={s._id}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="flex items-center justify-between">
             <Label>Items</Label>
             <span className="text-sm font-medium">
@@ -267,11 +305,21 @@ export function SalesForm({
           </div>
 
           {form.items.map((item, index) => (
-            /* CHANGED: The grid now gives the Product column (1fr) all the extra wide space */
             <div
               key={index}
-              className="grid grid-cols-[1fr_90px_90px_36px] gap-3 items-end"
+              className="grid grid-cols-[48px_1fr_90px_36px] gap-3 items-center"
             >
+              <div className="flex items-center justify-center">
+                <div className="h-10 w-10 rounded-md border bg-muted overflow-hidden">
+                  {item.item_id && getProductImage(products, item.item_id) ? (
+                    <img
+                      src={getProductImage(products, item.item_id)}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : null}
+                </div>
+              </div>
               <div className="grid gap-1">
                 <Label className="text-xs">Product</Label>
                 <Select
@@ -282,34 +330,43 @@ export function SalesForm({
                     <SelectValue placeholder="Select product" />
                   </SelectTrigger>
                   <SelectContent>
-                    {products?.map((p) => (
-                      <SelectItem key={p._id} value={p._id}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
+                    {availableProducts.map((p) => {
+                      const available = storeItemsMap.get(p._id) || 0
+                      return (
+                        <SelectItem key={p._id} value={p._id} textValue={p.name}>
+                          <div className="flex items-center gap-2">
+                            {p.image ? (
+                              <img src={p.image} alt="" className="h-6 w-6 rounded object-cover" />
+                            ) : (
+                              <div className="h-6 w-6 rounded bg-muted" />
+                            )}
+                            <span>{p.name}</span>
+                            <span className="text-muted-foreground ml-1 text-xs">
+                              ({available} in stock)
+                            </span>
+                          </div>
+                        </SelectItem>
+                      )
+                    })}
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid gap-1">
-                <Label className="text-xs">Qty</Label>
+                <Label className="text-xs">
+                  Qty
+                  {item.item_id && (
+                    <span className="text-muted-foreground ml-1">
+                      (max:{storeItemsMap.get(item.item_id) ?? 0})
+                    </span>
+                  )}
+                </Label>
                 <Input
                   type="number"
                   min="1"
+                  max={storeItemsMap.get(item.item_id) ?? undefined}
                   value={item.quantity}
                   onChange={(e) =>
                     setItemField(index, "quantity", e.target.value)
-                  }
-                />
-              </div>
-              <div className="grid gap-1">
-                <Label className="text-xs">Price</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={item.price}
-                  onChange={(e) =>
-                    setItemField(index, "price", e.target.value)
                   }
                 />
               </div>
@@ -330,9 +387,16 @@ export function SalesForm({
             variant="outline"
             size="sm"
             onClick={addItem}
+            disabled={availableProducts.length === 0}
           >
             + Add Item
           </Button>
+
+          {availableProducts.length === 0 && !editing && (
+            <p className="text-muted-foreground text-xs">
+              No products available in store inventory.
+            </p>
+          )}
 
           <div className="flex justify-end gap-2 pt-2">
             <Button

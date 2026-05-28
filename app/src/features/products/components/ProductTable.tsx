@@ -11,6 +11,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Pencil, Trash2 } from "lucide-react"
 import { useAuthSession } from "@/hooks/use-auth-session"
 import { useDeleteProduct, useProducts } from "../hooks"
@@ -36,6 +41,7 @@ export function ProductTable({ onEdit }: ProductTableProps) {
   const isAdmin = session?.role === "admin"
   const remove = useDeleteProduct()
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [previewProduct, setPreviewProduct] = useState<Product | null>(null)
 
   const columns: ColumnDef<Product>[] = [
     {
@@ -43,11 +49,17 @@ export function ProductTable({ onEdit }: ProductTableProps) {
       className: "w-[72px]",
       cell: (product) =>
         product.image ? (
-          <img
-            src={product.image}
-            alt={product.name}
-            className="h-10 w-10 rounded-md object-cover border"
-          />
+          <button
+            type="button"
+            onClick={() => setPreviewProduct(product)}
+            className="cursor-zoom-in"
+          >
+            <img
+              src={product.image}
+              alt={product.name}
+              className="h-10 w-10 rounded-md object-cover border"
+            />
+          </button>
         ) : (
           <div className="h-10 w-10 rounded-md border bg-muted" />
         ),
@@ -76,11 +88,6 @@ export function ProductTable({ onEdit }: ProductTableProps) {
       header: "Price",
       cell: (product) => formatPrice(product),
       className: "whitespace-nowrap",
-    },
-    {
-      header: "Tags",
-      cell: (product) =>
-        product.tags?.length ? product.tags.join(", ") : "-",
     },
     {
       header: "Actions",
@@ -139,6 +146,21 @@ export function ProductTable({ onEdit }: ProductTableProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!previewProduct} onOpenChange={() => setPreviewProduct(null)}>
+        <DialogContent className="max-w-3xl p-0 overflow-hidden">
+          <DialogTitle className="sr-only">
+            {previewProduct?.name ?? "Product image"}
+          </DialogTitle>
+          {previewProduct?.image ? (
+            <img
+              src={previewProduct.image}
+              alt={previewProduct.name}
+              className="w-full h-auto max-h-[80vh] object-contain"
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

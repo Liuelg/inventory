@@ -14,6 +14,7 @@ import {
 import { Pencil, Trash2 } from "lucide-react"
 import { useDeleteStock, useStocks } from "../hooks"
 import type { Stock } from "../types"
+import { ProductImageCell } from "@/components/ProductImageCell"
 
 interface StockTableProps {
   onEdit: (stock: Stock) => void
@@ -26,7 +27,10 @@ function getProductName(item: Stock["items"][number]) {
 
 function getProductCategory(item: Stock["items"][number]) {
   if (typeof item.item_id === "string") return "—"
-  return item.item_id?.category ?? "—"
+  const cat = item.item_id?.category
+  if (!cat) return "—"
+  if (typeof cat === "string") return cat
+  return cat.name ?? "—"
 }
 
 function formatItems(items: Stock["items"]) {
@@ -42,8 +46,18 @@ function formatRemaining(items: Stock["items"]) {
   return items.reduce((sum, i) => sum + (i.remaining ?? 0), 0)
 }
 
+function getStockImage(stock: Stock) {
+  const firstItem = stock.items?.[0]?.item_id
+  if (firstItem && typeof firstItem !== "string") {
+    return firstItem.image
+  }
+  return undefined
+}
+
+
 export function StockTable({ onEdit }: StockTableProps) {
   const { data: stocks, isLoading } = useStocks()
+  
   const remove = useDeleteStock()
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
@@ -55,9 +69,20 @@ export function StockTable({ onEdit }: StockTableProps) {
       className: "w-[120px]",
     },
     {
+      header: "Image",
+      className: "w-[72px]",
+      cell: (s) => (
+        <ProductImageCell 
+          image={getStockImage(s)} 
+          altName={s.items.length === 1 ? getProductName(s.items[0]) : "Stock Entry"} 
+        />
+      ),
+    },
+    {
       header: "Products",
       cell: (s) => formatItems(s.items),
     },
+    
     {
       header: "Category",
       cell: (s) => {
@@ -72,19 +97,7 @@ export function StockTable({ onEdit }: StockTableProps) {
       cell: (s) => formatRemaining(s.items),
       className: "w-[90px] text-right",
     },
-    {
-      header: "Total Amount",
-      cell: (s) => s.totalAmount.toFixed(2),
-      className: "w-[120px] text-right whitespace-nowrap",
-    },
-    {
-      header: "Description",
-      cell: (s) => s.description || "—",
-    },
-    {
-      header: "Note",
-      cell: (s) => s.note || "—",
-    },
+    
     {
       header: "Actions",
       className: "w-[120px] text-right",

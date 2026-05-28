@@ -2,6 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { stockApi } from "./api"
 import type { StockPayload } from "./types"
 
+function invalidateStockRelated(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ["stocks"] })
+  qc.invalidateQueries({ queryKey: ["stock", "available"] })
+}
+
 export function useStocks() {
   return useQuery({
     queryKey: ["stocks"],
@@ -21,7 +26,7 @@ export function useCreateStock() {
 
   return useMutation({
     mutationFn: (payload: StockPayload) => stockApi.create(payload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["stocks"] }),
+    onSuccess: () => invalidateStockRelated(qc),
   })
 }
 
@@ -36,7 +41,7 @@ export function useUpdateStock() {
       id: string
       payload: Partial<StockPayload>
     }) => stockApi.update(id, payload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["stocks"] }),
+    onSuccess: () => invalidateStockRelated(qc),
   })
 }
 
@@ -45,6 +50,6 @@ export function useDeleteStock() {
 
   return useMutation({
     mutationFn: (id: string) => stockApi.delete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["stocks"] }),
+    onSuccess: () => invalidateStockRelated(qc),
   })
 }

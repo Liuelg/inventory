@@ -35,6 +35,13 @@ export function StoreTable({ onEdit }: StoreTableProps) {
 
   const columns: ColumnDef<Store>[] = [
     {
+      header: "Code",
+      cell: (store) => (
+        <span className="font-mono font-medium">{store.code || "-"}</span>
+      ),
+      className: "w-[80px]",
+    },
+    {
       header: "Name",
       cell: (store) => (
         <span className="font-medium">{store.name || "-"}</span>

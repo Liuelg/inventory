@@ -19,8 +19,9 @@ import {
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
 import { useStores } from "@/features/stores/hooks"
-import { useAvailableStock } from "@/features/stock/hooks"
+import { useStocks } from "@/features/stock/hooks"
 import { useCreateStockout, useUpdateStockout } from "../hooks"
+import type { Product } from "@/features/products/types"
 import type { Stockout, StockoutPayload } from "../types"
 
 interface StockoutFormProps {
@@ -56,22 +57,42 @@ function getInitialState(editing?: Stockout | null): StockoutFormState {
     storeId: typeof editing.store === "string" ? editing.store : editing.store?._id ?? "",
     items: editing.items.length
       ? editing.items.map((i) => ({
-          item_id: typeof i.item_id === "string" ? i.item_id : i.item_id._id,
-          quantity: String(i.quantity),
-          price: String(i.price),
-        }))
+        item_id: typeof i.item_id === "string" ? i.item_id : i.item_id._id,
+        quantity: String(i.quantity),
+        price: String(i.price),
+      }))
       : [{ ...emptyItem }],
     note: editing.note ?? "",
   }
 }
 
-function toPayload(form: StockoutFormState, userId: string): StockoutPayload {
+function getProductPrice(
+  products: Product[] | undefined,
+  itemId: string
+): number | undefined {
+  const product = products?.find((p) => p._id === itemId)
+  return product?.price?.amount
+}
+
+function getProductImage(
+  products: Product[] | undefined,
+  itemId: string
+): string | undefined {
+  const product = products?.find((p) => p._id === itemId)
+  return product?.image
+}
+
+function toPayload(
+  form: StockoutFormState,
+  userId: string,
+  products: Product[] | undefined
+): StockoutPayload {
   const items = form.items
-    .filter((i) => i.item_id && i.quantity && i.price)
+    .filter((i) => i.item_id && Number(i.quantity) > 0)
     .map((i) => ({
       item_id: i.item_id,
       quantity: Number(i.quantity),
-      price: Number(i.price),
+      price: getProductPrice(products, i.item_id) ?? Number(i.price) ?? 0,
     }))
 
   return {
@@ -96,19 +117,29 @@ export function StockoutForm({
   const { data: session } = useAuthSession()
   const { data: products } = useProducts()
   const { data: stores } = useStores()
-  const { data: availableStockData } = useAvailableStock()
+  const { data: stocks } = useStocks()
   const create = useCreateStockout()
   const update = useUpdateStockout()
 
-  // Compute available stock map, adding back editing quantities
-  // so the user can re-allocate them
+  // Compute available stock map directly from Stock data (same source as Stock page)
   const availableMap = (() => {
-    const map = new Map(
-      availableStockData?.data?.map((s) => [s.product._id, s.available]) || []
-    )
+    const map = new Map<string, number>()
+    for (const stock of stocks || []) {
+      for (const item of stock.items || []) {
+        const productId =
+          typeof item.item_id === "string"
+            ? item.item_id
+            : item.item_id?._id ?? ""
+        if (!productId) continue
+        const existing = map.get(productId) || 0
+        map.set(productId, existing + (item.remaining || 0))
+      }
+    }
+    // Add back editing quantities so the user can re-allocate them
     if (editing?.items) {
       for (const item of editing.items) {
-        const productId = typeof item.item_id === "string" ? item.item_id : item.item_id._id
+        const productId =
+          typeof item.item_id === "string" ? item.item_id : item.item_id._id
         const current = map.get(productId) || 0
         map.set(productId, current + item.quantity)
       }
@@ -136,6 +167,10 @@ export function StockoutForm({
     setForm((prev) => {
       const items = [...prev.items]
       items[index] = { ...items[index], [key]: value }
+      if (key === "item_id" && value) {
+        const price = getProductPrice(products, value)
+        items[index].price = price !== undefined ? String(price) : ""
+      }
       return { ...prev, items }
     })
   }
@@ -165,15 +200,24 @@ export function StockoutForm({
     }
 
     const validItems = form.items.filter(
-      (i) => i.item_id && Number(i.quantity) > 0 && i.price
+      (i) => i.item_id && Number(i.quantity) > 0
     )
     if (validItems.length === 0) {
       setError("Please add at least one valid item.")
       return
     }
 
-    // Validate against available stock
+    // Validate that selected products have a price set
     for (const item of validItems) {
+      const price = getProductPrice(products, item.item_id)
+      if (price === undefined || price === null) {
+        const productName = products?.find((p) => p._id === item.item_id)?.name || item.item_id
+        setError(
+          `${productName} does not have a price set. Contact an admin to set the price.`
+        )
+        return
+      }
+
       const available = availableMap.get(item.item_id) || 0
       const requested = Number(item.quantity)
       if (requested > available) {
@@ -195,7 +239,7 @@ export function StockoutForm({
       return
     }
 
-    const payload = toPayload(form, userId)
+    const payload = toPayload(form, userId, products)
     if (editing) {
       update.mutate(
         { id: editing._id, payload },
@@ -269,8 +313,19 @@ export function StockoutForm({
           {form.items.map((item, index) => (
             <div
               key={index}
-              className="grid grid-cols-[auto_90px_90px_36px] gap-3 items-end"
+              className="grid grid-cols-[48px_1fr_90px_40px] gap-3 items-center"
             >
+              <div className="flex items-center justify-center">
+                <div className="h-10 w-10 rounded-md border bg-muted overflow-hidden">
+                  {item.item_id && getProductImage(products, item.item_id) ? (
+                    <img
+                      src={getProductImage(products, item.item_id)}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : null}
+                </div>
+              </div>
               <div className="grid gap-1">
                 <Label className="text-xs">Product</Label>
                 <Select
@@ -284,18 +339,30 @@ export function StockoutForm({
                     {products?.map((p) => {
                       const available = availableMap.get(p._id)
                       return (
-                        <SelectItem key={p._id} value={p._id}>
-                          {p.name}
-                          {available !== undefined ? (
-                            <span className="text-muted-foreground ml-1 text-xs">
-                              ({available} in stock)
-                            </span>
-                          ) : null}
+                        <SelectItem key={p._id} value={p._id} textValue={p.name}>
+                          <div className="flex items-center gap-2">
+                            {p.image ? (
+                              <img src={p.image} alt="" className="h-6 w-6 rounded object-cover" />
+                            ) : (
+                              <div className="h-6 w-6 rounded bg-muted" />
+                            )}
+                            <span>{p.name}</span>
+                            {available !== undefined ? (
+                              <span className="text-muted-foreground ml-1 text-xs">
+                                ({available} in stock)
+                              </span>
+                            ) : null}
+                          </div>
                         </SelectItem>
                       )
                     })}
                   </SelectContent>
                 </Select>
+                {item.item_id && (
+                  <span className="text-xs text-muted-foreground">
+                    Price: {getProductPrice(products, item.item_id)?.toFixed(2) ?? "—"}
+                  </span>
+                )}
               </div>
               <div className="grid gap-1">
                 <Label className="text-xs">
@@ -316,18 +383,7 @@ export function StockoutForm({
                   }
                 />
               </div>
-              <div className="grid gap-1">
-                <Label className="text-xs">Price</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={item.price}
-                  onChange={(e) =>
-                    setItemField(index, "price", e.target.value)
-                  }
-                />
-              </div>
+
               <Button
                 type="button"
                 variant="ghost"

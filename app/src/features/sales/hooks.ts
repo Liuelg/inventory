@@ -14,7 +14,11 @@ export function useCreateSale() {
 
   return useMutation({
     mutationFn: (payload: SalePayload) => saleApi.create(payload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["sales"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sales"] })
+      qc.invalidateQueries({ queryKey: ["stores"] })
+      qc.invalidateQueries({ queryKey: ["dashboard"] })
+    },
   })
 }
 
@@ -29,7 +33,11 @@ export function useUpdateSale() {
       id: string
       payload: Partial<SalePayload>
     }) => saleApi.update(id, payload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["sales"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sales"] })
+      qc.invalidateQueries({ queryKey: ["stores"] })
+      qc.invalidateQueries({ queryKey: ["dashboard"] })
+    },
   })
 }
 
@@ -38,6 +46,10 @@ export function useDeleteSale() {
 
   return useMutation({
     mutationFn: (id: string) => saleApi.delete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["sales"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sales"] })
+      qc.invalidateQueries({ queryKey: ["stores"] })
+      qc.invalidateQueries({ queryKey: ["dashboard"] })
+    },
   })
 }

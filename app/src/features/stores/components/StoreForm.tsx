@@ -21,12 +21,14 @@ interface StoreFormProps {
 
 type StoreFormState = {
   name: string
+  code: string
   address: string
   managerId: string
 }
 
 const initialState: StoreFormState = {
   name: "",
+  code: "",
   address: "",
   managerId: "",
 }
@@ -44,6 +46,7 @@ function getInitialState(editing?: Store | null): StoreFormState {
 
   return {
     name: editing.name ?? "",
+    code: editing.code ?? "",
     address: editing.address ?? "",
     managerId: getManagerId(editing.manager_id),
   }
@@ -52,6 +55,7 @@ function getInitialState(editing?: Store | null): StoreFormState {
 function toPayload(form: StoreFormState): StorePayload {
   return {
     name: form.name.trim(),
+    code: form.code.trim().toUpperCase(),
     address: form.address.trim(),
     manager_id: form.managerId.trim() || undefined,
   }
@@ -124,6 +128,17 @@ export function StoreForm({
               placeholder="Store name"
               value={form.name}
               onChange={(e) => setField("name", e.target.value)}
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="store-code">Branch Code</Label>
+            <Input
+              id="store-code"
+              placeholder="e.g. MB"
+              maxLength={4}
+              value={form.code}
+              onChange={(e) => setField("code", e.target.value)}
             />
           </div>
 

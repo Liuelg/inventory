@@ -1,5 +1,12 @@
 export type StockItem = {
-  item_id: string | { _id: string; name?: string; category?: string }
+  item_id:
+    | string
+    | {
+        _id: string
+        name?: string
+        category?: string | { _id: string; name?: string }
+        image?: string
+      }
   quantity: number
   remaining: number
   price: number

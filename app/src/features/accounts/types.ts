@@ -16,4 +16,5 @@ export type CreateAccountPayload = {
   password: string
   role: "sales" | "stock"
   store?: string
+  is_active?: boolean
 }

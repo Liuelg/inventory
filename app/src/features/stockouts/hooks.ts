@@ -2,6 +2,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { stockoutApi } from "./api"
 import type { StockoutPayload } from "./types"
 
+function invalidateStockoutRelated(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ["stockouts"] })
+  qc.invalidateQueries({ queryKey: ["stocks"] })
+  qc.invalidateQueries({ queryKey: ["stock", "available"] })
+  qc.invalidateQueries({ queryKey: ["stores"] })
+  qc.invalidateQueries({ queryKey: ["dashboard"] })
+}
+
 export function useStockouts(params?: { store?: string; status?: string }) {
   return useQuery({
     queryKey: ["stockouts", params],
@@ -17,7 +25,7 @@ export function useCreateStockout() {
 
   return useMutation({
     mutationFn: (payload: StockoutPayload) => stockoutApi.create(payload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["stockouts"] }),
+    onSuccess: () => invalidateStockoutRelated(qc),
   })
 }
 
@@ -32,7 +40,7 @@ export function useUpdateStockout() {
       id: string
       payload: Partial<StockoutPayload>
     }) => stockoutApi.update(id, payload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["stockouts"] }),
+    onSuccess: () => invalidateStockoutRelated(qc),
   })
 }
 
@@ -42,10 +50,7 @@ export function useAcceptStockout() {
   return useMutation({
     mutationFn: ({ id, accepted_by }: { id: string; accepted_by: string }) =>
       stockoutApi.accept(id, accepted_by),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["stockouts"] })
-      qc.invalidateQueries({ queryKey: ["stores"] })
-    },
+    onSuccess: () => invalidateStockoutRelated(qc),
   })
 }
 
@@ -54,7 +59,7 @@ export function useRejectStockout() {
 
   return useMutation({
     mutationFn: (id: string) => stockoutApi.reject(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["stockouts"] }),
+    onSuccess: () => invalidateStockoutRelated(qc),
   })
 }
 
@@ -63,6 +68,6 @@ export function useDeleteStockout() {
 
   return useMutation({
     mutationFn: (id: string) => stockoutApi.delete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["stockouts"] }),
+    onSuccess: () => invalidateStockoutRelated(qc),
   })
 }

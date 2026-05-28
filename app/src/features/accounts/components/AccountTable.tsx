@@ -1,13 +1,26 @@
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { DataTable, type ColumnDef } from "@/components/Table.tsx"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
-import { useAccounts, useUpdateAccount } from "../hooks"
+import { useAccounts, useDeleteAccount, useUpdateAccount } from "../hooks"
 import type { AccountUser } from "../types"
 
 export function AccountTable() {
   const { data: accounts, isLoading } = useAccounts()
   const { data: session } = useAuthSession()
   const update = useUpdateAccount()
+  const remove = useDeleteAccount()
+  const [deleteId, setDeleteId] = useState<string | null>(null)
 
   function toggleActive(user: AccountUser) {
     if (user._id === session?.id) return
@@ -50,24 +63,35 @@ export function AccountTable() {
     },
     {
       header: "Actions",
-      className: "w-[120px] text-right",
+      className: "w-[180px] text-right",
       cell: (u) => {
         const isSelf = u._id === session?.id
         const isActive = u.is_active !== false
         return (
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={isSelf || update.isPending}
-            onClick={() => toggleActive(u)}
-            className={
-              isActive
-                ? "text-red-600 hover:bg-red-50 hover:text-red-700"
-                : "text-green-600 hover:bg-green-50 hover:text-green-700"
-            }
-          >
-            {isActive ? "Deactivate" : "Activate"}
-          </Button>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isSelf || update.isPending}
+              onClick={() => toggleActive(u)}
+              className={
+                isActive
+                  ? "text-red-600 hover:bg-red-50 hover:text-red-700"
+                  : "text-green-600 hover:bg-green-50 hover:text-green-700"
+              }
+            >
+              {isActive ? "Deactivate" : "Activate"}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={isSelf || remove.isPending}
+              onClick={() => setDeleteId(u._id)}
+              className="text-destructive hover:bg-destructive/10"
+            >
+              Delete
+            </Button>
+          </div>
         )
       },
     },
@@ -82,6 +106,32 @@ export function AccountTable() {
         loading={isLoading}
         emptyMessage="No accounts found."
       />
+
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action permanently deletes this user account. This cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteId(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deleteId) remove.mutate(deleteId)
+                setDeleteId(null)
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

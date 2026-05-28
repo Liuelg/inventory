@@ -15,4 +15,9 @@ export const accountApi = {
       method: "PATCH",
       body: JSON.stringify(payload),
     }),
+
+  delete: (id: string) =>
+    fetcher<{ message: string; deletedUser: AccountUser }>(`/users/${id}`, {
+      method: "DELETE",
+    }),
 }

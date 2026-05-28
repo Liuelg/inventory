@@ -7,29 +7,18 @@ const router = Router()
 router.post('/', async (req, res, next) => {
   try {
     const body = req.body
-    const isAdmin = req.user?.role === 'admin'
 
-    // If non-admin, enforce product prices from database
-    let items = body.items
-    if (!isAdmin) {
-      items = await Promise.all(body.items.map(async (i) => {
-        const product = await Product.findById(i.item_id)
-        const price = product?.price?.amount ?? 0
-        return {
-          item_id: i.item_id,
-          quantity: i.quantity,
-          remaining: i.remaining ?? i.quantity,
-          price,
-        }
-      }))
-    } else {
-      items = body.items.map((i) => ({
+    // Enforce product prices from database
+    const items = await Promise.all(body.items.map(async (i) => {
+      const product = await Product.findById(i.item_id)
+      const price = product?.price?.amount ?? 0
+      return {
         item_id: i.item_id,
         quantity: i.quantity,
         remaining: i.remaining ?? i.quantity,
-        price: i.price,
-      }))
-    }
+        price,
+      }
+    }))
 
     const totalAmount = items.reduce((sum, i) => sum + (i.quantity * i.price), 0)
 
@@ -42,7 +31,10 @@ router.post('/', async (req, res, next) => {
       note: body.note,
     })
     await stock.save()
-    await stock.populate('items.item_id')
+    await stock.populate({
+      path: 'items.item_id',
+      populate: { path: 'category', select: 'name' }
+    })
     await stock.populate('created_by', 'name email')
     res.status(201).json(stock)
   } catch (err) {
@@ -53,7 +45,10 @@ router.post('/', async (req, res, next) => {
 router.get('/', async (req, res, next) => {
   try {
     const stocks = await Stock.find()
-      .populate('items.item_id', 'name category')
+      .populate({
+        path: 'items.item_id',
+        populate: { path: 'category', select: 'name' }
+      })
       .populate('created_by', 'name email')
       .sort({ createdAt: -1 })
     res.json(stocks)
@@ -65,7 +60,10 @@ router.get('/', async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
   try {
     const stock = await Stock.findById(req.params.id)
-      .populate('items.item_id', 'name category')
+      .populate({
+        path: 'items.item_id',
+        populate: { path: 'category', select: 'name' }
+      })
       .populate('created_by', 'name email')
     if (!stock) {
       return res.status(404).json({ message: 'Stock entry not found' })
@@ -79,7 +77,6 @@ router.get('/:id', async (req, res, next) => {
 router.patch('/:id', async (req, res, next) => {
   try {
     const body = req.body
-    const isAdmin = req.user?.role === 'admin'
     const update = {}
 
     if (body.date !== undefined) update.date = body.date
@@ -87,26 +84,16 @@ router.patch('/:id', async (req, res, next) => {
     if (body.note !== undefined) update.note = body.note
 
     if (body.items !== undefined) {
-      let items
-      if (!isAdmin) {
-        items = await Promise.all(body.items.map(async (i) => {
-          const product = await Product.findById(i.item_id)
-          const price = product?.price?.amount ?? 0
-          return {
-            item_id: i.item_id,
-            quantity: i.quantity,
-            remaining: i.remaining ?? i.quantity,
-            price,
-          }
-        }))
-      } else {
-        items = body.items.map((i) => ({
+      const items = await Promise.all(body.items.map(async (i) => {
+        const product = await Product.findById(i.item_id)
+        const price = product?.price?.amount ?? 0
+        return {
           item_id: i.item_id,
           quantity: i.quantity,
           remaining: i.remaining ?? i.quantity,
-          price: i.price,
-        }))
-      }
+          price,
+        }
+      }))
       update.items = items
       update.totalAmount = items.reduce((sum, i) => sum + (i.quantity * i.price), 0)
     }
@@ -116,7 +103,10 @@ router.patch('/:id', async (req, res, next) => {
       { $set: update },
       { new: true, runValidators: true }
     )
-      .populate('items.item_id', 'name category')
+      .populate({
+        path: 'items.item_id',
+        populate: { path: 'category', select: 'name' }
+      })
       .populate('created_by', 'name email')
 
     if (!stock) {

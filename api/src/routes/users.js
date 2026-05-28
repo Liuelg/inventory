@@ -51,4 +51,29 @@ router.patch('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+router.delete('/:id', authMiddleware, async (req, res) => {
+  try {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can delete users' });
+    }
+
+    if (req.user.sub === req.params.id) {
+      return res.status(400).json({ message: 'You cannot delete your own account' });
+    }
+
+    const deletedUser = await User.findByIdAndDelete(req.params.id);
+
+    if (!deletedUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({ message: 'User deleted successfully', deletedUser });
+  } catch (err) {
+    if (err.kind === 'ObjectId') {
+      return res.status(400).json({ message: 'Invalid User ID format' });
+    }
+    res.status(500).json({ message: err.message });
+  }
+});
+
 export default router;

@@ -8,13 +8,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog.tsx"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu.tsx"
 import { Input } from "@/components/ui/input.tsx"
 import { Label } from "@/components/ui/label.tsx"
-import { Separator } from "@/components/ui/separator.tsx"
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -30,6 +36,7 @@ import {
 } from "@/components/ui/sidebar.tsx"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useSidebarNavItems } from "@/hooks/useSidebar.ts"
+import { useStore } from "@/features/stores/hooks"
 import { changePassword, clearAuthSession } from "@/lib/auth.ts"
 import { queryClient } from "@/lib/query-client.ts"
 import { KeyRound, LogOutIcon, UserIcon } from "lucide-react"
@@ -38,11 +45,12 @@ export type AppSidebarLayoutProps = {
   children?: ReactNode
 }
 
-function SidebarLogo() {
+function SidebarLogo({ suffix }: { suffix?: string }) {
   const { state } = useSidebar()
+  const fullTitle = suffix ? `Sina Leather - ${suffix}` : "Sina Leather"
   return (
     <span className="truncate font-semibold">
-      {state === "collapsed" ? "SL" : "Sina Leather"}
+      {state === "collapsed" ? "SL" : fullTitle}
     </span>
   )
 }
@@ -164,41 +172,45 @@ function UserMenu() {
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <Separator className="bg-sidebar-border" />
-      <div className="flex items-center gap-2 px-2 py-1">
-        <UserIcon className="size-4 shrink-0 text-sidebar-foreground/70" />
-        <span className="truncate text-sm text-sidebar-foreground">
-          {session?.email ?? "User"}
-        </span>
-      </div>
-      <SidebarMenu>
-        <SidebarMenuItem>
-          <SidebarMenuButton
-            tooltip="Change password"
-            onClick={() => setChangePasswordOpen(true)}
-          >
-            <KeyRound />
-            <span>Change password</span>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-        <SidebarMenuItem>
-          <SidebarMenuButton tooltip="Log out" onClick={handleLogout}>
-            <LogOutIcon />
-            <span>Log out</span>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      </SidebarMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon">
+            <UserIcon className="h-5 w-5" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>{session?.email ?? "User"}</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setChangePasswordOpen(true)}>
+            <KeyRound className="mr-2 h-4 w-4" />
+            Change password
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleLogout}>
+            <LogOutIcon className="mr-2 h-4 w-4" />
+            Log out
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
       <ChangePasswordDialog
         open={changePasswordOpen}
         onOpenChange={setChangePasswordOpen}
       />
-    </div>
+    </>
   )
 }
 
 export function AppSidebarLayout({ children }: AppSidebarLayoutProps) {
+  const { data: session } = useAuthSession()
+  const { data: userStore } = useStore(session?.store || "")
   const navItems = useSidebarNavItems()
+
+  let sidebarSuffix: string | undefined
+  if (session?.role === "sales" && userStore) {
+    sidebarSuffix = userStore.name
+  } else if (session?.role === "stock") {
+    sidebarSuffix = "STOCK"
+  }
 
   return (
     <SidebarProvider>
@@ -208,7 +220,7 @@ export function AppSidebarLayout({ children }: AppSidebarLayoutProps) {
             <SidebarMenuItem>
               <SidebarMenuButton asChild size="lg" tooltip="Home">
                 <Link to="/">
-                  <SidebarLogo />
+                  <SidebarLogo suffix={sidebarSuffix} />
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -240,14 +252,12 @@ export function AppSidebarLayout({ children }: AppSidebarLayoutProps) {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter>
-          <UserMenu />
-        </SidebarFooter>
         <SidebarRail />
       </Sidebar>
       <SidebarInset className="min-h-0">
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+        <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b px-4">
           <SidebarTrigger />
+          <UserMenu />
         </header>
         <div className="flex min-h-0 flex-1 flex-col px-4 py-4">
           {children ?? <Outlet />}

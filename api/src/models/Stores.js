@@ -20,6 +20,7 @@ const StoreItemSchema = Schema({
 
 const storeSchema = Schema({
   name: { type: String, required: true },
+  code: { type: String, required: true, unique: true, uppercase: true, trim: true },
   address: {type: String, required: true},
   manager_id: { type: Schema.Types.ObjectId, ref: 'User' },
   items: [StoreItemSchema]

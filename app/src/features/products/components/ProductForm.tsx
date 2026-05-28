@@ -188,16 +188,6 @@ export function ProductForm({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="product-description">Description</Label>
-            <Input
-              id="product-description"
-              placeholder="Product description"
-              value={form.description}
-              onChange={(e) => setField("description", e.target.value)}
-            />
-          </div>
-
-          <div className="grid gap-2">
             <Label>Category</Label>
             <Select
               value={form.category}

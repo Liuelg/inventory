@@ -3,6 +3,7 @@ import mongoose from 'mongoose'
 import Stockout from '../models/Stockout.js'
 import Store from '../models/Stores.js'
 import Stock from '../models/Stock.js'
+import Product from '../models/Products.js'
 
 const router = Router()
 
@@ -109,10 +110,14 @@ async function restoreStock(items) {
 router.post('/', async (req, res, next) => {
   try {
     const body = req.body
-    const items = body.items.map((i) => ({
-      item_id: i.item_id,
-      quantity: i.quantity,
-      price: i.price
+    const items = await Promise.all(body.items.map(async (i) => {
+      const product = await Product.findById(i.item_id)
+      const price = product?.price?.amount ?? 0
+      return {
+        item_id: i.item_id,
+        quantity: i.quantity,
+        price,
+      }
     }))
 
     // Validate available stock
@@ -279,11 +284,17 @@ router.patch('/:id', async (req, res, next) => {
     }
 
     const body = req.body
-    const newItems = body.items?.map((i) => ({
-      item_id: i.item_id,
-      quantity: i.quantity,
-      price: i.price
-    }))
+    const newItems = body.items
+      ? await Promise.all(body.items.map(async (i) => {
+        const product = await Product.findById(i.item_id)
+        const price = product?.price?.amount ?? 0
+        return {
+          item_id: i.item_id,
+          quantity: i.quantity,
+          price,
+        }
+      }))
+      : undefined
 
     // If items are changing, validate and adjust stock
     if (newItems) {
