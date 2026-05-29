@@ -98,7 +98,7 @@ router.get("/store/:storeId", async (req, res, next) => {
       store: storeId,
       date_time: { $gte: start, $lt: end },
     })
-      .populate("items.item_id", "name")
+      .populate("items.item_id", "name image")
       .populate("processedBy", "name email")
       .sort({ date_time: -1 })
 
@@ -123,6 +123,7 @@ router.get("/store/:storeId", async (req, res, next) => {
           _id: product?._id?.toString?.() || item.item_id?.toString?.(),
           name: product?.name || "—",
           category: product?.category || "—",
+          image: product?.image || null,
         },
         quantity: item.quantity,
         price: item.price,

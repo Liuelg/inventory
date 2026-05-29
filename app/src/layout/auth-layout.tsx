@@ -13,7 +13,7 @@ export function AuthLayout({ children }: AuthLayoutProps) {
           to="/"
           className="text-foreground hover:text-foreground/80 text-lg font-semibold tracking-tight transition-colors"
         >
-          App
+          Sina Leather Inventory
         </Link>
         <div className="w-full max-w-md">
           {children ?? <Outlet />}

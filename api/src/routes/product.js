@@ -78,6 +78,9 @@ router.patch('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can delete products' });
+    }
     const deletedProduct = await Product.findByIdAndDelete(req.params.id);
 
     if (!deletedProduct) {

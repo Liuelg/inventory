@@ -25,11 +25,7 @@ export function CategoryTable({ onEdit }: CategoryTableProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
   const columns: ColumnDef<Category>[] = [
-    {
-      header: "ID",
-      cell: (c) => <span className="font-medium">{c._id}</span>,
-      className: "w-[80px]",
-    },
+    
     { header: "Name", cell: (c) => c.name },
     {
       header: "Actions",

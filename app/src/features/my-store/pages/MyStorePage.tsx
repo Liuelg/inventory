@@ -6,8 +6,9 @@ type PopulatedStoreItem = {
   item_id: {
     _id: string
     name: string
-    category?: string
+    category?: string | { name: string } | null
     price?: { amount: number; currency: string }
+    image?: string | null
   }
   quantity: number
   price: number
@@ -33,12 +34,30 @@ export function MyStorePage() {
     {
       header: "Product",
       cell: (item) => (
-        <span className="font-medium">{item.item_id?.name || "Unknown"}</span>
+        <div className="flex items-center gap-3">
+          {item.item_id?.image ? (
+            <img
+              src={item.item_id.image}
+              alt={item.item_id.name}
+              className="h-10 w-10 rounded-md object-cover border"
+            />
+          ) : (
+            <div className="h-10 w-10 rounded-md border bg-muted flex items-center justify-center text-xs text-muted-foreground">
+              No img
+            </div>
+          )}
+          <span className="font-medium">{item.item_id?.name || "Unknown"}</span>
+        </div>
       ),
     },
     {
       header: "Category",
-      cell: (item) => item.item_id?.category || "—",
+      cell: (item) => {
+        const cat = item.item_id?.category
+        if (!cat) return "—"
+        if (typeof cat === "string") return cat
+        return cat.name || "—"
+      },
     },
     {
       header: "Quantity",

@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom"
 import { BarChart3 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DataTable, type ColumnDef } from "@/components/Table"
+import { DailySalesChart } from "@/features/dashboard/components/DailySalesChart"
 import { useAuthSession } from "@/hooks/use-auth-session"
 import { useDailySales } from "@/features/dashboard/hooks"
 import type { DailySalesRow } from "@/features/dashboard/types"
@@ -77,12 +79,21 @@ export function Home() {
         {isAdmin && (
           <Button asChild>
             <Link to="/reports">
-              <BarChart3 className="mr-2 h-4 w-4" />
+              <BarChart3 className="mr-2 h-2 w-2" />
               Generate Report
             </Link>
           </Button>
         )}
       </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Today's Sales by Store</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DailySalesChart data={rows ?? []} />
+        </CardContent>
+      </Card>
+
       <DataTable
         data={rows ?? []}
         columns={columns}

@@ -81,7 +81,7 @@ function getInitialState(editing?: Product | null): ProductFormState {
   }
 }
 
-function toPayload(form: ProductFormState): ProductPayload {
+function toPayload(form: ProductFormState, isAdmin: boolean): ProductPayload {
   const amount = form.amount.trim() ? Number(form.amount) : undefined
   const previousPrice = form.previousPrice.trim()
     ? Number(form.previousPrice)
@@ -91,22 +91,28 @@ function toPayload(form: ProductFormState): ProductPayload {
     .map((value) => value.trim())
     .filter(Boolean)
 
-  return {
+  const payload: ProductPayload = {
     name: form.name.trim(),
     description: form.description.trim() || undefined,
     category: form.category.trim() || undefined,
     subCategory: form.subCategory.trim() || undefined,
-    price:
-      amount !== undefined || form.currency.trim()
-        ? {
-          amount,
-          currency: form.currency.trim() || "USD",
-        }
-        : undefined,
-    previous_prices: previousPrice,
     tags: tags.length ? tags : undefined,
     image: form.image.trim() || undefined,
   }
+
+  if (isAdmin) {
+    if (amount !== undefined || form.currency.trim()) {
+      payload.price = {
+        amount,
+        currency: form.currency.trim() || "USD",
+      }
+    }
+    if (previousPrice !== undefined) {
+      payload.previous_prices = previousPrice
+    }
+  }
+
+  return payload
 }
 
 export function ProductForm({
@@ -145,7 +151,7 @@ export function ProductForm({
     setError(null)
     if (!form.name.trim()) return
 
-    const payload = toPayload(form)
+    const payload = toPayload(form, isAdmin)
     if (editing) {
       update.mutate(
         { id: editing._id, payload },

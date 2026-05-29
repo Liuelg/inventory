@@ -16,6 +16,10 @@ import { useDeleteStore, useStores } from "../hooks"
 import type { Store } from "../types"
 
 function getManagerLabel(store: Store) {
+  // Prefer sales person (store staff) over manager_id
+  const sp = store.salesPerson
+  if (sp?.name) return sp.name
+
   const manager = store.manager_id
   if (!manager) return "-"
   if (typeof manager === "string") return manager

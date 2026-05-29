@@ -33,6 +33,7 @@ export type StoreRemainingProduct = {
     _id: string
     name: string
     category: string
+    image?: string | null
   }
   quantity: number
   price: number

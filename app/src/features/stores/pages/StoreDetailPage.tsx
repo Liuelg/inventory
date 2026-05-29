@@ -48,7 +48,22 @@ export function StoreDetailPage() {
   const remainingColumns: ColumnDef<StoreRemainingProduct>[] = [
     {
       header: "Product",
-      cell: (r) => <span className="font-medium">{r.product.name}</span>,
+      cell: (r) => (
+        <div className="flex items-center gap-3">
+          {r.product.image ? (
+            <img
+              src={r.product.image}
+              alt={r.product.name}
+              className="h-10 w-10 rounded-md object-cover border"
+            />
+          ) : (
+            <div className="h-10 w-10 rounded-md border bg-muted flex items-center justify-center text-xs text-muted-foreground">
+              No img
+            </div>
+          )}
+          <span className="font-medium">{r.product.name}</span>
+        </div>
+      ),
     },
     {
       header: "Category",

@@ -91,7 +91,7 @@ export function SignupPage() {
             </p>
           ) : null}
           <div className="grid gap-2">
-            <Label htmlFor="signup-name">name</Label>
+            <Label htmlFor="signup-name">Name</Label>
             <Input
               id="signup-name"
               type="text"

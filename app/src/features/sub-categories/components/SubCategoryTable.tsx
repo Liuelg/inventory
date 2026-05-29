@@ -25,11 +25,7 @@ export function SubCategoryTable({ onEdit }: SubCategoryTableProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
   const columns: ColumnDef<SubCategory>[] = [
-    {
-      header: "ID",
-      cell: (sc) => <span className="font-medium">{sc._id}</span>,
-      className: "w-[80px]",
-    },
+   
     { header: "Name", cell: (sc) => sc.name },
     { header: "Category", cell: (sc) => sc.category?.name ?? "—" },
     {
