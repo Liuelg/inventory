@@ -305,7 +305,7 @@ export function StockForm({
                     <span className="text-xs font-medium text-muted-foreground sm:hidden">Qty</span>
                     <Input
                       type="number"
-                      min="1"
+                      min="0"
                       placeholder="0"
                       value={item.quantity}
                       onChange={(e) =>

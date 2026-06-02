@@ -30,7 +30,7 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Database connection
 
-const dbURI = "mongodb://localhost:27017/inventory_db";
+const dbURI = process.env.MONGO_URI || "mongodb://localhost:27017/inventory_db";
 mongoose
   .connect(dbURI)
   .then(() => console.log("Successfully connected to MongoDB"))

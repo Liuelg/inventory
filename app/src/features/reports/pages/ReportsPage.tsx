@@ -1,12 +1,15 @@
 import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Button } from "@/components/ui/button"
 import { ReportFilters } from "../components/ReportFilters"
 import { ReportSummaryCards } from "../components/ReportSummaryCards"
 import { ReportBreakdownTable } from "../components/ReportBreakdownTable"
 import { ReportByStoreTable } from "../components/ReportByStoreTable"
 import { useReport } from "../hooks"
+import { generateReportPDF } from "../utils"
 import type { ReportParams } from "../types"
+import { Printer } from "lucide-react"
 
 export function ReportsPage() {
   const [params, setParams] = useState<ReportParams | null>(null)
@@ -32,19 +35,29 @@ export function ReportsPage() {
       <ReportFilters onGenerate={handleGenerate} isLoading={loading} />
 
       {report && (
-        <div className="text-muted-foreground text-sm">
-          Showing{" "}
-          <span className="font-medium capitalize">{report.period}</span>{" "}
-          report for{" "}
-          <span className="font-medium capitalize">
-            {report.type === "goodIns"
-              ? "Stock In"
-              : report.type === "stockouts"
-                ? "Stock Out"
-                : "Sales"}
-          </span>{" "}
-          ({new Date(report.start).toLocaleDateString()} –{" "}
-          {new Date(report.end).toLocaleDateString()})
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-muted-foreground text-sm">
+            Showing{" "}
+            <span className="font-medium capitalize">{report.period}</span>{" "}
+            report for{" "}
+            <span className="font-medium capitalize">
+              {report.type === "goodIns"
+                ? "Stock In"
+                : report.type === "stockouts"
+                  ? "Stock Out"
+                  : "Sales"}
+            </span>{" "}
+            ({new Date(report.start).toLocaleDateString()} –{" "}
+            {new Date(report.end).toLocaleDateString()})
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => generateReportPDF(report)}
+          >
+            <Printer className="mr-2 h-4 w-4" />
+            Export PDF
+          </Button>
         </div>
       )}
 

@@ -23,20 +23,18 @@ type StoreFormState = {
   name: string
   code: string
   address: string
-  managerId: string
 }
 
 const initialState: StoreFormState = {
   name: "",
   code: "",
   address: "",
-  managerId: "",
 }
 
-function getManagerId(manager: Store["manager_id"]): string {
-  if (!manager) return ""
+function getManagerName(manager: Store["manager_id"]): string {
+  if (!manager) return "Not assigned"
   if (typeof manager === "string") return manager
-  return manager._id ?? ""
+  return manager.name ?? "Unknown"
 }
 
 function getInitialState(editing?: Store | null): StoreFormState {
@@ -48,7 +46,6 @@ function getInitialState(editing?: Store | null): StoreFormState {
     name: editing.name ?? "",
     code: editing.code ?? "",
     address: editing.address ?? "",
-    managerId: getManagerId(editing.manager_id),
   }
 }
 
@@ -57,7 +54,6 @@ function toPayload(form: StoreFormState): StorePayload {
     name: form.name.trim(),
     code: form.code.trim().toUpperCase(),
     address: form.address.trim(),
-    manager_id: form.managerId.trim() || undefined,
   }
 }
 
@@ -152,15 +148,17 @@ export function StoreForm({
             />
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="store-manager-id">Manager ID (optional)</Label>
-            <Input
-              id="store-manager-id"
-              placeholder="MongoDB User ID"
-              value={form.managerId}
-              onChange={(e) => setField("managerId", e.target.value)}
-            />
-          </div>
+          {editing ? (
+            <div className="grid gap-2">
+              <Label htmlFor="store-manager-name">Manager</Label>
+              <Input
+                id="store-manager-name"
+                value={getManagerName(editing.manager_id)}
+                disabled
+                className="bg-muted"
+              />
+            </div>
+          ) : null}
 
           <div className="flex justify-end gap-2">
             <Button

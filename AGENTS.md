@@ -47,12 +47,11 @@ The repository is located at `C:\Users\HP\Documents\My-Project\Inventory Managem
 | Linter | ESLint | ^9.39.4 |
 | Formatter | Prettier | ^3.8.1 |
 
-### Container Services (Docker Compose — backend only)
+### Container Services (Docker Compose — full stack)
 
-- **app** — the Node.js API (exposes `3000`)
-- **mongo** — MongoDB instance (exposes `27017`, volume `mongo-data`)
-- **mongo-express** — Web-based MongoDB admin UI (exposes `8081`)
-
+- **backend** — the Node.js API (exposes `3000` internally)
+- **mongo** — MongoDB instance (exposes `27017` internally, volume `mongo-data`)
+- **nginx** — reverse proxy + static file server for the React frontend (exposes `80`)
 ---
 
 ## Project Structure
@@ -92,7 +91,7 @@ The repository is located at `C:\Users\HP\Documents\My-Project\Inventory Managem
 │   │       └── migrate-product-categories.js
 │   ├── .env                      # Environment variables (PORT, MONGO_URI, JWT_SECRET)
 │   ├── Dockerfile
-│   ├── docker-compose.yml
+│   ├── .dockerignore
 │   ├── ecosystem.config.cjs      # PM2 production process config
 │   ├── eslint.config.mjs
 │   ├── package.json
@@ -141,6 +140,7 @@ The repository is located at `C:\Users\HP\Documents\My-Project\Inventory Managem
 │   ├── .env                      # Frontend dev env (VITE_API_URL)
 │   ├── .env.production           # Frontend production env (VITE_API_URL=/api)
 │   ├── .env.example
+│   ├── .dockerignore
 │   ├── index.html
 │   ├── vite.config.ts
 │   ├── tsconfig.json
@@ -152,6 +152,7 @@ The repository is located at `C:\Users\HP\Documents\My-Project\Inventory Managem
 │   ├── package.json
 │   └── package-lock.json
 │
+├── .env.example                  # Example environment variables for Docker Compose
 ├── .gitignore
 ├── DEPLOY.md                     # DigitalOcean VPS deployment guide
 ├── README.md
@@ -182,14 +183,15 @@ npm run dev               # nodemon src/app.js
 npx eslint src/
 ```
 
-**Docker Compose (backend):**
+**Docker Compose (full stack):**
 
 ```bash
-cd api
+# From the project root
+cp .env.example .env   # Edit .env and set JWT_SECRET
 docker-compose up --build
 ```
 
-This builds the API image, starts MongoDB, and starts mongo-express. The API is available at `http://localhost:3000`. Mongo Express is at `http://localhost:8081` (credentials: `webuser` / `webpassword`).
+This builds and starts the backend, MongoDB, and nginx (with the built frontend). The application is available at `http://localhost`.
 
 ### Frontend (`app/`)
 
@@ -230,8 +232,9 @@ npm run typecheck         # tsc --noEmit
 |----------|---------|---------|
 | `PORT` | `3000` | HTTP port the Express server listens on |
 | `MONGO_URI` | `mongodb://localhost:27017/inventory_db` | MongoDB connection string |
+| `JWT_SECRET` | *(none)* | Secret key for signing JWT tokens |
 
-In Docker Compose, `MONGO_URI` is overridden to `mongodb://mongo:27017/inventory_db`.
+In Docker Compose, `MONGO_URI` is overridden to `mongodb://mongo:27017/inventory_db` and `JWT_SECRET` is read from the root `.env` file.
 
 ### Frontend (`app/.env`)
 
@@ -478,18 +481,17 @@ features/<name>/
 
 - **Passwords are hashed with bcrypt** via `routes/auth.js`. The legacy `/users` `POST` route still accepts raw passwords — avoid using it directly.
 - **JWT authentication** is implemented via `middleware/auth.js` and `routes/auth.js`.
-- **Mongo Express** is exposed with basic HTTP authentication (`ME_CONFIG_BASICAUTH_USERNAME` / `ME_CONFIG_BASICAUTH_PASSWORD`) in the Docker Compose setup. Do not deploy the compose file to production without changing these defaults and adding TLS.
-- **`.env` files** contain connection strings and secrets. Both `api/.env` and `app/.env` are ignored in `.gitignore`.
+- **`.env` files** contain connection strings and secrets. Both `api/.env` and `app/.env` are ignored in `.gitignore`. The root `.env` file (used by Docker Compose) should also be kept secret.
 - **CORS is configured** on the backend (`app.use(cors())`) for local development. In production, both frontend and backend are served from the same domain via Nginx, so CORS is not needed.
 
 ---
 
 ## Deployment Notes
 
-- The backend `Dockerfile` uses the official `node:18` image, installs dependencies, copies the full source, exposes port `3000`, and runs `node src/app.js`.
+- The backend `Dockerfile` uses the official `node:18-alpine` image, installs dependencies, copies the full source, exposes port `3000`, and runs `node src/app.js`.
 - The backend server binds to `0.0.0.0` explicitly (see `src/app.js`), which is required for Docker container accessibility.
 - MongoDB data is persisted via a named Docker volume (`mongo-data`).
-- The frontend is a static Vite build. Run `npm run build` in `app/` to produce a `dist/` folder that can be served by any static file server.
+- The frontend is built inside the `nginx/Dockerfile` multi-stage build and served by nginx alongside API proxy routes.
 - For production VPS deployment, see `DEPLOY.md` which covers Ubuntu + Nginx + PM2 + MongoDB Atlas + Let's Encrypt.
 - `api/ecosystem.config.cjs` is the PM2 process configuration for production.
 - `app/.env.production` sets `VITE_API_URL=/api` for same-domain deployment behind Nginx.

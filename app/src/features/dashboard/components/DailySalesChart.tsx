@@ -39,7 +39,7 @@ export function DailySalesChart({ data }: Props) {
           <YAxis
             tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
             axisLine={{ stroke: "var(--border)" }}
-            tickFormatter={(v) => formatCurrency(v)}
+            tickFormatter={(v: number) => formatCurrency(v)}
           />
           <Tooltip
             contentStyle={{
