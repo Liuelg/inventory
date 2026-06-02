@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,8 +20,8 @@ import {
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
 import type { Product } from "@/features/products/types"
-import { useCreateStock, useUpdateStock } from "../hooks"
-import type { Stock, StockPayload } from "../types"
+import { useCreateStock, useStocks, useUpdateStock } from "../hooks"
+import type { Stock, StockPayload, StockItem } from "../types"
 
 interface StockFormProps {
   open: boolean
@@ -31,6 +31,7 @@ interface StockFormProps {
 }
 
 type StockItemForm = {
+  _key: string
   item_id: string
   quantity: string
 }
@@ -42,28 +43,36 @@ type StockFormState = {
   note: string
 }
 
-const emptyItem: StockItemForm = { item_id: "", quantity: "1" }
+let keyCounter = 0
+function nextKey(): string {
+  return `row-${++keyCounter}`
+}
+
+function createEmptyItem(): StockItemForm {
+  return { _key: nextKey(), item_id: "", quantity: "1" }
+}
 
 const initialState: StockFormState = {
   date: new Date().toISOString().slice(0, 10),
-  items: [{ ...emptyItem }],
+  items: [createEmptyItem()],
   description: "",
   note: "",
 }
 
 function getInitialState(editing?: Stock | null): StockFormState {
-  if (!editing) return { ...initialState }
+  if (!editing) return { ...initialState, items: [createEmptyItem()] }
   return {
     date: editing.date
       ? new Date(editing.date).toISOString().slice(0, 10)
       : new Date().toISOString().slice(0, 10),
     items: editing.items.length
       ? editing.items.map((i) => ({
+          _key: nextKey(),
           item_id:
             typeof i.item_id === "string" ? i.item_id : i.item_id?._id ?? "",
           quantity: String(i.quantity),
         }))
-      : [{ ...emptyItem }],
+      : [createEmptyItem()],
     description: editing.description ?? "",
     note: editing.note ?? "",
   }
@@ -85,6 +94,21 @@ function getProductImage(
   return product?.image
 }
 
+function mergeDuplicateItems(
+  items: { item_id: string; quantity: number; price: number }[]
+): { item_id: string; quantity: number; price: number }[] {
+  const map = new Map<string, { item_id: string; quantity: number; price: number }>()
+  for (const item of items) {
+    const existing = map.get(item.item_id)
+    if (existing) {
+      existing.quantity += item.quantity
+    } else {
+      map.set(item.item_id, { ...item })
+    }
+  }
+  return Array.from(map.values())
+}
+
 function toPayload(
   form: StockFormState,
   userId: string,
@@ -94,14 +118,16 @@ function toPayload(
     (i) => i.item_id && Number(i.quantity) > 0
   )
 
-  const items = rawItems.map((i) => {
-    const price = getProductPrice(products, i.item_id) ?? 0
-    return {
-      item_id: i.item_id,
-      quantity: Number(i.quantity),
-      price,
-    }
-  })
+  const items = mergeDuplicateItems(
+    rawItems.map((i) => {
+      const price = getProductPrice(products, i.item_id) ?? 0
+      return {
+        item_id: i.item_id,
+        quantity: Number(i.quantity),
+        price,
+      }
+    })
+  )
 
   const totalAmount = items.reduce(
     (sum, i) => sum + i.quantity * i.price,
@@ -117,6 +143,11 @@ function toPayload(
   }
 }
 
+function getItemIdString(item: StockItem): string {
+  if (typeof item.item_id === "string") return item.item_id
+  return item.item_id?._id ?? ""
+}
+
 export function StockForm({
   open,
   onOpenChange,
@@ -129,8 +160,21 @@ export function StockForm({
   const [error, setError] = useState<string | null>(null)
   const { data: session } = useAuthSession()
   const { data: products } = useProducts()
+  const { data: existingStocks } = useStocks()
   const create = useCreateStock()
   const update = useUpdateStock()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Reset form when dialog opens/closes or editing changes
+  const prevEditingRef = useRef<string | null>(null)
+  const editingId = editing?._id ?? null
+  if (prevEditingRef.current !== editingId) {
+    prevEditingRef.current = editingId
+    if (open) {
+      setForm(getInitialState(editing))
+      setError(null)
+    }
+  }
 
   function setField<Key extends keyof StockFormState>(
     key: Key,
@@ -140,13 +184,55 @@ export function StockForm({
   }
 
   function setItemField(
-    index: number,
-    key: keyof StockItemForm,
+    rowKey: string,
+    key: keyof Omit<StockItemForm, "_key">,
     value: string
   ) {
     setForm((prev) => {
-      const items = [...prev.items]
-      items[index] = { ...items[index], [key]: value }
+      const items = prev.items.map((item) =>
+        item._key === rowKey ? { ...item, [key]: value } : item
+      )
+      return { ...prev, items }
+    })
+  }
+
+  function handleProductSelect(rowKey: string, productId: string) {
+    if (!productId) {
+      setItemField(rowKey, "item_id", productId)
+      return
+    }
+
+    setForm((prev) => {
+      const currentRow = prev.items.find((i) => i._key === rowKey)
+      if (!currentRow) return prev
+
+      const existingRow = prev.items.find(
+        (i) => i._key !== rowKey && i.item_id === productId
+      )
+
+      if (existingRow) {
+        const mergedQty =
+          (Number(existingRow.quantity) || 0) +
+          (Number(currentRow.quantity) || 0)
+
+        const newItems = prev.items
+          .map((item) =>
+            item._key === existingRow._key
+              ? { ...item, quantity: String(mergedQty) }
+              : item
+          )
+          .filter((item) => item._key !== rowKey)
+
+        if (newItems.length === 0) {
+          newItems.push(createEmptyItem())
+        }
+
+        return { ...prev, items: newItems }
+      }
+
+      const items = prev.items.map((item) =>
+        item._key === rowKey ? { ...item, item_id: productId } : item
+      )
       return { ...prev, items }
     })
   }
@@ -154,19 +240,145 @@ export function StockForm({
   function addItem() {
     setForm((prev) => ({
       ...prev,
-      items: [...prev.items, { ...emptyItem }],
+      items: [...prev.items, createEmptyItem()],
     }))
   }
 
-  function removeItem(index: number) {
+  function removeItem(rowKey: string) {
     setForm((prev) => {
       if (prev.items.length <= 1) return prev
-      const items = prev.items.filter((_, i) => i !== index)
+      const items = prev.items.filter((item) => item._key !== rowKey)
       return { ...prev, items }
     })
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleCreateWithDedup(userId: string) {
+    if (!existingStocks || existingStocks.length === 0) {
+      // No existing stock at all — just create
+      const payload = toPayload(form, userId, products)
+      await create.mutateAsync(payload)
+      return
+    }
+
+    // First, dedup items within the form itself
+    const formItems = mergeDuplicateItems(
+      form.items
+        .filter((i) => i.item_id && Number(i.quantity) > 0)
+        .map((i) => {
+          const price = getProductPrice(products, i.item_id) ?? 0
+          return {
+            item_id: i.item_id,
+            quantity: Number(i.quantity),
+            price,
+          }
+        })
+    )
+
+    // For each item, check if it already exists in stock
+    const itemsToCreate: { item_id: string; quantity: number; price: number }[] = []
+    const updatesByStockId = new Map<
+      string,
+      { stock: Stock; itemUpdates: Map<string, number> }
+    >()
+
+    for (const incoming of formItems) {
+      // Find which existing stock entry contains this product
+      const existingStock = existingStocks.find((stock) =>
+        stock.items.some(
+          (item) => getItemIdString(item) === incoming.item_id
+        )
+      )
+
+      if (existingStock) {
+        const entry = updatesByStockId.get(existingStock._id)
+        if (entry) {
+          entry.itemUpdates.set(
+            incoming.item_id,
+            (entry.itemUpdates.get(incoming.item_id) ?? 0) + incoming.quantity
+          )
+        } else {
+          const map = new Map<string, number>()
+          map.set(incoming.item_id, incoming.quantity)
+          updatesByStockId.set(existingStock._id, {
+            stock: existingStock,
+            itemUpdates: map,
+          })
+        }
+      } else {
+        itemsToCreate.push(incoming)
+      }
+    }
+
+    // Update existing stock entries
+    for (const [, { stock, itemUpdates }] of updatesByStockId) {
+      const updatedItems = stock.items.map((item) => {
+        const itemId = getItemIdString(item)
+        const additionalQty = itemUpdates.get(itemId) ?? 0
+        if (additionalQty > 0) {
+          return {
+            item_id: itemId,
+            quantity: item.quantity + additionalQty,
+            remaining: item.remaining + additionalQty,
+            price: item.price,
+          }
+        }
+        return {
+          item_id: itemId,
+          quantity: item.quantity,
+          remaining: item.remaining,
+          price: item.price,
+        }
+      })
+
+      // Also add any brand-new items that weren't in this stock entry
+      // (this shouldn't happen in normal flow, but just in case)
+      for (const [itemId, additionalQty] of itemUpdates) {
+        const alreadyInStock = stock.items.some(
+          (item) => getItemIdString(item) === itemId
+        )
+        if (!alreadyInStock) {
+          const price = getProductPrice(products, itemId) ?? 0
+          updatedItems.push({
+            item_id: itemId,
+            quantity: additionalQty,
+            remaining: additionalQty,
+            price,
+          })
+        }
+      }
+
+      const totalAmount = updatedItems.reduce(
+        (sum, i) => sum + i.quantity * i.price,
+        0
+      )
+
+      await update.mutateAsync({
+        id: stock._id,
+        payload: {
+          items: updatedItems,
+          totalAmount,
+          date: new Date(form.date).toISOString(),
+        },
+      })
+    }
+
+    // Create new stock entry for brand-new products
+    if (itemsToCreate.length > 0) {
+      const totalAmount = itemsToCreate.reduce(
+        (sum, i) => sum + i.quantity * i.price,
+        0
+      )
+      await create.mutateAsync({
+        created_by: userId,
+        date: new Date(form.date).toISOString(),
+        items: itemsToCreate,
+        totalAmount,
+        note: form.note.trim() || undefined,
+      })
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
 
@@ -197,25 +409,27 @@ export function StockForm({
       return
     }
 
-    const payload = toPayload(form, userId, products)
-    if (editing) {
-      update.mutate(
-        { id: editing._id, payload },
-        {
-          onSuccess: () => onSuccess?.(),
-          onError: (err) => setError(err.message),
-        }
-      )
-      return
-    }
+    setIsSubmitting(true)
 
-    create.mutate(payload, {
-      onSuccess: () => onSuccess?.(),
-      onError: (err) => setError(err.message),
-    })
+    try {
+      if (editing) {
+        const payload = toPayload(form, userId, products)
+        await update.mutateAsync(
+          { id: editing._id, payload },
+        )
+      } else {
+        await handleCreateWithDedup(userId)
+      }
+      onSuccess?.()
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Something went wrong"
+      setError(message)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  const isPending = create.isPending || update.isPending
+  const pending = isSubmitting || create.isPending || update.isPending
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -259,9 +473,9 @@ export function StockForm({
             </div>
 
             <div className="flex flex-col gap-3">
-              {form.items.map((item, index) => (
+              {form.items.map((item) => (
                 <div
-                  key={index}
+                  key={item._key}
                   className="grid grid-cols-1 gap-3 items-center border p-3 rounded-lg sm:border-0 sm:p-0 sm:rounded-none sm:grid-cols-[48px_1fr_100px_40px]"
                 >
                   <div className="flex items-center justify-center">
@@ -279,7 +493,7 @@ export function StockForm({
                     <span className="text-xs font-medium text-muted-foreground sm:hidden">Product</span>
                     <Select
                       value={item.item_id}
-                      onValueChange={(v) => setItemField(index, "item_id", v)}
+                      onValueChange={(v) => handleProductSelect(item._key, v)}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select product" />
@@ -309,7 +523,7 @@ export function StockForm({
                       placeholder="0"
                       value={item.quantity}
                       onChange={(e) =>
-                        setItemField(index, "quantity", e.target.value)
+                        setItemField(item._key, "quantity", e.target.value)
                       }
                     />
                   </div>
@@ -320,7 +534,7 @@ export function StockForm({
                       variant="ghost"
                       size="icon"
                       className="h-9 w-9 text-muted-foreground hover:text-destructive"
-                      onClick={() => removeItem(index)}
+                      onClick={() => removeItem(item._key)}
                       disabled={form.items.length <= 1}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -371,7 +585,7 @@ export function StockForm({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" disabled={pending}>
               {editing ? "Update" : "Create Entry"}
             </Button>
           </div>
