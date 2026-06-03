@@ -1,8 +1,17 @@
 import express from "express";
 import mongoose from "mongoose";
-import cors from "cors"; // Import the cors package
+import cors from "cors";
 import "dotenv/config";
 import { authMiddleware } from "./middleware/auth.js";
+
+function requireEnv(name) {
+  const value = process.env[name];
+  if (!value) {
+    console.error(`FATAL: ${name} is not set. Set it in your environment or .env file.`);
+    process.exit(1);
+  }
+  return value;
+}
 
 import userRoutes from "./routes/users.js";
 import salesRoutes from "./routes/sales.js";
@@ -20,10 +29,11 @@ import reportRoutes from "./routes/reports.js";
 
 const app = express();
 
-// CORS configuration for frontend API access
-app.use(
-  cors()
-);
+const corsOrigin = process.env.CORS_ORIGIN;
+const corsOptions = corsOrigin
+  ? { origin: corsOrigin.split(",").map((s) => s.trim()) }
+  : {};
+app.use(cors(corsOptions));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
@@ -48,7 +58,7 @@ app.use("/sales", authMiddleware, salesRoutes);
 app.use("/products", authMiddleware, productRoutes);
 app.use("/goodIns", authMiddleware, goodInRoutes);
 app.use("/transfers", authMiddleware, transferRoutes);
-app.use("/stores", storeRoutes);
+app.use("/stores", authMiddleware, storeRoutes);
 app.use("/api/categories", authMiddleware, categoryRoutes);
 app.use("/api/sub-categories", authMiddleware, subCategoryRoutes);
 app.use("/api/dashboard", authMiddleware, dashboardRoutes);
@@ -56,11 +66,15 @@ app.use("/api/stock", authMiddleware, stockRoutes);
 app.use("/api/stockouts", authMiddleware, stockoutRoutes);
 app.use("/api/reports", authMiddleware, reportRoutes);
 
-app.use((req, res) => {
-  res.status(404).json({ message: "Route not found" });
+app.get("/health", (_req, res) => {
+  const dbState = mongoose.connection.readyState;
+  res.status(dbState === 1 ? 200 : 503).json({
+    status: dbState === 1 ? "ok" : "error",
+    db: dbState === 1 ? "connected" : "disconnected",
+  });
 });
 
-app.use((err, req, res) => {
+app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ message: "Something went wrong on the server" });
 });

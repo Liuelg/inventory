@@ -232,7 +232,9 @@ npm run typecheck         # tsc --noEmit
 |----------|---------|---------|
 | `PORT` | `3000` | HTTP port the Express server listens on |
 | `MONGO_URI` | `mongodb://localhost:27017/inventory_db` | MongoDB connection string |
-| `JWT_SECRET` | *(none)* | Secret key for signing JWT tokens |
+| `JWT_SECRET` | *(required)* | Secret key for signing JWT tokens — **must be set** |
+| `JWT_EXPIRES_IN` | `1d` | JWT token lifetime |
+| `CORS_ORIGIN` | *(empty)* | Comma-separated allowed origins (empty = allow all, for dev only) |
 
 In Docker Compose, `MONGO_URI` is overridden to `mongodb://mongo:27017/inventory_db` and `JWT_SECRET` is read from the root `.env` file.
 
@@ -468,12 +470,12 @@ features/<name>/
 
 ## Known Issues & Gaps
 
-1. **Some routes missing `authMiddleware`** — `/products`, `/sales`, `/goodIns`, `/transfers` do not have `authMiddleware` applied at the router level in `app.js`, though individual route handlers may check `req.user`.
-2. **Missing Input Validation** — No middleware (e.g., Joi, Zod, express-validator) validates request bodies on the backend before they reach Mongoose. Validation relies solely on schema-level rules.
-3. **ESLint Configuration Uses Browser Globals for Backend** — `api/eslint.config.mjs` sets `globals: globals.browser` for a Node.js backend. It should use `globals.node` instead.
-4. **No Tests** — There is no testing framework, test directory, or test scripts configured in either workspace.
-5. **No CI/CD** — No GitHub Actions, pre-commit hooks, or deployment pipelines are configured.
-6. **No automated backups** — MongoDB backups are not configured.
+1. **ESLint Configuration Uses Browser Globals for Backend** — `api/eslint.config.mjs` sets `globals: globals.browser` for a Node.js backend. It should use `globals.node` instead.
+2. **No Tests** — There is no testing framework, test directory, or test scripts configured in either workspace.
+3. **No CI/CD** — No GitHub Actions, pre-commit hooks, or deployment pipelines are configured.
+4. **No automated backups** — MongoDB backups are not configured.
+5. **No HTTPS in Docker Compose** — The local Docker setup uses HTTP only. Use a reverse proxy (nginx, Traefik, Cloudflare) with TLS for production.
+6. **MongoDB has no authentication** — The Docker Compose MongoDB container has no username/password. Only expose port 27017 to the host if you add authentication.
 
 ---
 

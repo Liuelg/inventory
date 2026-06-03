@@ -2,10 +2,19 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import process from 'node:process';
+import rateLimit from 'express-rate-limit';
 import User from '../models/User.js';
 import { authMiddleware } from '../middleware/auth.js';
 
 const router = Router();
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // 20 attempts per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many attempts, please try again later.' },
+});
 
 function buildToken(user) {
   const jwtSecret = process.env.JWT_SECRET;
@@ -35,6 +44,12 @@ router.post('/register', authMiddleware, async (req, res, next) => {
     const { email, phone, password, name, role, store } = req.body;
     if (!email || !password || !name) {
       return res.status(400).json({ message: 'Name, email and password are required' });
+    }
+    if (typeof email !== 'string' || !email.includes('@')) {
+      return res.status(400).json({ message: 'Invalid email' });
+    }
+    if (typeof password !== 'string' || password.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
     }
 
     const existingEmail = await User.findOne({ email });
@@ -77,11 +92,14 @@ router.post('/register', authMiddleware, async (req, res, next) => {
   }
 });
 
-router.post('/login', async (req, res, next) => {
+router.post('/login', authLimiter, async (req, res, next) => {
   try {
     const { identifier, password } = req.body;
     if (!identifier || !password) {
       return res.status(400).json({ message: 'Email or phone and password are required' });
+    }
+    if (typeof identifier !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({ message: 'Invalid credentials format' });
     }
 
     let user = await User.findOne({ email: identifier });

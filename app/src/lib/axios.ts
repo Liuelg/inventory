@@ -1,6 +1,6 @@
 export const api = {
   async request<T>(path: string, options?: RequestInit): Promise<T> {
-    const baseURL = import.meta.env.VITE_API_URL || "http://localhost:3000"
+    const baseURL = import.meta.env.VITE_API_URL ?? ""
     const response = await fetch(`${baseURL}${path}`, {
       credentials: "include",
       headers: {

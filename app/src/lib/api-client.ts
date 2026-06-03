@@ -1,6 +1,6 @@
 import { clearAuthSession, getAuthToken } from "@/lib/auth"
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000"
+const API_BASE = import.meta.env.VITE_API_URL ?? ""
 
 export async function fetcher<T>(
   path: string,

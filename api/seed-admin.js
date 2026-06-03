@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import "dotenv/config";
 
-const MONGO_URI = "mongodb://localhost:27017/inventory_db";
+const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/inventory_db";
 
 const ADMIN = {
   name: "admin",
