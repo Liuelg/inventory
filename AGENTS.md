@@ -1,4 +1,4 @@
-# AGENTS.md — Leather-Inventory (Inventory Management System)
+<!-- AGENTS.md — Leather-Inventory (Inventory Management System) -->
 
 This document describes the full project structure, technology stack, conventions, and known issues. It is intended for AI coding agents and human developers who need to onboard quickly. The reader is assumed to know nothing about this project.
 
@@ -23,9 +23,11 @@ The repository is located at `C:\Users\HP\Documents\My-Project\Inventory Managem
 |-------|-----------|---------------------|
 | Runtime | Node.js | 18 (Docker base image) |
 | Framework | Express | ^4.18.0 |
-| Database | MongoDB | latest (via Docker) |
+| Database | MongoDB | 6 (via Docker) |
 | ODM | Mongoose | ^7.0.0 |
 | Config | dotenv | ^16.0.0 |
+| Auth | bcryptjs, jsonwebtoken | ^3.0.3, ^9.0.3 |
+| Rate Limiting | express-rate-limit | ^8.5.2 |
 | Dev reload | nodemon | ^3.0.0 |
 | Linter | ESLint | ^10.4.0 |
 
@@ -33,7 +35,7 @@ The repository is located at `C:\Users\HP\Documents\My-Project\Inventory Managem
 
 | Layer | Technology | Version (specified) |
 |-------|-----------|---------------------|
-| Runtime | Node.js | 20+ (implied by dependencies) |
+| Runtime | Node.js | 22 (Docker build image) |
 | Framework | React | ^19.2.4 |
 | Language | TypeScript | ~5.9.3 |
 | Bundler | Vite | ^7.3.1 |
@@ -44,14 +46,17 @@ The repository is located at `C:\Users\HP\Documents\My-Project\Inventory Managem
 | Authentication | Custom JWT | via jsonwebtoken |
 | Forms | React Hook Form | ^7.72.1 |
 | Validation | Yup | ^1.7.1 |
+| Charts | Recharts | ^2.15.0 |
+| PDF Generation | jspdf, jspdf-autotable | ^2.5.2, ^3.8.4 |
 | Linter | ESLint | ^9.39.4 |
 | Formatter | Prettier | ^3.8.1 |
 
 ### Container Services (Docker Compose — full stack)
 
 - **backend** — the Node.js API (exposes `3000` internally)
-- **mongo** — MongoDB instance (exposes `27017` internally, volume `mongo-data`)
+- **mongo** — MongoDB 6 instance (exposes `27017` internally, volume `mongo-data`)
 - **nginx** — reverse proxy + static file server for the React frontend (exposes `80`)
+
 ---
 
 ## Project Structure
@@ -87,6 +92,8 @@ The repository is located at `C:\Users\HP\Documents\My-Project\Inventory Managem
 │   │   │   ├── subCategories.js
 │   │   │   ├── transfers.js
 │   │   │   └── users.js
+│   │   └── middleware/
+│   │       └── auth.js           # JWT verification middleware
 │   │   └── scripts/
 │   │       └── migrate-product-categories.js
 │   ├── .env                      # Environment variables (PORT, MONGO_URI, JWT_SECRET)
@@ -96,7 +103,7 @@ The repository is located at `C:\Users\HP\Documents\My-Project\Inventory Managem
 │   ├── eslint.config.mjs
 │   ├── package.json
 │   ├── package-lock.json
-│   └── seed-admin.js
+│   └── seed-admin.js             # Bootstraps a default admin user
 │
 ├── app/                          # Frontend React application
 │   ├── src/
@@ -105,6 +112,7 @@ The repository is located at `C:\Users\HP\Documents\My-Project\Inventory Managem
 │   │   ├── index.css             # Tailwind CSS imports + theme variables
 │   │   ├── components/           # Shared / reusable components
 │   │   │   ├── ui/               # shadcn/ui components (button, card, dialog, etc.)
+│   │   │   ├── ProductImageCell.tsx
 │   │   │   ├── Table.tsx
 │   │   │   └── theme-provider.tsx
 │   │   ├── features/             # Feature-based modules
@@ -121,22 +129,24 @@ The repository is located at `C:\Users\HP\Documents\My-Project\Inventory Managem
 │   │   │   ├── stores/           # Store management
 │   │   │   └── sub-categories/   # Sub-category management
 │   │   ├── hooks/                # Global custom hooks
+│   │   │   ├── use-auth-session.ts
 │   │   │   ├── use-mobile.ts
 │   │   │   └── useSidebar.ts
 │   │   ├── layout/               # Layout components
 │   │   │   ├── app-sidebar-layout.tsx
 │   │   │   └── auth-layout.tsx
 │   │   ├── lib/                  # Utilities, API clients, schemas
-│   │   │   ├── api-client.ts
-│   │   │   ├── auth-client.ts
-│   │   │   ├── auth-schemas.ts
-│   │   │   └── utils.ts
-│   │   ├── pages/                # Top-level page components
-│   │   │   ├── Home.tsx
-│   │   │   ├── login.tsx
-│   │   │   ├── signup.tsx
-│   │   │   └── NotFound.tsx
-│   │   └── assets/
+│   │   │   ├── api-client.ts     # Generic fetcher wrapper (native fetch)
+│   │   │   ├── auth.ts           # Auth API + localStorage session helpers
+│   │   │   ├── auth-schemas.ts   # Yup schemas for login/signup
+│   │   │   ├── axios.ts          # Legacy-named fetch wrapper (uses native fetch, not axios)
+│   │   │   ├── query-client.ts   # TanStack Query client instance
+│   │   │   └── utils.ts          # cn() utility
+│   │   └── pages/                # Top-level page components
+│   │       ├── Home.tsx
+│   │       ├── login.tsx
+│   │       ├── signup.tsx
+│   │       └── NotFound.tsx
 │   ├── .env                      # Frontend dev env (VITE_API_URL)
 │   ├── .env.production           # Frontend production env (VITE_API_URL=/api)
 │   ├── .env.example
@@ -151,6 +161,10 @@ The repository is located at `C:\Users\HP\Documents\My-Project\Inventory Managem
 │   ├── .prettierrc
 │   ├── package.json
 │   └── package-lock.json
+│
+├── nginx/
+│   ├── Dockerfile
+│   └── default.conf              # Nginx reverse-proxy + SPA config
 │
 ├── .env.example                  # Example environment variables for Docker Compose
 ├── .gitignore
@@ -181,6 +195,9 @@ npm run dev               # nodemon src/app.js
 
 # Lint manually (no script in package.json)
 npx eslint src/
+
+# Seed default admin user
+node seed-admin.js
 ```
 
 **Docker Compose (full stack):**
@@ -232,9 +249,9 @@ npm run typecheck         # tsc --noEmit
 |----------|---------|---------|
 | `PORT` | `3000` | HTTP port the Express server listens on |
 | `MONGO_URI` | `mongodb://localhost:27017/inventory_db` | MongoDB connection string |
-| `JWT_SECRET` | *(required)* | Secret key for signing JWT tokens — **must be set** |
-| `JWT_EXPIRES_IN` | `1d` | JWT token lifetime |
-| `CORS_ORIGIN` | *(empty)* | Comma-separated allowed origins (empty = allow all, for dev only) |
+| `JWT_SECRET` | *(none)* | Secret key for signing JWT tokens |
+| `JWT_EXPIRES_IN` | `1d` | JWT token expiration time |
+| `CORS_ORIGIN` | *(empty)* | Optional comma-separated allowed origins |
 
 In Docker Compose, `MONGO_URI` is overridden to `mongodb://mongo:27017/inventory_db` and `JWT_SECRET` is read from the root `.env` file.
 
@@ -246,11 +263,19 @@ In Docker Compose, `MONGO_URI` is overridden to `mongodb://mongo:27017/inventory
 
 See `app/.env.example` for the template.
 
+### Docker Compose (root `.env`)
+
+| Variable | Example | Purpose |
+|----------|---------|---------|
+| `JWT_SECRET` | *(none)* | Shared secret for backend token signing |
+| `JWT_EXPIRES_IN` | `1d` | Token lifetime |
+| `CORS_ORIGIN` | *(empty)* | CORS restriction (optional) |
+
 ---
 
 ## Backend API Routes
 
-All routes are mounted in `api/src/app.js` and prefixed as follows:
+All routes are mounted in `api/src/app.js`. Every route except `/api/auth` and `/health` is protected by `authMiddleware`.
 
 | Prefix | Route File | Supported Methods |
 |--------|-----------|-------------------|
@@ -267,9 +292,11 @@ All routes are mounted in `api/src/app.js` and prefixed as follows:
 | `/api/stock` | `routes/stock.js` | `POST`, `GET`, `GET /:id`, `PATCH /:id`, `DELETE /:id`, `GET /available` |
 | `/api/stockouts` | `routes/stockout.js` | `POST`, `GET`, `GET /:id`, `PATCH /:id`, `DELETE /:id`, `PATCH /:id/accept`, `PATCH /:id/reject` |
 | `/api/reports` | `routes/reports.js` | `GET` |
+| `/health` | *(inline)* | `GET` — returns DB connectivity status |
 
 ### Global Error Handling
 
+- `401` — returned by `authMiddleware` for missing or invalid JWT tokens.
 - `404` — returned for unknown routes via a catch-all middleware.
 - `500` — returned by a centralized error handler that logs `err.stack` to the console.
 
@@ -282,7 +309,7 @@ All routes are mounted in `api/src/app.js` and prefixed as follows:
 - `name` (String, required)
 - `email` (String, required, unique)
 - `phone` (String, unique, sparse)
-- `password` (String, required) — hashed with bcrypt
+- `password` (String, required) — hashed with bcrypt (salt rounds 10)
 - `role` (String, enum: `['admin', 'sales', 'stock']`, default: `'stock'`)
 - `is_active` (Boolean)
 - `store` (ObjectId ref Store)
@@ -397,18 +424,23 @@ Auth guards:
 - `RedirectIfAuthed` — redirects authenticated users to their role's default route.
 - `RequireRole` — redirects users without the required role to their default route.
 
+Default role routes:
+- `admin` → `/`
+- `sales` → `/my-store`
+- `stock` → `/stock`
+
 ### State Management & Data Fetching
 
 - **TanStack Query** (`@tanstack/react-query`) handles server-state caching, mutations, and invalidation.
 - Each feature module exposes an `api.ts` (raw fetch wrappers) and `hooks.ts` (query/mutation hooks).
-- The global `QueryClient` is instantiated in `main.tsx`.
+- The global `QueryClient` is instantiated in `lib/query-client.ts` and provided in `main.tsx`.
 
 ### Authentication
 
-- **Custom JWT auth** (`lib/auth.ts`) provides `login`, `register`, `changePassword`, `fetchCurrentUser`, and session management via localStorage.
-- The `fetcher` in `lib/api-client.ts` injects the `Bearer` token on every request.
+- **Custom JWT auth** (`lib/auth.ts`) provides `login`, `register`, `changePassword`, `fetchCurrentUser`, and session management via `localStorage`.
+- The `fetcher` in `lib/api-client.ts` injects the `Bearer` token on every request and clears the session on `401` responses.
 - `useAuthSession()` is a TanStack Query hook that validates the token via `GET /api/auth/me`.
-- The backend implements JWT auth in `routes/auth.js` with bcrypt-hashed passwords.
+- The backend implements JWT auth in `routes/auth.js` with bcrypt-hashed passwords and express-rate-limit on the login endpoint.
 
 ### Feature-Based Folder Structure
 
@@ -425,11 +457,13 @@ features/<name>/
 
 ### Shared Code
 
-- `src/components/ui/` — shadcn/ui primitive components (Button, Card, Dialog, Input, Label, Select, Separator, Sheet, Sidebar, Skeleton, Table, Tabs, Tooltip, etc.).
+- `src/components/ui/` — shadcn/ui primitive components (alert-dialog, button, card, dialog, dropdown-menu, input, label, select, separator, sheet, sidebar, skeleton, table, tabs, tooltip).
+- `src/components/theme-provider.tsx` — Light/dark theme provider with system detection.
 - `src/lib/utils.ts` — `cn()` utility merging `clsx` + `tailwind-merge`.
-- `src/lib/api-client.ts` — Generic `fetcher<T>` wrapper for JSON API calls.
+- `src/lib/api-client.ts` — Generic `fetcher<T>` wrapper for JSON API calls using native `fetch`.
+- `src/lib/axios.ts` — Another native `fetch` wrapper (legacy filename; does not use the axios library).
 - `src/lib/auth-schemas.ts` — Yup schemas for login and signup forms.
-- `src/hooks/` — Global custom hooks (`useSidebar`, `use-mobile`).
+- `src/hooks/` — Global custom hooks (`useAuthSession`, `use-mobile`, `useSidebar`).
 - `src/layout/` — Reusable layout shells (`AppSidebarLayout`, `AuthLayout`).
 
 ---
@@ -470,21 +504,25 @@ features/<name>/
 
 ## Known Issues & Gaps
 
-1. **ESLint Configuration Uses Browser Globals for Backend** — `api/eslint.config.mjs` sets `globals: globals.browser` for a Node.js backend. It should use `globals.node` instead.
-2. **No Tests** — There is no testing framework, test directory, or test scripts configured in either workspace.
-3. **No CI/CD** — No GitHub Actions, pre-commit hooks, or deployment pipelines are configured.
-4. **No automated backups** — MongoDB backups are not configured.
-5. **No HTTPS in Docker Compose** — The local Docker setup uses HTTP only. Use a reverse proxy (nginx, Traefik, Cloudflare) with TLS for production.
-6. **MongoDB has no authentication** — The Docker Compose MongoDB container has no username/password. Only expose port 27017 to the host if you add authentication.
+1. **Missing Input Validation** — No middleware (e.g., Joi, Zod, express-validator) validates request bodies on the backend before they reach Mongoose. Validation relies solely on schema-level rules and ad-hoc checks in route handlers.
+2. **ESLint Configuration Uses Browser Globals for Backend** — `api/eslint.config.mjs` sets `globals: globals.browser` for a Node.js backend. It should use `globals.node` instead.
+3. **No Tests** — There is no testing framework, test directory, or test scripts configured in either workspace.
+4. **No CI/CD** — No GitHub Actions, pre-commit hooks, or deployment pipelines are configured.
+5. **No automated backups** — MongoDB backups are not configured (see `DEPLOY.md` for a manual cron-based backup strategy).
+6. **Password length mismatch** — The frontend signup form (`auth-schemas.ts`) requires passwords of at least 8 characters, but the backend register endpoint (`routes/auth.js`) only enforces a minimum of 6 characters.
+7. **Legacy filename** — `app/src/lib/axios.ts` is named after the axios library but implements a native `fetch` wrapper.
 
 ---
 
 ## Security Considerations
 
-- **Passwords are hashed with bcrypt** via `routes/auth.js`. The legacy `/users` `POST` route still accepts raw passwords — avoid using it directly.
+- **Passwords are hashed with bcrypt** (salt rounds 10) via `routes/auth.js`.
 - **JWT authentication** is implemented via `middleware/auth.js` and `routes/auth.js`.
+- **Rate limiting** is applied to the login endpoint (`/api/auth/login`) via `express-rate-limit`: 20 attempts per 15-minute window.
 - **`.env` files** contain connection strings and secrets. Both `api/.env` and `app/.env` are ignored in `.gitignore`. The root `.env` file (used by Docker Compose) should also be kept secret.
-- **CORS is configured** on the backend (`app.use(cors())`) for local development. In production, both frontend and backend are served from the same domain via Nginx, so CORS is not needed.
+- **CORS is configurable** on the backend (`app.use(cors(corsOptions))`) via the `CORS_ORIGIN` environment variable. In production, both frontend and backend are served from the same domain via Nginx, so CORS is typically not needed.
+- The `/api/auth/register` endpoint is protected by `authMiddleware` and restricts account creation to admins only.
+- The `seed-admin.js` script creates a default admin with a hardcoded password (`admin12345`). This password should be changed immediately after first login.
 
 ---
 
@@ -493,7 +531,7 @@ features/<name>/
 - The backend `Dockerfile` uses the official `node:18-alpine` image, installs dependencies, copies the full source, exposes port `3000`, and runs `node src/app.js`.
 - The backend server binds to `0.0.0.0` explicitly (see `src/app.js`), which is required for Docker container accessibility.
 - MongoDB data is persisted via a named Docker volume (`mongo-data`).
-- The frontend is built inside the `nginx/Dockerfile` multi-stage build and served by nginx alongside API proxy routes.
+- The frontend is built inside the `nginx/Dockerfile` multi-stage build (using `node:22-alpine`) and served by nginx alongside API proxy routes.
 - For production VPS deployment, see `DEPLOY.md` which covers Ubuntu + Nginx + PM2 + MongoDB Atlas + Let's Encrypt.
 - `api/ecosystem.config.cjs` is the PM2 process configuration for production.
 - `app/.env.production` sets `VITE_API_URL=/api` for same-domain deployment behind Nginx.

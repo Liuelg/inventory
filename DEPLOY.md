@@ -1,6 +1,6 @@
-# Deployment Guide — DigitalOcean VPS
+# Deployment Guide — DigitalOcean VPS (Docker Compose)
 
-This guide walks you through deploying the full **Leather-Inventory** stack (Node.js API + React frontend + MongoDB) to a DigitalOcean droplet.
+This guide walks you through deploying the full **Leather-Inventory** stack to a DigitalOcean droplet using **Docker Compose**. The backend, frontend, and MongoDB all run in containers. A system-level Nginx + Let's Encrypt handles HTTPS.
 
 ---
 
@@ -10,25 +10,39 @@ This guide walks you through deploying the full **Leather-Inventory** stack (Nod
 Internet
     |
     v
-+----------------------------+
-|  Nginx (port 80 / 443)     |
-|  - Serves static React app |
-|  - Proxies /api/* to Node  |
-+----------------------------+
-    |              |
-    v              v
-+---------+  +------------------+
-|  React  |  |  Node.js API     |
-|  dist/  |  |  (PM2 managed)   |
-+---------+  +------------------+
-                      |
-                      v
-               +-------------+
-               |  MongoDB    |
-               |  (Atlas or  |
-               |   Docker)   |
-               +-------------+
++-----------------------------+
+|  System Nginx (80 / 443)    |  ← Let's Encrypt SSL
+|  - Proxies everything to    |
+|    Docker nginx on port 80  |
++-----------------------------+
+    |
+    v
++-----------------------------+
+|  Docker Compose Network     |
+|                             |
+|  +---------------------+    |
+|  | nginx (container)   |    |  ← Serves React static files
+|  | Port 80 (internal)  |    |  ← Proxies /api/* to backend
+|  +---------------------+    |
+|           |                 |
+|           v                 |
+|  +---------------------+    |
+|  | backend (container) |    |  ← Node.js API
+|  | Port 3000 (internal)|    |
+|  +---------------------+    |
+|           |                 |
+|           v                 |
+|  +---------------------+    |
+|  | mongo (container)   |    |  ← MongoDB 6
+|  | Port 27017 (internal)|   |
+|  +---------------------+    |
++-----------------------------+
 ```
+
+**Why system Nginx + Docker Nginx?**
+- System Nginx terminates SSL (port 443) and manages Let's Encrypt certificates
+- Docker Nginx serves the built React app and routes API calls to the backend
+- This keeps SSL concerns outside your application containers
 
 ---
 
@@ -43,16 +57,16 @@ Internet
 ## 2. Create the Droplet
 
 1. Log in to DigitalOcean → **Create → Droplets**
-2. **Choose Region**: Pick one closest to your users (e.g., `NYC1`, `FRA1`, `BLR1`)
+2. **Choose Region**: Pick one closest to your users (e.g., `NYC1`, `FRA1`, `BLR1`, `LON1`)
 3. **Choose an Image**: `Ubuntu 24.04 (LTS) x64`
-4. **Choose Size**: 
-   - Minimum: **Basic / $6/mo** (1 GB RAM / 1 CPU) for testing
-   - Recommended: **Basic / $12/mo** (2 GB RAM / 1 CPU) for production
-5. **Choose Authentication**: SSH key (recommended) or password
+4. **Choose Size**:
+   - Minimum: **Basic / $12/mo** (2 GB RAM / 1 CPU) — required for Docker
+   - Recommended: **Basic / $18/mo** (2 GB RAM / 2 CPU) for smoother builds
+5. **Choose Authentication**: SSH key (recommended)
 6. **Hostname**: `inventory-app` (or your domain)
 7. Click **Create Droplet**
 
-Wait ~1 minute, then copy the **IPv4 address** (e.g., `192.0.2.1`).
+Wait ~1 minute, then copy the **IPv4 address**.
 
 ---
 
@@ -89,33 +103,40 @@ usermod -aG sudo deployer
 su - deployer
 ```
 
-### 4.2 Install Node.js (via NodeSource)
+### 4.2 Update system packages
 
 ```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt-get install -y nodejs
+sudo apt update && sudo aept upgrade -y
 ```
 
-Verify:
+### 4.3 Install Docker & Docker Compose
 
 ```bash
-node -v   # v20.x.x
-npm -v    # 10.x.x
-```
+# Install Docker
+sudo apt install -y apt-transport-https ca-certificates curl gnupg lsb-release
 
-### 4.3 Install Nginx
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
 
-```bash
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
 sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# Add deployer to docker group (run Docker without sudo)
+sudo usermod -aG docker deployer
+newgrp docker
+
+# Verify
+docker --version
+docker compose version
+```
+
+### 4.4 Install system Nginx
+
+```bash
 sudo apt install -y nginx
 sudo systemctl enable nginx
 sudo systemctl start nginx
-```
-
-### 4.4 Install PM2 (process manager)
-
-```bash
-sudo npm install -g pm2
 ```
 
 ### 4.5 Install Git
@@ -126,66 +147,9 @@ sudo apt install -y git
 
 ---
 
-## 5. MongoDB Setup (Recommended: Atlas)
+## 5. Deploy the Application
 
-For production, **MongoDB Atlas** (managed cloud DB) is simpler and more reliable than self-hosting.
-
-### Option A: MongoDB Atlas (Easiest)
-
-1. Go to [mongodb.com/atlas](https://mongodb.com/atlas) → Sign up
-2. Create a **Free (M0)** cluster
-3. In **Network Access** → Add your droplet IP to the allowlist
-4. In **Database Access** → Create a user with password
-5. Go to **Clusters → Connect → Drivers → Node.js**
-6. Copy the connection string:
-
-```
-mongodb+srv://<user>:<password>@cluster0.xxxxx.mongodb.net/inventory_db?retryWrites=true&w=majority
-```
-
-Save this — you'll need it for the backend `.env`.
-
-### Option B: Self-Hosted MongoDB (Docker)
-
-If you prefer to run MongoDB on the same VPS:
-
-```bash
-sudo apt install -y docker.io docker-compose
-sudo systemctl enable docker
-
-# Create a docker-compose for MongoDB
-mkdir -p ~/mongodb && cd ~/mongodb
-cat > docker-compose.yml << 'EOF'
-version: "3.8"
-services:
-  mongo:
-    image: mongo:latest
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:27017:27017"
-    volumes:
-      - mongo-data:/data/db
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: YOUR_STRONG_PASSWORD
-volumes:
-  mongo-data:
-EOF
-
-sudo docker compose up -d
-```
-
-Connection string for self-hosted:
-
-```
-mongodb://admin:YOUR_STRONG_PASSWORD@localhost:27017/inventory_db?authSource=admin
-```
-
----
-
-## 6. Deploy the Application
-
-### 6.1 Clone the repo on the server
+### 5.1 Clone the repo on the server
 
 ```bash
 cd ~
@@ -193,79 +157,81 @@ git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git inventory-app
 cd inventory-app
 ```
 
-### 6.2 Build the Frontend
+### 5.2 Create the production environment file
 
 ```bash
-cd app
-npm install
-npm run build
-```
-
-This creates the `app/dist/` folder with static files.
-
-### 6.3 Configure Backend Environment
-
-```bash
-cd ~/inventory-app/api
-mkdir -p logs
-```
-
-Create the production `.env`:
-
-```bash
+cp .env.example .env
 nano .env
 ```
 
-Paste (replace values with yours):
+Paste and edit (generate a strong secret):
 
 ```env
-PORT=3000
-MONGO_URI=mongodb+srv://your_user:your_password@cluster0.xxxxx.mongodb.net/inventory_db?retryWrites=true&w=majority
-JWT_SECRET=REPLACE_THIS_WITH_A_LONG_RANDOM_STRING_MIN_32_CHARS
+JWT_SECRET=REPLACE_THIS_WITH_A_LONG_RANDOM_STRING
 JWT_EXPIRES_IN=1d
+CORS_ORIGIN=https://yourdomain.com
 ```
 
 > **Generate a strong JWT secret:**
 > ```bash
-> node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+> openssl rand -base64 32
 > ```
 
-### 6.4 Install Backend Dependencies
+### 5.3 Build and start the containers (production)
 
 ```bash
-cd ~/inventory-app/api
-npm install --production
+cd ~/inventory-app
+docker compose -f docker-compose.prod.yml up --build -d
 ```
 
-### 6.5 Start the API with PM2
+This builds:
+- Backend image (`api/Dockerfile`)
+- Frontend build inside nginx image (`nginx/Dockerfile`)
+- Pulls MongoDB 6 image
+
+### 5.4 Verify containers are running
 
 ```bash
-cd ~/inventory-app/api
-pm2 start ecosystem.config.cjs
-pm2 save
-pm2 startup systemd
+docker compose -f docker-compose.prod.yml ps
 ```
 
-The last command will output something like:
+You should see:
+- `inventory-backend` — Up
+- `inventory-nginx` — Up, port 80 mapped
+- `inventory-mongo` — Up (healthy)
+
+### 5.5 Seed the default admin user
 
 ```bash
-sudo env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u deployer --hp /home/deployer
+docker exec -e MONGO_URI=mongodb://mongo:27017/inventory_db inventory-backend node seed-admin.js
 ```
 
-**Run that exact command with `sudo`** to make PM2 auto-start on boot.
+Expected output:
+```
+Admin account created successfully!
+  Email: admin@gmail.com
+  Password: admin12345
+```
 
-Verify the API is running:
+> **Change this password immediately after first login.**
+
+### 5.6 Verify the API is responding
 
 ```bash
-curl http://localhost:3000/users
-# Should return: {"message":"Unauthorized"}
+curl http://localhost/health
+# {"status":"ok","db":"connected"}
+
+curl -i http://localhost/users
+# HTTP/1.1 401 Unauthorized
 ```
+
+The 401 on `/users` is correct — it means auth is working.
 
 ---
 
-## 7. Configure Nginx
+## 6. Configure System Nginx + Let's Encrypt (HTTPS)
 
-### 7.1 Create the site config
+### 6.1 Create the Nginx site config
 
 ```bash
 sudo nano /etc/nginx/sites-available/inventory
@@ -278,16 +244,8 @@ server {
     listen 80;
     server_name yourdomain.com www.yourdomain.com;
 
-    # Frontend — static React build
     location / {
-        root /home/deployer/inventory-app/app/dist;
-        index index.html;
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Backend API — proxy to Node.js
-    location /api/ {
-        proxy_pass http://localhost:3000/api/;
+        proxy_pass http://localhost:80;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -297,20 +255,10 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
     }
-
-    # Backend API — other routes (users, sales, products, etc.)
-    location ~ ^/(users|sales|products|goodIns|stores|transfers|api)/ {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
 }
 ```
 
-### 7.2 Enable the site
+### 6.2 Enable the site
 
 ```bash
 sudo ln -sf /etc/nginx/sites-available/inventory /etc/nginx/sites-enabled/
@@ -319,18 +267,7 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-### 7.3 Fix permissions
-
-Nginx runs as `www-data` and needs access to the static files:
-
-```bash
-sudo chown -R deployer:www-data /home/deployer/inventory-app/app/dist
-sudo chmod -R 755 /home/deployer/inventory-app/app/dist
-```
-
----
-
-## 8. SSL with Let's Encrypt (HTTPS)
+### 6.3 Install SSL with Let's Encrypt
 
 ```bash
 sudo apt install -y certbot python3-certbot-nginx
@@ -345,13 +282,11 @@ Certbot auto-renews. Test renewal:
 sudo certbot renew --dry-run
 ```
 
----
+### 6.4 Verify HTTPS
 
-## 9. Verify Everything
+Open `https://yourdomain.com` in your browser. You should see the login page with a valid SSL certificate.
 
-Open `https://yourdomain.com` in your browser. You should see the login page.
-
-Test the API:
+Test the API over HTTPS:
 
 ```bash
 curl -i https://yourdomain.com/users
@@ -359,16 +294,9 @@ curl -i https://yourdomain.com/users
 # {"message":"Unauthorized"}
 ```
 
-Test the frontend build:
-
-```bash
-curl -i https://yourdomain.com/
-# Should return the React index.html
-```
-
 ---
 
-## 10. Updating After Code Changes
+## 7. Updating After Code Changes
 
 When you push new code, SSH to the server and run:
 
@@ -376,40 +304,45 @@ When you push new code, SSH to the server and run:
 cd ~/inventory-app
 git pull origin main
 
-# Rebuild frontend
-cd app && npm install && npm run build && cd ..
+# Rebuild everything and restart
+docker compose -f docker-compose.prod.yml down
+docker compose -f docker-compose.prod.yml up --build -d
 
-# Restart backend
-pm2 restart inventory-api
-
-# Reload nginx (if configs changed)
-sudo nginx -t && sudo systemctl reload nginx
+# Verify
+docker compose -f docker-compose.prod.yml ps
 ```
+
+> **Tip:** To avoid downtime during updates, use `docker compose -f docker-compose.prod.yml up --build -d` without `down` first. Docker will recreate only changed containers.
 
 ---
 
-## 11. Monitoring & Logs
+## 8. Monitoring & Logs
 
-### PM2 status
+### Docker status
 
 ```bash
-pm2 status
-pm2 logs inventory-api
-pm2 monit
+docker ps
+docker stats
 ```
 
-### Nginx logs
+### Container logs
+
+```bash
+# Backend
+docker logs -f inventory-backend
+
+# Nginx (application)
+docker logs -f inventory-nginx
+
+# MongoDB
+docker logs -f inventory-mongo
+```
+
+### System Nginx logs
 
 ```bash
 sudo tail -f /var/log/nginx/access.log
 sudo tail -f /var/log/nginx/error.log
-```
-
-### Backend logs
-
-```bash
-tail -f ~/inventory-app/api/logs/out.log
-tail -f ~/inventory-app/api/logs/err.log
 ```
 
 ### Server resources
@@ -418,11 +351,60 @@ tail -f ~/inventory-app/api/logs/err.log
 htop
 free -h
 df -h
+docker system df
 ```
 
 ---
 
-## 12. Firewall (UFW)
+## 9. Backup Strategy
+
+### Automated daily MongoDB backup
+
+Create a backup script:
+
+```bash
+mkdir -p ~/backups
+nano ~/backup-mongo.sh
+```
+
+Paste:
+
+```bash
+#!/bin/bash
+BACKUP_DIR="/home/deployer/backups"
+DATE=$(date +%Y-%m-%d_%H-%M-%S)
+CONTAINER="inventory-mongo"
+DB_NAME="inventory_db"
+
+mkdir -p "$BACKUP_DIR"
+
+docker exec "$CONTAINER" mongodump --db "$DB_NAME" --archive > "$BACKUP_DIR/${DB_NAME}_${DATE}.archive"
+
+# Keep only last 7 backups
+find "$BACKUP_DIR" -name "*.archive" -type f -mtime +7 -delete
+
+echo "Backup completed: ${DB_NAME}_${DATE}.archive"
+```
+
+Make it executable and add to cron:
+
+```bash
+chmod +x ~/backup-mongo.sh
+
+# Add cron job (runs daily at 3 AM)
+(crontab -l 2>/dev/null; echo "0 3 * * * /home/deployer/backup-mongo.sh >> /home/deployer/backups/backup.log 2>&1") | crontab -
+```
+
+### Restore from backup
+
+```bash
+# Replace with your backup file
+docker exec -i inventory-mongo mongorestore --db inventory_db --archive < ~/backups/inventory_db_YYYY-MM-DD_HH-MM-SS.archive
+```
+
+---
+
+## 10. Firewall (UFW)
 
 ```bash
 sudo ufw default deny incoming
@@ -446,74 +428,94 @@ To                         Action      From
 Nginx Full                 ALLOW       Anywhere
 ```
 
----
-
-## 13. Backup Strategy (Recommended)
-
-For MongoDB Atlas, enable **Automated Backups** in the Atlas dashboard.
-
-For self-hosted MongoDB, add a daily cron job:
-
-```bash
-sudo apt install -y cron
-
-crontab -e
-```
-
-Add:
-
-```cron
-0 3 * * * /usr/bin/mongodump --uri="mongodb://admin:PASSWORD@localhost:27017/inventory_db?authSource=admin" --out=/home/deployer/backups/$(date +\%Y-\%m-\%d) && find /home/deployer/backups -type d -mtime +7 -exec rm -rf {} +
-```
+> **Important:** Do NOT open port 3000 (backend) or 27017 (MongoDB). They are only accessible inside the Docker network.
 
 ---
 
-## Troubleshooting
+## 11. Troubleshooting
 
 | Problem | Fix |
 |---------|-----|
-| `502 Bad Gateway` | API is not running: `pm2 status` → `pm2 restart inventory-api` |
-| Blank white page | Check `app/dist/` exists and Nginx `root` path is correct |
-| CORS errors | Backend `cors()` is open, but check `VITE_API_URL` points to `/api` (same domain) |
-| MongoDB connection timeout | Check Atlas IP allowlist or self-hosted MongoDB is running |
-| Permission denied on files | Run `sudo chown -R deployer:www-data /home/deployer/inventory-app` |
-| Port 3000 exposed publicly | It's OK — Nginx proxies to it. But you can firewall it: `sudo ufw deny 3000` |
+| `502 Bad Gateway` | Docker nginx is not running: `docker ps` → `docker compose -f docker-compose.prod.yml restart nginx` |
+| Container keeps restarting | Check logs: `docker logs inventory-backend` — likely `JWT_SECRET` missing |
+| Blank white page | Frontend build failed during `docker compose -f docker-compose.prod.yml up --build`. Check: `docker compose -f docker-compose.prod.yml logs nginx` |
+| CORS errors | Check `CORS_ORIGIN` in `.env` matches your domain. Rebuild: `docker compose -f docker-compose.prod.yml up --build -d` |
+| MongoDB connection timeout | Check `inventory-mongo` is healthy: `docker ps`. Verify `MONGO_URI` in docker-compose |
+| Permission denied on files | Make sure you're running commands as `deployer`, not root |
+| SSL certificate error | Run `sudo certbot renew --dry-run`. Check system nginx config: `sudo nginx -t` |
+| Disk full | Clean up Docker: `docker system prune -a` and `docker volume prune` |
 
 ---
 
-## Quick Reference Commands
+## 12. Security Checklist
+
+Before going live, verify:
+
+- [ ] `JWT_SECRET` is set to a long random string in `.env`
+- [ ] `CORS_ORIGIN` is set to your domain (not empty) in `.env`
+- [ ] MongoDB port `27017` is NOT exposed to the host (check `docker-compose.yml`)
+- [ ] Backend port `3000` is NOT exposed to the host
+- [ ] UFW firewall is enabled and only allows SSH + Nginx
+- [ ] Default admin password has been changed
+- [ ] `api/.env` and `app/.env` are NOT committed to Git
+- [ ] Backups are running and restorable
+- [ ] SSL certificate is valid and auto-renewing
+
+---
+
+## 13. Quick Reference Commands
 
 ```bash
 # SSH
-ssh root@YOUR_DROPLET_IP
+ssh deployer@YOUR_DROPLET_IP
 
-# Backend
-pm2 status
-pm2 restart inventory-api
-pm2 logs inventory-api --lines 50
+# Docker Compose (production)
+cd ~/inventory-app
+docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml logs -f
+docker compose -f docker-compose.prod.yml up --build -d
+docker compose -f docker-compose.prod.yml down
 
-# Frontend rebuild
-cd ~/inventory-app/app && npm run build
+# Backend logs
+docker compose -f docker-compose.prod.yml logs -f backend --tail 50
 
-# Nginx
+# Nginx (system)
 sudo nginx -t
 sudo systemctl reload nginx
 sudo systemctl status nginx
 
 # Full update
-cd ~/inventory-app && git pull && cd app && npm run build && cd ../api && pm2 restart inventory-api
+cd ~/inventory-app && git pull && docker compose -f docker-compose.prod.yml down && docker compose -f docker-compose.prod.yml up --build -d
+
+# Backup
+~/backup-mongo.sh
 ```
 
 ---
 
-## Estimated Monthly Cost
+## 14. Estimated Monthly Cost
 
 | Service | Cost |
 |---------|------|
 | DigitalOcean Droplet (2 GB RAM) | ~$12/mo |
-| MongoDB Atlas (M0 Free Tier) | Free |
 | Domain name | ~$10–15/year |
+| Let's Encrypt SSL | Free |
 | **Total** | **~$12/mo** |
+
+---
+
+## Architecture Notes
+
+**Why not use PM2 anymore?**
+- Docker handles process management, restarts, and isolation
+- No need to install Node.js on the host
+- Frontend is built inside the container, not on the host
+- Updates are a single `docker compose -f docker-compose.prod.yml up --build -d` command
+
+**Why system Nginx instead of Traefik or Docker-only nginx?**
+- Let's Encrypt integration with certbot is simplest with system Nginx
+- Separation of concerns: SSL termination lives on the host, application lives in Docker
+- Easier to debug and inspect SSL configs
 
 ---
 
