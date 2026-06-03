@@ -22,6 +22,8 @@ services:
     image: mongo:6
     container_name: inventory-mongo
     restart: always
+    ports:
+      - "27017:27017"
     volumes:
       - mongo-data:/data/db
     expose:
