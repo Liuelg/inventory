@@ -10,6 +10,8 @@ function getReportTypeLabel(type: ReportType): string {
       return "Stock Out"
     case "sales":
       return "Sales"
+    case "remaining":
+      return "Remaining Products"
   }
 }
 

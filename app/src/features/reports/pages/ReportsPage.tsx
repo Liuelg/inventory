@@ -27,8 +27,8 @@ export function ReportsPage() {
       <div>
         <h1 className="text-2xl font-bold">Reports</h1>
         <p className="text-sm text-gray-500">
-          Generate daily, weekly, and monthly reports for sales, stock ins, and
-          stock outs.
+          Generate daily, weekly, and monthly reports for sales, stock ins,
+          stock outs, and remaining products.
         </p>
       </div>
 
@@ -37,18 +37,28 @@ export function ReportsPage() {
       {report && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-muted-foreground text-sm">
-            Showing{" "}
-            <span className="font-medium capitalize">{report.period}</span>{" "}
-            report for{" "}
-            <span className="font-medium capitalize">
-              {report.type === "goodIns"
-                ? "Stock In"
-                : report.type === "stockouts"
-                  ? "Stock Out"
-                  : "Sales"}
-            </span>{" "}
-            ({new Date(report.start).toLocaleDateString()} –{" "}
-            {new Date(report.end).toLocaleDateString()})
+            {report.type === "remaining" ? (
+              <>
+                Showing current inventory report for{" "}
+                <span className="font-medium">Remaining Products</span> (as
+                of {new Date(report.start).toLocaleDateString()})
+              </>
+            ) : (
+              <>
+                Showing{" "}
+                <span className="font-medium capitalize">{report.period}</span>{" "}
+                report for{" "}
+                <span className="font-medium capitalize">
+                  {report.type === "goodIns"
+                    ? "Stock In"
+                    : report.type === "stockouts"
+                      ? "Stock Out"
+                      : "Sales"}
+                </span>{" "}
+                ({new Date(report.start).toLocaleDateString()} –{" "}
+                {new Date(report.end).toLocaleDateString()})
+              </>
+            )}
           </div>
           <Button
             variant="outline"
@@ -74,18 +84,22 @@ export function ReportsPage() {
         <div className="flex flex-col gap-4">
           <ReportSummaryCards summary={report.summary} />
 
-          <Tabs defaultValue="product">
-            <TabsList>
-              <TabsTrigger value="product">By Product</TabsTrigger>
-              <TabsTrigger value="store">By Store</TabsTrigger>
-            </TabsList>
-            <TabsContent value="product" className="pt-2">
-              <ReportBreakdownTable data={report.breakdown} />
-            </TabsContent>
-            <TabsContent value="store" className="pt-2">
-              <ReportByStoreTable data={report.byStore} />
-            </TabsContent>
-          </Tabs>
+          {report.type === "remaining" ? (
+            <ReportBreakdownTable data={report.breakdown} />
+          ) : (
+            <Tabs defaultValue="product">
+              <TabsList>
+                <TabsTrigger value="product">By Product</TabsTrigger>
+                <TabsTrigger value="store">By Store</TabsTrigger>
+              </TabsList>
+              <TabsContent value="product" className="pt-2">
+                <ReportBreakdownTable data={report.breakdown} />
+              </TabsContent>
+              <TabsContent value="store" className="pt-2">
+                <ReportByStoreTable data={report.byStore} />
+              </TabsContent>
+            </Tabs>
+          )}
         </div>
       ) : null}
 

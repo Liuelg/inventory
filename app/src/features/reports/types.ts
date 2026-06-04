@@ -1,4 +1,4 @@
-export type ReportType = "sales" | "goodIns" | "stockouts"
+export type ReportType = "sales" | "goodIns" | "stockouts" | "remaining"
 export type ReportPeriod = "daily" | "weekly" | "monthly"
 
 export type ReportSummary = {

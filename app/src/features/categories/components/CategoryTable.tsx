@@ -10,13 +10,51 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { DataTable, type ColumnDef } from "@/components/Table.tsx"
 import { useCategories, useDeleteCategory } from "../hooks"
+import { useSubCategoriesByCategory } from "@/features/sub-categories/hooks"
 import type { Category } from "../types"
-import { Pencil, Trash2 } from "lucide-react"
+import { ChevronDown, Pencil, Trash2 } from "lucide-react"
 
 interface CategoryTableProps {
   onEdit: (category: Category) => void
+}
+
+function SubCategoryDropdown({ categoryId }: { categoryId: string }) {
+  const { data: subCategories, isLoading } = useSubCategoriesByCategory(categoryId)
+  const count = subCategories?.length ?? 0
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm">
+          {isLoading ? "..." : count}
+          <ChevronDown className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-48">
+        <DropdownMenuLabel>Sub-categories</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {isLoading ? (
+          <DropdownMenuItem disabled>Loading...</DropdownMenuItem>
+        ) : subCategories && subCategories.length > 0 ? (
+          subCategories.map((sc) => (
+            <DropdownMenuItem key={sc._id}>{sc.name}</DropdownMenuItem>
+          ))
+        ) : (
+          <DropdownMenuItem disabled>No sub-categories</DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
 }
 
 export function CategoryTable({ onEdit }: CategoryTableProps) {
@@ -25,8 +63,12 @@ export function CategoryTable({ onEdit }: CategoryTableProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
   const columns: ColumnDef<Category>[] = [
-    
     { header: "Name", cell: (c) => c.name },
+    {
+      header: "Sub-categories",
+      className: "w-[180px]",
+      cell: (c) => <SubCategoryDropdown categoryId={c._id} />,
+    },
     {
       header: "Actions",
       className: "w-[120px] text-right",

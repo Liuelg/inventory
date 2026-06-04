@@ -18,6 +18,7 @@ const REPORT_TYPES: { value: ReportType; label: string }[] = [
   { value: "sales", label: "Sales" },
   { value: "goodIns", label: "Stock In" },
   { value: "stockouts", label: "Stock Out" },
+  { value: "remaining", label: "Remaining Products" },
 ]
 
 const PERIODS: { value: ReportPeriod; label: string }[] = [
@@ -60,8 +61,8 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
 
   return (
     <Card>
-      <CardContent className="grid gap-4 pt-6 md:grid-cols-5">
-        <div className="flex flex-col gap-2">
+      <CardContent className="flex w-full flex-row divide-x divide-border pt-6">
+        <div className="flex flex-1 flex-col gap-2 px-4 py-2">
           <Label htmlFor="report-type">Report Type</Label>
           <Select value={type} onValueChange={(v) => setType(v as ReportType)}>
             <SelectTrigger id="report-type">
@@ -77,36 +78,40 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
           </Select>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="report-period">Period</Label>
-          <Select
-            value={period}
-            onValueChange={(v) => setPeriod(v as ReportPeriod)}
-          >
-            <SelectTrigger id="report-period">
-              <SelectValue placeholder="Select period" />
-            </SelectTrigger>
-            <SelectContent>
-              {PERIODS.map((p) => (
-                <SelectItem key={p.value} value={p.value}>
-                  {p.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {type !== "remaining" && (
+          <>
+            <div className="flex flex-1 flex-col gap-2 px-4 py-2">
+              <Label htmlFor="report-period">Period</Label>
+              <Select
+                value={period}
+                onValueChange={(v) => setPeriod(v as ReportPeriod)}
+              >
+                <SelectTrigger id="report-period">
+                  <SelectValue placeholder="Select period" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PERIODS.map((p) => (
+                    <SelectItem key={p.value} value={p.value}>
+                      {p.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="report-date">Date</Label>
-          <Input
-            id="report-date"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-          />
-        </div>
+            <div className="flex flex-1 flex-col gap-2 px-4 py-2">
+              <Label htmlFor="report-date">Date</Label>
+              <Input
+                id="report-date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
+            </div>
+          </>
+        )}
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-1 flex-col gap-2 px-4 py-2">
           <Label htmlFor="report-store">Store (optional)</Label>
           <Select value={store} onValueChange={setStore}>
             <SelectTrigger id="report-store">
@@ -123,7 +128,7 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
           </Select>
         </div>
 
-        <div className="flex items-end">
+        <div className="flex flex-1 items-end px-4 py-2">
           <Button onClick={handleGenerate} disabled={isLoading} className="w-full">
             <BarChart3 className="mr-2 h-4 w-4" />
             {isLoading ? "Generating..." : "Generate Report"}

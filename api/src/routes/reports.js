@@ -3,6 +3,7 @@ import mongoose from "mongoose"
 import Sale from "../models/Sale.js"
 import GoodIn from "../models/Goodin.js"
 import Stockout from "../models/Stockout.js"
+import Stock from "../models/Stock.js"
 
 const router = Router()
 
@@ -53,8 +54,62 @@ router.get("/", async (req, res, next) => {
   try {
     const { type, period, date, store } = req.query
 
-    if (!type || !["sales", "goodIns", "stockouts"].includes(type)) {
-      return res.status(400).json({ success: false, message: "Invalid or missing type. Use sales, goodIns, or stockouts." })
+    if (!type || !["sales", "goodIns", "stockouts", "remaining"].includes(type)) {
+      return res.status(400).json({ success: false, message: "Invalid or missing type. Use sales, goodIns, stockouts, or remaining." })
+    }
+
+    if (type === "remaining") {
+      const stocks = await Stock.find().populate("items.item_id", "name category")
+
+      let totalItems = 0
+      let totalValue = 0
+      const productMap = new Map()
+
+      for (const stock of stocks) {
+        for (const item of stock.items || []) {
+          const qty = item.remaining || 0
+          const price = item.price || 0
+          const itemValue = qty * price
+
+          totalItems += qty
+          totalValue += itemValue
+
+          const productId = item.item_id?._id?.toString?.() || item.item_id?.toString?.()
+          const productName = item.item_id?.name || "Unknown Product"
+
+          if (productId) {
+            const existing = productMap.get(productId) || {
+              product: { _id: productId, name: productName },
+              quantity: 0,
+              value: 0,
+            }
+            existing.quantity += qty
+            existing.value += itemValue
+            productMap.set(productId, existing)
+          }
+        }
+      }
+
+      const breakdown = Array.from(productMap.values()).sort((a, b) => b.quantity - a.quantity)
+      const now = new Date()
+
+      return res.json({
+        success: true,
+        data: {
+          type: "remaining",
+          period: "daily",
+          start: now.toISOString(),
+          end: now.toISOString(),
+          storeFilter: null,
+          summary: {
+            totalRecords: stocks.length,
+            totalItems,
+            totalValue,
+          },
+          breakdown,
+          byStore: [],
+        },
+      })
     }
 
     if (!period || !["daily", "weekly", "monthly"].includes(period)) {
