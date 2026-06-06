@@ -1,8 +1,8 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useMemo, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Trash2 } from "lucide-react"
+import { Trash2, Search, Check } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -10,13 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
 import type { Product } from "@/features/products/types"
@@ -146,6 +139,112 @@ function toPayload(
 function getItemIdString(item: StockItem): string {
   if (typeof item.item_id === "string") return item.item_id
   return item.item_id?._id ?? ""
+}
+
+function ProductSearchSelect({
+  products,
+  value,
+  onChange,
+}: {
+  products: Product[]
+  value: string
+  onChange: (id: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState("")
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const selected = products.find((p) => p._id === value)
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return products
+    return products.filter((p) => p.name.toLowerCase().includes(q))
+  }, [products, query])
+
+  useEffect(() => {
+    function handleDocClick(e: MouseEvent) {
+      if (!containerRef.current?.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleDocClick)
+    return () => document.removeEventListener("mousedown", handleDocClick)
+  }, [])
+
+  return (
+    <div ref={containerRef} className="relative">
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full justify-start font-normal"
+        onClick={() => {
+          setOpen((v) => !v)
+          if (!open) setQuery("")
+        }}
+      >
+        {selected ? (
+          <div className="flex items-center gap-2 overflow-hidden">
+            {selected.image ? (
+              <img src={selected.image} alt="" className="h-5 w-5 rounded object-cover shrink-0" />
+            ) : (
+              <div className="h-5 w-5 rounded bg-muted shrink-0" />
+            )}
+            <span className="truncate">{selected.name}</span>
+          </div>
+        ) : (
+          <span className="text-muted-foreground">Select product</span>
+        )}
+      </Button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
+          <div className="flex items-center gap-2 border-b px-2 py-1.5">
+            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+            <Input
+              type="text"
+              placeholder="Search products..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="h-8 border-0 bg-transparent shadow-none focus-visible:ring-0 px-0"
+              autoFocus
+            />
+          </div>
+          <div className="max-h-60 overflow-auto py-1">
+            {filtered.length === 0 ? (
+              <p className="px-3 py-2 text-sm text-muted-foreground">No products found.</p>
+            ) : (
+              filtered.map((p) => {
+                const isSelected = p._id === value
+                return (
+                  <button
+                    key={p._id}
+                    type="button"
+                    className={`flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground ${
+                      isSelected ? "bg-accent text-accent-foreground" : ""
+                    }`}
+                    onClick={() => {
+                      onChange(p._id)
+                      setOpen(false)
+                      setQuery("")
+                    }}
+                  >
+                    {p.image ? (
+                      <img src={p.image} alt="" className="h-6 w-6 rounded object-cover shrink-0" />
+                    ) : (
+                      <div className="h-6 w-6 rounded bg-muted shrink-0" />
+                    )}
+                    <span className="flex-1 truncate text-left">{p.name}</span>
+                    {isSelected ? <Check className="h-4 w-4 shrink-0" /> : null}
+                  </button>
+                )
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function StockForm({
@@ -491,28 +590,11 @@ export function StockForm({
                   </div>
                   <div className="grid gap-1">
                     <span className="text-xs font-medium text-muted-foreground sm:hidden">Product</span>
-                    <Select
+                    <ProductSearchSelect
+                      products={products ?? []}
                       value={item.item_id}
-                      onValueChange={(v) => handleProductSelect(item._key, v)}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select product" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {products?.map((p) => (
-                          <SelectItem key={p._id} value={p._id} textValue={p.name}>
-                            <div className="flex items-center gap-2">
-                              {p.image ? (
-                                <img src={p.image} alt="" className="h-6 w-6 rounded object-cover" />
-                              ) : (
-                                <div className="h-6 w-6 rounded bg-muted" />
-                              )}
-                              <span>{p.name}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onChange={(v) => handleProductSelect(item._key, v)}
+                    />
                   </div>
 
                   <div className="grid gap-1">
