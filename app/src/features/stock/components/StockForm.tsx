@@ -10,9 +10,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
+import { useProductGroups } from "@/features/product-groups/hooks"
 import type { Product } from "@/features/products/types"
+import type { ProductGroup } from "@/features/product-groups/types"
 import { useCreateStock, useStocks, useUpdateStock } from "../hooks"
 import type { Stock, StockPayload, StockItem } from "../types"
 
@@ -27,6 +30,7 @@ type StockItemForm = {
   _key: string
   item_id: string
   quantity: string
+  group?: string | null
 }
 
 type StockFormState = {
@@ -42,7 +46,7 @@ function nextKey(): string {
 }
 
 function createEmptyItem(): StockItemForm {
-  return { _key: nextKey(), item_id: "", quantity: "1" }
+  return { _key: nextKey(), item_id: "", quantity: "1", group: null }
 }
 
 const initialState: StockFormState = {
@@ -88,9 +92,9 @@ function getProductImage(
 }
 
 function mergeDuplicateItems(
-  items: { item_id: string; quantity: number; price: number }[]
-): { item_id: string; quantity: number; price: number }[] {
-  const map = new Map<string, { item_id: string; quantity: number; price: number }>()
+  items: { item_id: string; quantity: number; price: number; group?: string | null }[]
+): { item_id: string; quantity: number; price: number; group?: string | null }[] {
+  const map = new Map<string, { item_id: string; quantity: number; price: number; group?: string | null }>()
   for (const item of items) {
     const existing = map.get(item.item_id)
     if (existing) {
@@ -118,6 +122,7 @@ function toPayload(
         item_id: i.item_id,
         quantity: Number(i.quantity),
         price,
+        group: i.group || null,
       }
     })
   )
@@ -141,26 +146,66 @@ function getItemIdString(item: StockItem): string {
   return item.item_id?._id ?? ""
 }
 
+function getGroupId(
+  group: StockItem["group"]
+): string | null {
+  if (!group) return null
+  if (typeof group === "string") return group
+  return group._id ?? null
+}
+
+type DropdownItem =
+  | { type: "product"; id: string; name: string; image?: string }
+  | { type: "group"; id: string; name: string; image?: string; count: number }
+
 function ProductSearchSelect({
   products,
+  groups,
   value,
   onChange,
+  onGroupSelect,
 }: {
   products: Product[]
+  groups?: ProductGroup[]
   value: string
   onChange: (id: string) => void
+  onGroupSelect?: (id: string) => void
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const selected = products.find((p) => p._id === value)
+  const selectedProduct = products.find((p) => p._id === value)
+
+  const allItems: DropdownItem[] = useMemo(() => {
+    const items: DropdownItem[] = []
+    if (groups && groups.length > 0) {
+      for (const g of groups) {
+        items.push({
+          type: "group",
+          id: g._id,
+          name: g.name,
+          image: g.image,
+          count: g.items?.length || 0,
+        })
+      }
+    }
+    for (const p of products) {
+      items.push({
+        type: "product",
+        id: p._id,
+        name: p.name,
+        image: p.image,
+      })
+    }
+    return items
+  }, [products, groups])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return products
-    return products.filter((p) => p.name.toLowerCase().includes(q))
-  }, [products, query])
+    if (!q) return allItems
+    return allItems.filter((p) => p.name.toLowerCase().includes(q))
+  }, [allItems, query])
 
   useEffect(() => {
     function handleDocClick(e: MouseEvent) {
@@ -171,6 +216,9 @@ function ProductSearchSelect({
     document.addEventListener("mousedown", handleDocClick)
     return () => document.removeEventListener("mousedown", handleDocClick)
   }, [])
+
+  const selectedLabel = selectedProduct?.name || (value ? "" : "Select product or group")
+  const selectedImage = selectedProduct?.image
 
   return (
     <div ref={containerRef} className="relative">
@@ -183,17 +231,17 @@ function ProductSearchSelect({
           if (!open) setQuery("")
         }}
       >
-        {selected ? (
+        {selectedProduct ? (
           <div className="flex items-center gap-2 overflow-hidden">
-            {selected.image ? (
-              <img src={selected.image} alt="" className="h-5 w-5 rounded object-cover shrink-0" />
+            {selectedImage ? (
+              <img src={selectedImage} alt="" className="h-5 w-5 rounded object-cover shrink-0" />
             ) : (
               <div className="h-5 w-5 rounded bg-muted shrink-0" />
             )}
-            <span className="truncate">{selected.name}</span>
+            <span className="truncate">{selectedLabel}</span>
           </div>
         ) : (
-          <span className="text-muted-foreground">Select product</span>
+          <span className="text-muted-foreground">{selectedLabel}</span>
         )}
       </Button>
 
@@ -203,7 +251,7 @@ function ProductSearchSelect({
             <Search className="h-4 w-4 text-muted-foreground shrink-0" />
             <Input
               type="text"
-              placeholder="Search products..."
+              placeholder="Search products or groups..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="h-8 border-0 bg-transparent shadow-none focus-visible:ring-0 px-0"
@@ -212,29 +260,38 @@ function ProductSearchSelect({
           </div>
           <div className="max-h-60 overflow-auto py-1">
             {filtered.length === 0 ? (
-              <p className="px-3 py-2 text-sm text-muted-foreground">No products found.</p>
+              <p className="px-3 py-2 text-sm text-muted-foreground">No items found.</p>
             ) : (
-              filtered.map((p) => {
-                const isSelected = p._id === value
+              filtered.map((item) => {
+                const isSelected = item.type === "product" && item.id === value
                 return (
                   <button
-                    key={p._id}
+                    key={item.id}
                     type="button"
                     className={`flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground ${
                       isSelected ? "bg-accent text-accent-foreground" : ""
                     }`}
                     onClick={() => {
-                      onChange(p._id)
+                      if (item.type === "group") {
+                        onGroupSelect?.(item.id)
+                      } else {
+                        onChange(item.id)
+                      }
                       setOpen(false)
                       setQuery("")
                     }}
                   >
-                    {p.image ? (
-                      <img src={p.image} alt="" className="h-6 w-6 rounded object-cover shrink-0" />
+                    {item.image ? (
+                      <img src={item.image} alt="" className="h-6 w-6 rounded object-cover shrink-0" />
                     ) : (
                       <div className="h-6 w-6 rounded bg-muted shrink-0" />
                     )}
-                    <span className="flex-1 truncate text-left">{p.name}</span>
+                    <span className="flex-1 truncate text-left">{item.name}</span>
+                    {item.type === "group" && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary shrink-0">
+                        GROUP ({item.count})
+                      </span>
+                    )}
                     {isSelected ? <Check className="h-4 w-4 shrink-0" /> : null}
                   </button>
                 )
@@ -259,6 +316,7 @@ export function StockForm({
   const [error, setError] = useState<string | null>(null)
   const { data: session } = useAuthSession()
   const { data: products } = useProducts()
+  const { data: productGroups } = useProductGroups()
   const { data: existingStocks } = useStocks()
   const create = useCreateStock()
   const update = useUpdateStock()
@@ -336,6 +394,41 @@ export function StockForm({
     })
   }
 
+  function handleGroupSelect(groupId: string) {
+    if (!groupId) return
+    const group = productGroups?.find((g) => g._id === groupId)
+    if (!group) return
+
+    setForm((prev) => {
+      const newItems = [...prev.items.filter((i) => i.item_id)]
+
+      for (const groupItem of group.items) {
+        const productId = typeof groupItem.product === "string" ? groupItem.product : groupItem.product._id
+        const quantity = groupItem.quantity
+        const existing = newItems.find((i) => i.item_id === productId)
+        if (existing) {
+          existing.quantity = String(Number(existing.quantity) + quantity)
+          if (!existing.group) {
+            existing.group = groupId
+          }
+        } else {
+          newItems.push({
+            _key: nextKey(),
+            item_id: productId,
+            quantity: String(quantity),
+            group: groupId,
+          })
+        }
+      }
+
+      if (newItems.length === 0) {
+        newItems.push(createEmptyItem())
+      }
+
+      return { ...prev, items: newItems }
+    })
+  }
+
   function addItem() {
     setForm((prev) => ({
       ...prev,
@@ -369,15 +462,16 @@ export function StockForm({
             item_id: i.item_id,
             quantity: Number(i.quantity),
             price,
+            group: i.group || null,
           }
         })
     )
 
     // For each item, check if it already exists in stock
-    const itemsToCreate: { item_id: string; quantity: number; price: number }[] = []
+    const itemsToCreate: { item_id: string; quantity: number; price: number; group?: string | null }[] = []
     const updatesByStockId = new Map<
       string,
-      { stock: Stock; itemUpdates: Map<string, number> }
+      { stock: Stock; itemUpdates: Map<string, number>; itemGroups?: Map<string, string | null> }
     >()
 
     for (const incoming of formItems) {
@@ -395,12 +489,20 @@ export function StockForm({
             incoming.item_id,
             (entry.itemUpdates.get(incoming.item_id) ?? 0) + incoming.quantity
           )
+          // Track group per item_id (use first group's id if multiple)
+          if (!entry.itemGroups) entry.itemGroups = new Map()
+          if (incoming.group && !entry.itemGroups.has(incoming.item_id)) {
+            entry.itemGroups.set(incoming.item_id, incoming.group)
+          }
         } else {
           const map = new Map<string, number>()
           map.set(incoming.item_id, incoming.quantity)
+          const groups = new Map<string, string | null>()
+          if (incoming.group) groups.set(incoming.item_id, incoming.group)
           updatesByStockId.set(existingStock._id, {
             stock: existingStock,
             itemUpdates: map,
+            itemGroups: groups,
           })
         }
       } else {
@@ -409,16 +511,18 @@ export function StockForm({
     }
 
     // Update existing stock entries
-    for (const [, { stock, itemUpdates }] of updatesByStockId) {
+    for (const [, { stock, itemUpdates, itemGroups }] of updatesByStockId) {
       const updatedItems = stock.items.map((item) => {
         const itemId = getItemIdString(item)
         const additionalQty = itemUpdates.get(itemId) ?? 0
+        const groupId = itemGroups?.get(itemId) ?? null
         if (additionalQty > 0) {
           return {
             item_id: itemId,
             quantity: item.quantity + additionalQty,
             remaining: item.remaining + additionalQty,
             price: item.price,
+            group: groupId ?? getGroupId((item as StockItem).group),
           }
         }
         return {
@@ -426,22 +530,24 @@ export function StockForm({
           quantity: item.quantity,
           remaining: item.remaining,
           price: item.price,
+          group: getGroupId((item as StockItem).group),
         }
       })
 
       // Also add any brand-new items that weren't in this stock entry
-      // (this shouldn't happen in normal flow, but just in case)
       for (const [itemId, additionalQty] of itemUpdates) {
         const alreadyInStock = stock.items.some(
           (item) => getItemIdString(item) === itemId
         )
         if (!alreadyInStock) {
           const price = getProductPrice(products, itemId) ?? 0
+          const groupId = itemGroups?.get(itemId) ?? null
           updatedItems.push({
             item_id: itemId,
             quantity: additionalQty,
             remaining: additionalQty,
             price,
+            group: groupId,
           })
         }
       }
@@ -592,8 +698,10 @@ export function StockForm({
                     <span className="text-xs font-medium text-muted-foreground sm:hidden">Product</span>
                     <ProductSearchSelect
                       products={products ?? []}
+                      groups={productGroups ?? []}
                       value={item.item_id}
                       onChange={(v) => handleProductSelect(item._key, v)}
+                      onGroupSelect={(gId) => handleGroupSelect(gId)}
                     />
                   </div>
 

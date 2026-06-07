@@ -15,6 +15,11 @@ const StoreItemSchema = Schema({
     type: Number,
     required: true,
     min: 0
+  },
+  group: {
+    type: Schema.Types.ObjectId,
+    ref: 'ProductGroup',
+    default: null
   }
 })
 

@@ -1,13 +1,15 @@
 import { useState } from "react"
 import { ProductTable } from "../components/ProductTable"
 import { ProductForm } from "../components/ProductForm"
+import { ProductGroupForm } from "@/features/product-groups/components/ProductGroupForm"
 import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
+import { Plus, Layers } from "lucide-react"
 import { useProducts } from "../hooks"
 import type { Product } from "../types"
 
 export function ProductPage() {
   const [formOpen, setFormOpen] = useState(false)
+  const [groupFormOpen, setGroupFormOpen] = useState(false)
   const [editing, setEditing] = useState<Product | null>(null)
   const { data: products } = useProducts()
 
@@ -35,10 +37,16 @@ export function ProductPage() {
           </div>
           <p className="text-sm text-gray-500">Manage products and pricing.</p>
         </div>
-        <Button onClick={openAdd}>
-          <Plus data-icon="inline-start" />
-          Add Product
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setGroupFormOpen(true)}>
+            <Layers className="mr-1 h-4 w-4" />
+            Create Group
+          </Button>
+          <Button onClick={openAdd}>
+            <Plus data-icon="inline-start" />
+            Add Product
+          </Button>
+        </div>
       </div>
       <ProductTable onEdit={openEdit} />
       {formOpen ? (
@@ -53,6 +61,11 @@ export function ProductPage() {
           }}
         />
       ) : null}
+      <ProductGroupForm
+        open={groupFormOpen}
+        onOpenChange={setGroupFormOpen}
+        onSuccess={() => setGroupFormOpen(false)}
+      />
     </div>
   )
 }

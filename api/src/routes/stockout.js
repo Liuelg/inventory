@@ -22,11 +22,15 @@ async function addItemsToStore(storeId, items) {
     if (existing) {
       existing.quantity += incoming.quantity
       existing.price = incoming.price
+      if (incoming.group) {
+        existing.group = incoming.group
+      }
     } else {
       store.items.push({
         item_id: incoming.item_id,
         quantity: incoming.quantity,
-        price: incoming.price
+        price: incoming.price,
+        group: incoming.group || null
       })
     }
   }
@@ -117,6 +121,7 @@ router.post('/', async (req, res, next) => {
         item_id: i.item_id,
         quantity: i.quantity,
         price,
+        group: i.group || null,
       }
     }))
 
@@ -292,6 +297,7 @@ router.patch('/:id', async (req, res, next) => {
           item_id: i.item_id,
           quantity: i.quantity,
           price,
+          group: i.group || null,
         }
       }))
       : undefined

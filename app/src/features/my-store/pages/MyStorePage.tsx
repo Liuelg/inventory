@@ -28,7 +28,9 @@ export function MyStorePage() {
   const storeId = session?.store
   const { data: store, isLoading } = useStore(storeId || "")
 
-  const items = (store?.items || []) as unknown as PopulatedStoreItem[]
+  const items = ((store?.items || []) as unknown as PopulatedStoreItem[]).filter(
+    (item) => item.quantity > 0 && item.item_id?._id
+  )
 
   const columns: ColumnDef<PopulatedStoreItem>[] = [
     {
@@ -111,7 +113,7 @@ export function MyStorePage() {
       <DataTable
         data={items}
         columns={columns}
-        keyExtractor={(item) => item.item_id?._id || Math.random().toString(36)}
+        keyExtractor={(item) => item.item_id._id}
         loading={isLoading}
         emptyMessage="No products in stock."
       />

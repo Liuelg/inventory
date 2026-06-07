@@ -55,7 +55,8 @@ router.get('/:id', async (req, res) => {
   try {
     const store = await Store.findById(req.params.id)
       .populate('manager_id')
-      .populate({ path: 'items.item_id', populate: { path: 'category', select: 'name' } });
+      .populate({ path: 'items.item_id', populate: { path: 'category', select: 'name' } })
+      .populate('items.group', 'name image');
     
     if (!store) return res.status(404).json({ message: 'Store not found' });
     res.json(store);
@@ -87,5 +88,21 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+
+// Delete a specific item from a store's inventory
+router.delete('/:id/items/:itemId', authMiddleware, async (req, res) => {
+  try {
+    const store = await Store.findById(req.params.id)
+    if (!store) return res.status(404).json({ message: 'Store not found' })
+
+    const itemId = req.params.itemId
+    store.items = store.items.filter((i) => i.item_id.toString() !== itemId)
+    await store.save()
+
+    res.json({ success: true, message: 'Item removed from store' })
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+})
 
 export default router;

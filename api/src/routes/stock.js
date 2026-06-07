@@ -17,6 +17,7 @@ router.post('/', async (req, res, next) => {
         quantity: i.quantity,
         remaining: i.remaining ?? i.quantity,
         price,
+        group: i.group || null,
       }
     }))
 
@@ -92,6 +93,7 @@ router.patch('/:id', async (req, res, next) => {
           quantity: i.quantity,
           remaining: i.remaining ?? i.quantity,
           price,
+          group: i.group || null,
         }
       }))
       update.items = items

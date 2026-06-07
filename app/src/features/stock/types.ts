@@ -1,3 +1,9 @@
+export type ProductGroupRef = {
+  _id: string
+  name: string
+  image?: string | null
+}
+
 export type StockItem = {
   item_id:
     | string
@@ -10,6 +16,7 @@ export type StockItem = {
   quantity: number
   remaining: number
   price: number
+  group?: string | ProductGroupRef | null
   _id?: string
 }
 
@@ -28,7 +35,12 @@ export type Stock = {
 export type StockPayload = {
   created_by: string
   date?: string
-  items: Omit<StockItem, "_id" | "remaining">[]
+  items: {
+    item_id: string
+    quantity: number
+    price: number
+    group?: string | null
+  }[]
   totalAmount: number
   note?: string
 }

@@ -37,6 +37,11 @@ export type StoreRemainingProduct = {
   }
   quantity: number
   price: number
+  group?: {
+    _id: string
+    name: string
+    image?: string | null
+  } | null
 }
 
 export type StoreDailyDetail = {

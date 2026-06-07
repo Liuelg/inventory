@@ -26,6 +26,7 @@ import dashboardRoutes from "./routes/dashboard.js";
 import stockRoutes from "./routes/stock.js";
 import stockoutRoutes from "./routes/stockout.js";
 import reportRoutes from "./routes/reports.js";
+import productGroupRoutes from "./routes/productGroups.js";
 
 const app = express();
 
@@ -35,8 +36,8 @@ const corsOptions = corsOrigin
   : {};
 app.use(cors(corsOptions));
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ limit: '20mb', extended: true }));
 
 // Database connection
 
@@ -65,6 +66,7 @@ app.use("/api/dashboard", authMiddleware, dashboardRoutes);
 app.use("/api/stock", authMiddleware, stockRoutes);
 app.use("/api/stockouts", authMiddleware, stockoutRoutes);
 app.use("/api/reports", authMiddleware, reportRoutes);
+app.use("/api/product-groups", authMiddleware, productGroupRoutes);
 
 app.get("/health", (_req, res) => {
   const dbState = mongoose.connection.readyState;

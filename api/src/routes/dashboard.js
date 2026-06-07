@@ -87,6 +87,7 @@ router.get("/store/:storeId", async (req, res, next) => {
 
     const store = await Store.findById(storeId)
       .populate("items.item_id", "name category image")
+      .populate("items.group", "name image")
       .populate("manager_id", "name email")
 
     if (!store) {
@@ -116,19 +117,29 @@ router.get("/store/:storeId", async (req, res, next) => {
       )
     }
 
-    const remainingProducts = store.items.map((item) => {
-      const product = item.item_id
-      return {
-        product: {
-          _id: product?._id?.toString?.() || item.item_id?.toString?.(),
-          name: product?.name || "—",
-          category: product?.category || "—",
-          image: product?.image || null,
-        },
-        quantity: item.quantity,
-        price: item.price,
-      }
-    })
+    const remainingProducts = store.items
+      .filter((item) => item.quantity > 0 && item.item_id)
+      .map((item) => {
+        const product = item.item_id
+        const group = item.group
+        return {
+          product: {
+            _id: product?._id?.toString?.() || item.item_id?.toString?.(),
+            name: product?.name || "—",
+            category: product?.category || "—",
+            image: product?.image || null,
+          },
+          quantity: item.quantity,
+          price: item.price,
+          group: group
+            ? {
+                _id: group._id.toString(),
+                name: group.name,
+                image: group.image || null,
+              }
+            : null,
+        }
+      })
 
     res.json({
       success: true,

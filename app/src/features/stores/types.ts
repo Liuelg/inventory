@@ -5,9 +5,15 @@ export type StoreManager = {
 }
 
 export type StoreItem = {
-  item_id: string
+  item_id: string | {
+    _id: string
+    name?: string
+    category?: string | { _id: string; name?: string }
+    image?: string
+  }
   quantity: number
   price: number
+  group?: string | { _id: string; name: string; image?: string | null } | null
 }
 
 export type StoreSalesPerson = {

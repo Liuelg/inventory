@@ -1,18 +1,128 @@
+import { useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useStoreDaily } from "@/features/dashboard/hooks"
 import { DataTable, type ColumnDef } from "@/components/Table.tsx"
 import { Button } from "@/components/ui/button.tsx"
-import { ArrowLeftIcon } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog.tsx"
+import { ArrowLeftIcon, Trash2 } from "lucide-react"
+import { useDeleteStoreItem } from "@/features/stores/hooks"
 import type { StoreSale, StoreRemainingProduct } from "@/features/dashboard/types"
 
 function formatCurrency(amount: number) {
   return amount.toFixed(2)
 }
 
+type UnifiedRow =
+  | {
+      _id: string
+      type: "group"
+      image: string | null
+      name: string
+      category: string
+      quantity: number
+      price: number
+      items: StoreRemainingProduct[]
+    }
+  | {
+      _id: string
+      type: "individual"
+      image: string | null
+      name: string
+      category: string
+      quantity: number
+      price: number
+    }
+
+function buildUnifiedRows(
+  products: StoreRemainingProduct[]
+): UnifiedRow[] {
+  const groupMap = new Map<
+    string,
+    { group: NonNullable<StoreRemainingProduct["group"]>; items: StoreRemainingProduct[] }
+  >()
+  const rows: UnifiedRow[] = []
+
+  for (const p of products) {
+    // Skip items with missing product reference
+    if (!p.product._id) continue
+
+    if (p.group?._id) {
+      const existing = groupMap.get(p.group._id)
+      if (existing) {
+        existing.items.push(p)
+      } else {
+        groupMap.set(p.group._id, { group: p.group, items: [p] })
+      }
+    } else {
+      rows.push({
+        _id: p.product._id,
+        type: "individual",
+        image: p.product.image || null,
+        name: p.product.name,
+        category: typeof p.product.category === "string" ? p.product.category : "—",
+        quantity: p.quantity,
+        price: p.price,
+      })
+    }
+  }
+
+  for (const { group, items } of groupMap.values()) {
+    const totalQty = items.reduce((sum, i) => sum + i.quantity, 0)
+    const avgPrice =
+      items.reduce((sum, i) => sum + i.price * i.quantity, 0) / totalQty || 0
+    rows.push({
+      _id: group._id,
+      type: "group",
+      image: group.image || null,
+      name: group.name,
+      category: "",
+      quantity: totalQty,
+      price: avgPrice,
+      items,
+    })
+  }
+
+  return rows
+}
+
 export function StoreDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { data, isLoading } = useStoreDaily(id || "")
+  const deleteItem = useDeleteStoreItem()
+  const [deleteRow, setDeleteRow] = useState<UnifiedRow | null>(null)
+
+  const rows = data?.remainingProducts
+    ? buildUnifiedRows(data.remainingProducts)
+    : []
+
+  async function handleDelete() {
+    if (!id || !deleteRow) return
+
+    if (deleteRow.type === "individual") {
+      await deleteItem.mutateAsync({ storeId: id, itemId: deleteRow._id })
+    } else {
+      // Delete all products in the group
+      await Promise.all(
+        deleteRow.items.map((item) =>
+          deleteItem.mutateAsync({
+            storeId: id,
+            itemId: item.product._id,
+          })
+        )
+      )
+    }
+    setDeleteRow(null)
+  }
 
   const saleColumns: ColumnDef<StoreSale>[] = [
     {
@@ -45,15 +155,15 @@ export function StoreDetailPage() {
     },
   ]
 
-  const remainingColumns: ColumnDef<StoreRemainingProduct>[] = [
+  const remainingColumns: ColumnDef<UnifiedRow>[] = [
     {
       header: "Product",
       cell: (r) => (
         <div className="flex items-center gap-3">
-          {r.product.image ? (
+          {r.image ? (
             <img
-              src={r.product.image}
-              alt={r.product.name}
+              src={r.image}
+              alt={r.name}
               className="h-10 w-10 rounded-md object-cover border"
             />
           ) : (
@@ -61,13 +171,20 @@ export function StoreDetailPage() {
               No img
             </div>
           )}
-          <span className="font-medium">{r.product.name}</span>
+          <div className="flex flex-col min-w-0">
+            <span className="font-medium truncate">{r.name}</span>
+            {r.type === "group" && r.items.length > 0 && (
+              <span className="text-xs text-muted-foreground truncate">
+                {r.items.map((i) => `${i.product.name} (${i.quantity})`).join(", ")}
+              </span>
+            )}
+          </div>
         </div>
       ),
     },
     {
       header: "Category",
-      cell: (r) => r.product.category || "—",
+      cell: (r) => r.category || "—",
     },
     {
       header: "Quantity",
@@ -78,6 +195,21 @@ export function StoreDetailPage() {
       header: "Price",
       cell: (r) => formatCurrency(r.price),
       className: "w-[100px] text-right whitespace-nowrap",
+    },
+    {
+      header: "",
+      className: "w-[50px]",
+      cell: (r) => (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+          onClick={() => setDeleteRow(r)}
+          disabled={!r._id}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      ),
     },
   ]
 
@@ -132,7 +264,7 @@ export function StoreDetailPage() {
 
           {/* Today's Sales Table */}
           <div className="flex flex-col gap-2">
-            <h2 className="text-lg font-semibold">Today's Sales</h2>
+            <h2 className="text-lg font-semibold">Today&apos;s Sales</h2>
             <DataTable
               data={data.sales}
               columns={saleColumns}
@@ -141,18 +273,43 @@ export function StoreDetailPage() {
             />
           </div>
 
-          {/* Remaining Products Table */}
+          {/* Remaining Products — Unified Table */}
           <div className="flex flex-col gap-2">
             <h2 className="text-lg font-semibold">Remaining Products</h2>
             <DataTable
-              data={data.remainingProducts}
+              data={rows}
               columns={remainingColumns}
-              keyExtractor={(r) => r.product._id}
+              keyExtractor={(r) => r._id}
               emptyMessage="No products in stock."
             />
           </div>
         </>
       ) : null}
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteRow} onOpenChange={() => setDeleteRow(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove from store?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteRow?.type === "group"
+                ? `This will remove all ${deleteRow.items.length} products in "${deleteRow.name}" from the store inventory.`
+                : `This will remove "${deleteRow?.name}" from the store inventory.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteRow(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDelete}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

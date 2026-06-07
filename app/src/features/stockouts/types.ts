@@ -2,6 +2,7 @@ export type StockoutItem = {
   item_id: string
   quantity: number
   price: number
+  group?: string | null
 }
 
 export type StockoutItemPopulated = {
@@ -12,6 +13,7 @@ export type StockoutItemPopulated = {
   }
   quantity: number
   price: number
+  group?: string | { _id: string; name: string; image?: string | null } | null
 }
 
 export type Stockout = {

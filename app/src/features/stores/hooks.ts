@@ -49,3 +49,17 @@ export function useDeleteStore() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["stores"] }),
   })
 }
+
+export function useDeleteStoreItem() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ storeId, itemId }: { storeId: string; itemId: string }) =>
+      storeApi.deleteItem(storeId, itemId),
+    onSuccess: (_, { storeId }) => {
+      qc.invalidateQueries({ queryKey: ["stores"] })
+      qc.invalidateQueries({ queryKey: ["dashboard", "store", storeId] })
+      qc.invalidateQueries({ queryKey: ["dashboard", "daily-sales"] })
+    },
+  })
+}
