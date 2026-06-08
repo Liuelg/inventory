@@ -2,7 +2,7 @@ import { fetcher } from "@/lib/api-client"
 import type { AccountUser, CreateAccountPayload } from "./types"
 
 export const accountApi = {
-  list: () => fetcher<AccountUser[]>("/users"),
+  list: () => fetcher<AccountUser[]>("/api/users"),
 
   create: (payload: CreateAccountPayload) =>
     fetcher<{ token: string; user: AccountUser }>("/api/auth/register", {
@@ -11,13 +11,13 @@ export const accountApi = {
     }),
 
   update: (id: string, payload: Partial<CreateAccountPayload>) =>
-    fetcher<AccountUser>(`/users/${id}`, {
+    fetcher<AccountUser>(`/api/users/${id}`, {
       method: "PATCH",
       body: JSON.stringify(payload),
     }),
 
   delete: (id: string) =>
-    fetcher<{ message: string; deletedUser: AccountUser }>(`/users/${id}`, {
+    fetcher<{ message: string; deletedUser: AccountUser }>(`/api/users/${id}`, {
       method: "DELETE",
     }),
 }

@@ -64,7 +64,7 @@ services:
     build:
       context: .
       dockerfile: nginx/Dockerfile
-    container_name: 
+    container_name: inventory-nginx
     restart: unless-stopped
     ports:
       - "127.0.0.1:8080:80"

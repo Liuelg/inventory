@@ -6,24 +6,24 @@ type DeleteStoreResponse = {
 }
 
 export const storeApi = {
-  list: () => fetcher<Store[]>("/stores"),
+  list: () => fetcher<Store[]>("/api/stores"),
 
-  get: (id: string) => fetcher<Store>(`/stores/${id}`),
+  get: (id: string) => fetcher<Store>(`/api/stores/${id}`),
 
   create: (payload: StorePayload) =>
-    fetcher<Store>("/stores", {
+    fetcher<Store>("/api/stores", {
       method: "POST",
       body: JSON.stringify(payload),
     }),
 
   update: (id: string, payload: Partial<StorePayload>) =>
-    fetcher<Store>(`/stores/${id}`, {
+    fetcher<Store>(`/api/stores/${id}`, {
       method: "PUT",
       body: JSON.stringify(payload),
     }),
 
   delete: (id: string) =>
-    fetcher<DeleteStoreResponse>(`/stores/${id}`, {
+    fetcher<DeleteStoreResponse>(`/api/stores/${id}`, {
       method: "DELETE",
     }),
 

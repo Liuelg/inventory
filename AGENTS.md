@@ -280,12 +280,12 @@ All routes are mounted in `api/src/app.js`. Every route except `/api/auth` and `
 | Prefix | Route File | Supported Methods |
 |--------|-----------|-------------------|
 | `/api/auth` | `routes/auth.js` | `POST /register`, `POST /login`, `POST /change-password`, `GET /me` |
-| `/users` | `routes/users.js` | `POST`, `GET`, `PATCH /:id`, `DELETE /:id` |
-| `/products` | `routes/product.js` | `POST`, `GET`, `GET /:id`, `PATCH /:id`, `DELETE /:id` |
-| `/sales` | `routes/sales.js` | `POST`, `GET`, `GET /:id`, `PATCH /:id`, `DELETE /:id` |
-| `/goodIns` | `routes/goodIn.js` | `POST`, `GET`, `GET /:id`, `PATCH /:id`, `DELETE /:id` |
-| `/stores` | `routes/stores.js` | `POST`, `GET`, `GET /:id`, `PUT /:id`, `DELETE /:id` |
-| `/transfers` | `routes/transfers.js` | `POST`, `GET` |
+| `/api/users` | `routes/users.js` | `POST`, `GET`, `PATCH /:id`, `DELETE /:id` |
+| `/api/products` | `routes/product.js` | `POST`, `GET`, `GET /:id`, `PATCH /:id`, `DELETE /:id` |
+| `/api/sales` | `routes/sales.js` | `POST`, `GET`, `GET /:id`, `PATCH /:id`, `DELETE /:id` |
+| `/api/goodIns` | `routes/goodIn.js` | `POST`, `GET`, `GET /:id`, `PATCH /:id`, `DELETE /:id` |
+| `/api/stores` | `routes/stores.js` | `POST`, `GET`, `GET /:id`, `PUT /:id`, `DELETE /:id` |
+| `/api/transfers` | `routes/transfers.js` | `POST`, `GET` |
 | `/api/categories` | `routes/categories.js` | `GET`, `POST`, `GET /:id`, `PUT /:id`, `DELETE /:id` |
 | `/api/sub-categories` | `routes/subCategories.js` | `GET`, `POST`, `GET /:id`, `PUT /:id`, `DELETE /:id`, `GET /category/:categoryId` |
 | `/api/dashboard` | `routes/dashboard.js` | `GET /daily-sales`, `GET /store/:storeId` |

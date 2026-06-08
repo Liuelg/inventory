@@ -54,12 +54,12 @@ mongoose.connection.on("error", (err) => {
 // Your Application Routes
 app.use("/api/auth", authRoutes);
 
-app.use("/users", authMiddleware, userRoutes);
-app.use("/sales", authMiddleware, salesRoutes);
-app.use("/products", authMiddleware, productRoutes);
-app.use("/goodIns", authMiddleware, goodInRoutes);
-app.use("/transfers", authMiddleware, transferRoutes);
-app.use("/stores", authMiddleware, storeRoutes);
+app.use("/api/users", authMiddleware, userRoutes);
+app.use("/api/sales", authMiddleware, salesRoutes);
+app.use("/api/products", authMiddleware, productRoutes);
+app.use("/api/goodIns", authMiddleware, goodInRoutes);
+app.use("/api/transfers", authMiddleware, transferRoutes);
+app.use("/api/stores", authMiddleware, storeRoutes);
 app.use("/api/categories", authMiddleware, categoryRoutes);
 app.use("/api/sub-categories", authMiddleware, subCategoryRoutes);
 app.use("/api/dashboard", authMiddleware, dashboardRoutes);

@@ -7,24 +7,24 @@ type DeleteProductResponse = {
 }
 
 export const productApi = {
-  list: () => fetcher<Product[]>("/products"),
+  list: () => fetcher<Product[]>("/api/products"),
 
-  get: (id: string) => fetcher<Product>(`/products/${id}`),
+  get: (id: string) => fetcher<Product>(`/api/products/${id}`),
 
   create: (payload: ProductPayload) =>
-    fetcher<Product>("/products", {
+    fetcher<Product>("/api/products", {
       method: "POST",
       body: JSON.stringify(payload),
     }),
 
   update: (id: string, payload: Partial<ProductPayload>) =>
-    fetcher<Product>(`/products/${id}`, {
+    fetcher<Product>(`/api/products/${id}`, {
       method: "PATCH",
       body: JSON.stringify(payload),
     }),
 
   delete: (id: string) =>
-    fetcher<DeleteProductResponse>(`/products/${id}`, {
+    fetcher<DeleteProductResponse>(`/api/products/${id}`, {
       method: "DELETE",
     }),
 }

@@ -6,24 +6,24 @@ type DeleteGoodInResponse = {
 }
 
 export const goodInApi = {
-  list: () => fetcher<GoodIn[]>("/goodIns"),
+  list: () => fetcher<GoodIn[]>("/api/goodIns"),
 
-  get: (id: string) => fetcher<GoodIn>(`/goodIns/${id}`),
+  get: (id: string) => fetcher<GoodIn>(`/api/goodIns/${id}`),
 
   create: (payload: GoodInPayload) =>
-    fetcher<GoodIn>("/goodIns", {
+    fetcher<GoodIn>("/api/goodIns", {
       method: "POST",
       body: JSON.stringify(payload),
     }),
 
   update: (id: string, payload: Partial<GoodInPayload>) =>
-    fetcher<GoodIn>(`/goodIns/${id}`, {
+    fetcher<GoodIn>(`/api/goodIns/${id}`, {
       method: "PATCH",
       body: JSON.stringify(payload),
     }),
 
   delete: (id: string) =>
-    fetcher<DeleteGoodInResponse>(`/goodIns/${id}`, {
+    fetcher<DeleteGoodInResponse>(`/api/goodIns/${id}`, {
       method: "DELETE",
     }),
 }
