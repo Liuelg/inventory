@@ -18,11 +18,8 @@ import {
 } from "@/components/ui/select.tsx"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
-<<<<<<< HEAD
 import { useProductGroups } from "@/features/product-groups/hooks"
-=======
 import { getProductImageUrl } from "@/features/products/utils"
->>>>>>> new
 import { useStores } from "@/features/stores/hooks"
 import { useStocks } from "@/features/stock/hooks"
 import { useCreateStockout, useUpdateStockout } from "../hooks"

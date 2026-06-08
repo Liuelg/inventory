@@ -13,11 +13,8 @@ import {
 
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
-<<<<<<< HEAD
 import { useProductGroups } from "@/features/product-groups/hooks"
-=======
 import { getProductImageUrl } from "@/features/products/utils"
->>>>>>> new
 import type { Product } from "@/features/products/types"
 import type { ProductGroup } from "@/features/product-groups/types"
 import { useCreateStock, useStocks, useUpdateStock } from "../hooks"
@@ -237,13 +234,8 @@ function ProductSearchSelect({
       >
         {selectedProduct ? (
           <div className="flex items-center gap-2 overflow-hidden">
-<<<<<<< HEAD
             {selectedImage ? (
-              <img src={selectedImage} alt="" className="h-5 w-5 rounded object-cover shrink-0" />
-=======
-            {selected.image ? (
-              <img src={getProductImageUrl(selected.image)} alt="" className="h-5 w-5 rounded object-cover shrink-0" />
->>>>>>> new
+              <img src={getProductImageUrl(selectedImage)} alt="" className="h-5 w-5 rounded object-cover shrink-0" />
             ) : (
               <div className="h-5 w-5 rounded bg-muted shrink-0" />
             )}
@@ -290,13 +282,8 @@ function ProductSearchSelect({
                       setQuery("")
                     }}
                   >
-<<<<<<< HEAD
                     {item.image ? (
-                      <img src={item.image} alt="" className="h-6 w-6 rounded object-cover shrink-0" />
-=======
-                    {p.image ? (
-                      <img src={getProductImageUrl(p.image)} alt="" className="h-6 w-6 rounded object-cover shrink-0" />
->>>>>>> new
+                      <img src={getProductImageUrl(item.image)} alt="" className="h-6 w-6 rounded object-cover shrink-0" />
                     ) : (
                       <div className="h-6 w-6 rounded bg-muted shrink-0" />
                     )}
