@@ -15,6 +15,7 @@ import { Pencil, Trash2 } from "lucide-react"
 import { useDeleteStock, useStocks } from "../hooks"
 import type { Stock } from "../types"
 import { ProductImageCell } from "@/components/ProductImageCell"
+import { getProductImageUrl } from "@/features/products/utils"
 
 interface StockTableProps {
   onEdit: (stock: Stock) => void
@@ -49,7 +50,7 @@ function formatRemaining(items: Stock["items"]) {
 function getStockImage(stock: Stock) {
   const firstItem = stock.items?.[0]?.item_id
   if (firstItem && typeof firstItem !== "string") {
-    return firstItem.image
+    return getProductImageUrl(firstItem.image)
   }
   return undefined
 }

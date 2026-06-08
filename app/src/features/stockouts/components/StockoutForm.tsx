@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select.tsx"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
+import { getProductImageUrl } from "@/features/products/utils"
 import { useStores } from "@/features/stores/hooks"
 import { useStocks } from "@/features/stock/hooks"
 import { useCreateStockout, useUpdateStockout } from "../hooks"
@@ -342,7 +343,7 @@ export function StockoutForm({
                         <SelectItem key={p._id} value={p._id} textValue={p.name}>
                           <div className="flex items-center gap-2">
                             {p.image ? (
-                              <img src={p.image} alt="" className="h-6 w-6 rounded object-cover" />
+                              <img src={getProductImageUrl(p.image)} alt="" className="h-6 w-6 rounded object-cover" />
                             ) : (
                               <div className="h-6 w-6 rounded bg-muted" />
                             )}

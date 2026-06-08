@@ -17,10 +17,22 @@ export const productApi = {
       body: JSON.stringify(payload),
     }),
 
+  createWithImage: (formData: FormData) =>
+    fetcher<Product>("/products", {
+      method: "POST",
+      body: formData,
+    }),
+
   update: (id: string, payload: Partial<ProductPayload>) =>
     fetcher<Product>(`/products/${id}`, {
       method: "PATCH",
       body: JSON.stringify(payload),
+    }),
+
+  updateWithImage: (id: string, formData: FormData) =>
+    fetcher<Product>(`/products/${id}`, {
+      method: "PATCH",
+      body: formData,
     }),
 
   delete: (id: string) =>

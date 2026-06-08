@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
+import { getProductImageUrl } from "@/features/products/utils"
 import type { Product } from "@/features/products/types"
 import { useCreateStock, useStocks, useUpdateStock } from "../hooks"
 import type { Stock, StockPayload, StockItem } from "../types"
@@ -186,7 +187,7 @@ function ProductSearchSelect({
         {selected ? (
           <div className="flex items-center gap-2 overflow-hidden">
             {selected.image ? (
-              <img src={selected.image} alt="" className="h-5 w-5 rounded object-cover shrink-0" />
+              <img src={getProductImageUrl(selected.image)} alt="" className="h-5 w-5 rounded object-cover shrink-0" />
             ) : (
               <div className="h-5 w-5 rounded bg-muted shrink-0" />
             )}
@@ -230,7 +231,7 @@ function ProductSearchSelect({
                     }}
                   >
                     {p.image ? (
-                      <img src={p.image} alt="" className="h-6 w-6 rounded object-cover shrink-0" />
+                      <img src={getProductImageUrl(p.image)} alt="" className="h-6 w-6 rounded object-cover shrink-0" />
                     ) : (
                       <div className="h-6 w-6 rounded bg-muted shrink-0" />
                     )}

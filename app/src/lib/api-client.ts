@@ -8,7 +8,9 @@ export async function fetcher<T>(
 ): Promise<T> {
   const token = getAuthToken()
   const headers = new Headers(options?.headers)
-  headers.set("Content-Type", "application/json")
+  if (!(options?.body instanceof FormData) && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json")
+  }
   if (token) {
     headers.set("Authorization", `Bearer ${token}`)
   }

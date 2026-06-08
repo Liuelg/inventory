@@ -4,6 +4,7 @@ import { DataTable, type ColumnDef } from "@/components/Table.tsx"
 import { Button } from "@/components/ui/button.tsx"
 import { ArrowLeftIcon } from "lucide-react"
 import type { StoreSale, StoreRemainingProduct } from "@/features/dashboard/types"
+import { getProductImageUrl } from "@/features/products/utils"
 
 function formatCurrency(amount: number) {
   return amount.toFixed(2)
@@ -52,7 +53,7 @@ export function StoreDetailPage() {
         <div className="flex items-center gap-3">
           {r.product.image ? (
             <img
-              src={r.product.image}
+              src={getProductImageUrl(r.product.image)}
               alt={r.product.name}
               className="h-10 w-10 rounded-md object-cover border"
             />

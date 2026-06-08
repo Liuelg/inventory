@@ -10,6 +10,8 @@ services:
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-1d}
     expose:
       - "3000"
+    volumes:
+      - ./uploads:/app/uploads
     depends_on:
       mongo:
         condition: service_healthy
@@ -41,6 +43,8 @@ services:
     restart: always
     ports:
       - "80:80"
+    volumes:
+      - ./uploads:/usr/share/nginx/html/uploads:ro
     depends_on:
       - backend
     networks:

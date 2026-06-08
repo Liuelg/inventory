@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { getProductImageUrl } from "@/features/products/utils"
 
 interface ProductImageCellProps {
   image?: string
@@ -8,8 +9,9 @@ interface ProductImageCellProps {
 
 export function ProductImageCell({ image, altName = "Product image" }: ProductImageCellProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const src = getProductImageUrl(image)
 
-  if (!image) {
+  if (!src) {
     return <div className="h-10 w-10 rounded-md border bg-muted" />
   }
 
@@ -21,7 +23,7 @@ export function ProductImageCell({ image, altName = "Product image" }: ProductIm
         className="cursor-zoom-in block"
       >
         <img
-          src={image}
+          src={src}
           alt={altName}
           className="h-10 w-10 rounded-md object-cover border"
         />
@@ -31,7 +33,7 @@ export function ProductImageCell({ image, altName = "Product image" }: ProductIm
         <DialogContent className="max-w-3xl p-0 overflow-hidden">
           <DialogTitle className="sr-only">{altName}</DialogTitle>
           <img
-            src={image}
+            src={src}
             alt={altName}
             className="w-full h-auto max-h-[80vh] object-contain"
           />

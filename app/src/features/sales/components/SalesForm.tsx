@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
+import { getProductImageUrl } from "@/features/products/utils"
 import { useStore } from "@/features/stores/hooks"
 import { useCreateSale, useUpdateSale } from "../hooks"
 import type { Sale, SalePayload } from "../types"
@@ -336,7 +337,7 @@ export function SalesForm({
                         <SelectItem key={p._id} value={p._id} textValue={p.name}>
                           <div className="flex items-center gap-2">
                             {p.image ? (
-                              <img src={p.image} alt="" className="h-6 w-6 rounded object-cover" />
+                              <img src={getProductImageUrl(p.image)} alt="" className="h-6 w-6 rounded object-cover" />
                             ) : (
                               <div className="h-6 w-6 rounded bg-muted" />
                             )}

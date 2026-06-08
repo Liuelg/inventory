@@ -19,6 +19,7 @@ import {
 import { Pencil, Trash2 } from "lucide-react"
 import { useAuthSession } from "@/hooks/use-auth-session"
 import { useDeleteProduct, useProducts } from "../hooks"
+import { getProductImageUrl } from "../utils"
 import type { Product } from "../types"
 
 function formatPrice(product: Product) {
@@ -47,22 +48,24 @@ export function ProductTable({ onEdit }: ProductTableProps) {
     {
       header: "Image",
       className: "w-[72px]",
-      cell: (product) =>
-        product.image ? (
+      cell: (product) => {
+        const src = getProductImageUrl(product.image)
+        return src ? (
           <button
             type="button"
             onClick={() => setPreviewProduct(product)}
             className="cursor-zoom-in"
           >
             <img
-              src={product.image}
+              src={src}
               alt={product.name}
               className="h-10 w-10 rounded-md object-cover border"
             />
           </button>
         ) : (
           <div className="h-10 w-10 rounded-md border bg-muted" />
-        ),
+        )
+      },
     },
     {
       header: "Name",
@@ -154,7 +157,7 @@ export function ProductTable({ onEdit }: ProductTableProps) {
           </DialogTitle>
           {previewProduct?.image ? (
             <img
-              src={previewProduct.image}
+              src={getProductImageUrl(previewProduct.image)}
               alt={previewProduct.name}
               className="w-full h-auto max-h-[80vh] object-contain"
             />
