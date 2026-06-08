@@ -13,7 +13,10 @@ export function useCreateProduct() {
   const qc = useQueryClient()
 
   return useMutation({
-    mutationFn: (payload: ProductPayload) => productApi.create(payload),
+    mutationFn: (data: ProductPayload | FormData) => {
+      if (data instanceof FormData) return productApi.createWithImage(data)
+      return productApi.create(data)
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] }),
   })
 }
@@ -24,11 +27,14 @@ export function useUpdateProduct() {
   return useMutation({
     mutationFn: ({
       id,
-      payload,
+      data,
     }: {
       id: string
-      payload: Partial<ProductPayload>
-    }) => productApi.update(id, payload),
+      data: Partial<ProductPayload> | FormData
+    }) => {
+      if (data instanceof FormData) return productApi.updateWithImage(id, data)
+      return productApi.update(id, data)
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] }),
   })
 }

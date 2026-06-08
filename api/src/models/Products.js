@@ -14,4 +14,9 @@ const productSchema = new Schema({
   image: String,
 });
 
+productSchema.index({ category: 1 });
+productSchema.index({ subCategory: 1 });
+productSchema.index({ name: 1 });
+productSchema.index({ tags: 1 });
+
 export default model('Products', productSchema);

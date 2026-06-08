@@ -1,6 +1,7 @@
 import { DataTable, type ColumnDef } from "@/components/Table.tsx"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useStore } from "@/features/stores/hooks"
+import { getProductImageUrl } from "@/features/products/utils"
 
 type PopulatedStoreItem = {
   item_id: {
@@ -39,7 +40,7 @@ export function MyStorePage() {
         <div className="flex items-center gap-3">
           {item.item_id?.image ? (
             <img
-              src={item.item_id.image}
+              src={getProductImageUrl(item.item_id.image)}
               alt={item.item_id.name}
               className="h-10 w-10 rounded-md object-cover border"
             />

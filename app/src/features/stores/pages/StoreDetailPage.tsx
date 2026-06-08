@@ -16,6 +16,7 @@ import {
 import { ArrowLeftIcon, Trash2 } from "lucide-react"
 import { useDeleteStoreItem } from "@/features/stores/hooks"
 import type { StoreSale, StoreRemainingProduct } from "@/features/dashboard/types"
+import { getProductImageUrl } from "@/features/products/utils"
 
 function formatCurrency(amount: number) {
   return amount.toFixed(2)
@@ -162,8 +163,13 @@ export function StoreDetailPage() {
         <div className="flex items-center gap-3">
           {r.image ? (
             <img
+<<<<<<< HEAD
               src={r.image}
               alt={r.name}
+=======
+              src={getProductImageUrl(r.product.image)}
+              alt={r.product.name}
+>>>>>>> new
               className="h-10 w-10 rounded-md object-cover border"
             />
           ) : (

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,6 +20,7 @@ import { ImagePlus, X } from "lucide-react"
 import { useCategories } from "@/features/categories/hooks"
 import { useSubCategoriesByCategory } from "@/features/sub-categories/hooks"
 import { useCreateProduct, useUpdateProduct } from "../hooks"
+import { getProductImageUrl } from "../utils"
 import type { Product, ProductPayload } from "../types"
 
 interface ProductFormProps {
@@ -124,6 +125,8 @@ export function ProductForm({
   const [form, setForm] = useState<ProductFormState>(() =>
     getInitialState(editing)
   )
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const { data: categories } = useCategories()
   const { data: subCategories } = useSubCategoriesByCategory(form.category)
@@ -132,13 +135,30 @@ export function ProductForm({
   const create = useCreateProduct()
   const update = useUpdateProduct()
 
+  useEffect(() => {
+    if (open) {
+      setForm(getInitialState(editing))
+      setImageFile(null)
+      setPreviewUrl(null)
+      setError(null)
+    }
+  }, [open, editing])
+
+  useEffect(() => {
+    if (imageFile) {
+      const url = URL.createObjectURL(imageFile)
+      setPreviewUrl(url)
+      return () => URL.revokeObjectURL(url)
+    }
+    setPreviewUrl(null)
+  }, [imageFile])
+
   function setField<Key extends keyof ProductFormState>(
     key: Key,
     value: ProductFormState[Key]
   ) {
     setForm((prev) => {
       const next = { ...prev, [key]: value }
-      // Clear subCategory when category changes
       if (key === "category") {
         next.subCategory = ""
       }
@@ -152,9 +172,19 @@ export function ProductForm({
     if (!form.name.trim()) return
 
     const payload = toPayload(form, isAdmin)
+    const fd = new FormData()
+
+    if (imageFile) {
+      fd.append("image", imageFile)
+    } else if (editing && !form.image) {
+      payload.image = ""
+    }
+
+    fd.append("data", JSON.stringify(payload))
+
     if (editing) {
       update.mutate(
-        { id: editing._id, payload },
+        { id: editing._id, data: fd },
         {
           onSuccess: () => onSuccess?.(),
           onError: (err) => setError(err.message),
@@ -163,13 +193,14 @@ export function ProductForm({
       return
     }
 
-    create.mutate(payload, {
+    create.mutate(fd, {
       onSuccess: () => onSuccess?.(),
       onError: (err) => setError(err.message),
     })
   }
 
   const isPending = create.isPending || update.isPending
+  const imageSrc = previewUrl || getProductImageUrl(form.image)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -241,16 +272,19 @@ export function ProductForm({
           <div className="grid gap-2">
             <Label htmlFor="product-image">Product Image</Label>
             <div className="flex items-center gap-3">
-              {form.image ? (
+              {imageSrc ? (
                 <div className="relative">
                   <img
-                    src={form.image}
+                    src={imageSrc}
                     alt="Preview"
                     className="h-20 w-20 rounded-md object-cover border"
                   />
                   <button
                     type="button"
-                    onClick={() => setField("image", "")}
+                    onClick={() => {
+                      setImageFile(null)
+                      setField("image", "")
+                    }}
                     className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
                   >
                     <X className="h-3 w-3" />
@@ -259,7 +293,7 @@ export function ProductForm({
               ) : null}
               <label className="flex cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm hover:bg-accent">
                 <ImagePlus className="h-4 w-4" />
-                {form.image ? "Change Image" : "Upload Image"}
+                {imageSrc ? "Change Image" : "Upload Image"}
                 <input
                   id="product-image"
                   type="file"
@@ -272,11 +306,8 @@ export function ProductForm({
                       setError("Image must be smaller than 2MB")
                       return
                     }
-                    const reader = new FileReader()
-                    reader.onloadend = () => {
-                      setField("image", reader.result as string)
-                    }
-                    reader.readAsDataURL(file)
+                    setImageFile(file)
+                    setField("image", "")
                   }}
                 />
               </label>
@@ -313,7 +344,7 @@ export function ProductForm({
               </div>
             </div>
           )}
- 
+
           <div className="flex justify-end gap-2">
             <Button
               type="button"
