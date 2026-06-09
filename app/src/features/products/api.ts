@@ -18,7 +18,7 @@ export const productApi = {
     }),
 
   createWithImage: (formData: FormData) =>
-    fetcher<Product>("/products", {
+    fetcher<Product>("/api/products", {
       method: "POST",
       body: formData,
     }),
@@ -30,7 +30,7 @@ export const productApi = {
     }),
 
   updateWithImage: (id: string, formData: FormData) =>
-    fetcher<Product>(`/products/${id}`, {
+    fetcher<Product>(`/api/products/${id}`, {
       method: "PATCH",
       body: formData,
     }),
