@@ -8,9 +8,9 @@ const router = Router();
 
 function deleteImage(imagePath) {
   if (!imagePath) return;
-  const fullPath = path.join(process.cwd(), imagePath);
-  fs.unlink(fullPath, (err) => {
-    if (err && err.code !== "ENOENT") console.error("Failed to delete image:", err);
+  const fullPath = path.isAbsolute(imagePath) ? imagePath : path.join(process.cwd(), imagePath);
+  fs.promises.unlink(fullPath).catch((err) => {
+    if (err.code !== "ENOENT") console.error("Failed to delete image:", err);
   });
 }
 
@@ -40,7 +40,7 @@ router.post("/", uploadProductImage, async (req, res) => {
     return res.status(201).json(savedProduct);
   } catch (err) {
     if (req.file) {
-      fs.unlink(req.file.path, () => {});
+      deleteImage(req.file.path);
     }
     res.status(400).json({ message: err.message });
   }
@@ -82,32 +82,29 @@ router.patch("/:id", uploadProductImage, async (req, res) => {
       delete body.previous_prices;
     }
 
-    let oldImagePath = null;
     if (req.file) {
-      oldImagePath = (await Product.findById(req.params.id).select("image"))?.image;
       body.image = `/uploads/products/${req.file.filename}`;
-    } else if (body.image === "") {
-      oldImagePath = (await Product.findById(req.params.id).select("image"))?.image;
     }
 
-    const updatedProduct = await Product.findByIdAndUpdate(
+    const oldProduct = await Product.findByIdAndUpdate(
       req.params.id,
       { $set: body },
-      { new: true, runValidators: true }
+      { new: false, runValidators: true }
     );
 
-    if (!updatedProduct) {
-      if (req.file) fs.unlink(req.file.path, () => {});
+    if (!oldProduct) {
+      if (req.file) deleteImage(req.file.path);
       return res.status(404).json({ message: "Product not found" });
     }
 
-    if (oldImagePath) {
-      deleteImage(oldImagePath);
+    if ((req.file || body.image === "") && oldProduct.image) {
+      deleteImage(oldProduct.image);
     }
 
-    res.json(updatedProduct);
+    const responseProduct = { ...oldProduct.toObject(), ...body };
+    res.json(responseProduct);
   } catch (err) {
-    if (req.file) fs.unlink(req.file.path, () => {});
+    if (req.file) deleteImage(req.file.path);
     if (err.kind === "ObjectId") {
       return res.status(400).json({ message: "Invalid Product ID format" });
     }
