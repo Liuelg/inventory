@@ -11,9 +11,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog.tsx"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog.tsx"
 import { useDeleteStockout, useStockouts } from "../hooks"
-import type { Stockout } from "../types"
-import { Pencil, Trash2 } from "lucide-react"
+import type { Stockout, StockoutItemPopulated } from "../types"
+import { Pencil, Trash2, Eye } from "lucide-react"
 
 function getStoreName(store: Stockout["store"]) {
   if (!store) return "-"
@@ -43,6 +50,19 @@ function StatusBadge({ status }: { status: Stockout["status"] }) {
   )
 }
 
+function ItemRow({ item }: { item: StockoutItemPopulated }) {
+  const name =
+    typeof item.item_id === "string" ? item.item_id : item.item_id.name
+  return (
+    <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+      <span className="font-medium">{name}</span>
+      <span className="text-muted-foreground">
+        {item.quantity} × {item.price.toFixed(2)}
+      </span>
+    </div>
+  )
+}
+
 interface StockoutTableProps {
   onEdit: (stockout: Stockout) => void
 }
@@ -51,6 +71,7 @@ export function StockoutTable({ onEdit }: StockoutTableProps) {
   const { data: stockouts, isLoading } = useStockouts()
   const remove = useDeleteStockout()
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [viewing, setViewing] = useState<Stockout | null>(null)
 
   const columns: ColumnDef<Stockout>[] = [
     {
@@ -64,8 +85,17 @@ export function StockoutTable({ onEdit }: StockoutTableProps) {
     },
     {
       header: "Items",
-      cell: (s) => getTotalItems(s),
-      className: "w-[60px] text-right",
+      cell: (s) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-auto px-2 py-0.5 text-xs font-medium"
+          onClick={() => setViewing(s)}
+        >
+          {getTotalItems(s)} items
+        </Button>
+      ),
+      className: "w-[80px] text-right",
     },
     {
       header: "Status",
@@ -80,9 +110,17 @@ export function StockoutTable({ onEdit }: StockoutTableProps) {
     },
     {
       header: "Actions",
-      className: "w-[100px] text-right",
+      className: "w-[120px] text-right",
       cell: (s) => (
         <div className="flex justify-end gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            title="View Items"
+            onClick={() => setViewing(s)}
+          >
+            <Eye />
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => onEdit(s)}>
             <Pencil />
           </Button>
@@ -133,6 +171,58 @@ export function StockoutTable({ onEdit }: StockoutTableProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!viewing} onOpenChange={() => setViewing(null)}>
+        <DialogContent className="max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>Stockout Items</DialogTitle>
+            <DialogDescription>
+              Products included in this stockout request.
+            </DialogDescription>
+          </DialogHeader>
+
+          {viewing ? (
+            <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Store</p>
+                  <p className="font-medium">{getStoreName(viewing.store)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Status</p>
+                  <StatusBadge status={viewing.status} />
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Date</p>
+                  <p className="font-medium">
+                    {viewing.date
+                      ? new Date(viewing.date).toLocaleDateString()
+                      : "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Total Items</p>
+                  <p className="font-medium">{getTotalItems(viewing)}</p>
+                </div>
+              </div>
+
+              {viewing.note ? (
+                <div className="text-sm">
+                  <p className="text-muted-foreground">Note</p>
+                  <p className="font-medium">{viewing.note}</p>
+                </div>
+              ) : null}
+
+              <div className="flex flex-col gap-2">
+                <p className="text-sm font-medium">Items</p>
+                {viewing.items.map((item, idx) => (
+                  <ItemRow key={idx} item={item} />
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

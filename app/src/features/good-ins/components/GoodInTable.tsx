@@ -84,8 +84,17 @@ export function GoodInTable() {
     },
     {
       header: "Items",
-      cell: (s) => getTotalItems(s),
-      className: "w-[60px] text-right",
+      cell: (s) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-auto px-2 py-0.5 text-xs font-medium"
+          onClick={() => setViewing(s)}
+        >
+          {getTotalItems(s)} items
+        </Button>
+      ),
+      className: "w-[80px] text-right",
     },
     {
       header: "Total",
