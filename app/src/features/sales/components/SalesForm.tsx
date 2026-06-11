@@ -33,6 +33,7 @@ interface SalesFormProps {
 type SaleItemForm = {
   item_id: string
   quantity: string
+  price: string
 }
 
 type SaleFormState = {
@@ -40,7 +41,7 @@ type SaleFormState = {
   items: SaleItemForm[]
 }
 
-const emptyItem: SaleItemForm = { item_id: "", quantity: "1" }
+const emptyItem: SaleItemForm = { item_id: "", quantity: "1", price: "" }
 
 const initialState: SaleFormState = {
   customerName: "",
@@ -55,16 +56,10 @@ function getInitialState(editing?: Sale | null): SaleFormState {
       ? editing.items.map((i) => ({
           item_id: i.item_id,
           quantity: String(i.quantity),
+          price: String(i.price),
         }))
       : [{ ...emptyItem }],
   }
-}
-
-function getProductPrice(
-  products: { _id: string; price?: { amount?: number } }[] | undefined,
-  itemId: string
-): number {
-  return products?.find((p) => p._id === itemId)?.price?.amount ?? 0
 }
 
 function getProductImage(
@@ -76,15 +71,14 @@ function getProductImage(
 
 function toPayload(
   form: SaleFormState,
-  userId: string,
-  products: { _id: string; price?: { amount?: number } }[] | undefined
+  userId: string
 ): SalePayload {
   const items = form.items
     .filter((i) => i.item_id && Number(i.quantity) > 0)
     .map((i) => ({
       item_id: i.item_id,
       quantity: Number(i.quantity),
-      price: getProductPrice(products, i.item_id),
+      price: Number(i.price) || 0,
     }))
 
   const totalAmount = items.reduce(
@@ -158,10 +152,10 @@ export function SalesForm({
   const totalAmount = useMemo(() => {
     return form.items.reduce((sum, item) => {
       const qty = Number(item.quantity) || 0
-      const price = getProductPrice(products, item.item_id)
+      const price = Number(item.price) || 0
       return sum + qty * price
     }, 0)
-  }, [form.items, products])
+  }, [form.items])
 
   function setField<Key extends keyof SaleFormState>(
     key: Key,
@@ -213,14 +207,14 @@ export function SalesForm({
       return
     }
 
-    // Validate that selected products have a price set and enough stock
+    // Validate that each item has a price entered and enough stock
     for (const item of validItems) {
-      const price = getProductPrice(products, item.item_id)
-      if (!price) {
+      const price = Number(item.price)
+      if (!price || price <= 0) {
         const productName =
           products?.find((p) => p._id === item.item_id)?.name || item.item_id
         setError(
-          `${productName} does not have a price set. Contact an admin to set the price before recording a sale.`
+          `${productName} does not have a valid price. Please enter a price.`
         )
         return
       }
@@ -243,7 +237,7 @@ export function SalesForm({
       return
     }
 
-    const payload = toPayload(form, userId, products)
+    const payload = toPayload(form, userId)
     if (editing) {
       update.mutate(
         { id: editing._id, payload },
@@ -308,7 +302,7 @@ export function SalesForm({
           {form.items.map((item, index) => (
             <div
               key={index}
-              className="grid grid-cols-[48px_1fr_90px_36px] gap-3 items-center"
+              className="grid grid-cols-[48px_1fr_80px_80px_36px] gap-3 items-center"
             >
               <div className="flex items-center justify-center">
                 <div className="h-10 w-10 rounded-md border bg-muted overflow-hidden">
@@ -368,6 +362,18 @@ export function SalesForm({
                   value={item.quantity}
                   onChange={(e) =>
                     setItemField(index, "quantity", e.target.value)
+                  }
+                />
+              </div>
+              <div className="grid gap-1">
+                <Label className="text-xs">Price</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={item.price}
+                  onChange={(e) =>
+                    setItemField(index, "price", e.target.value)
                   }
                 />
               </div>

@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import Sale from '../models/Sale.js';
-import Product from '../models/Products.js';
 import Store from '../models/Stores.js';
 import InvoiceCounter from '../models/InvoiceCounter.js';
 
@@ -91,15 +90,11 @@ router.post('/', async (req, res) => {
     );
     const invoiceNumber = `${store.code}-${String(counter.sequence).padStart(3, '0')}`;
 
-    // Look up product prices from the database
-    const items = await Promise.all(body.items.map(async (i) => {
-      const product = await Product.findById(i.item_id);
-      const price = product?.price?.amount ?? 0;
-      return {
-        item_id: i.item_id,
-        quantity: i.quantity,
-        price,
-      };
+    // Use prices provided in the request body
+    const items = body.items.map((i) => ({
+      item_id: i.item_id,
+      quantity: i.quantity,
+      price: i.price ?? 0,
     }));
 
     // Deduct from store inventory
@@ -194,14 +189,10 @@ router.patch('/:id', async (req, res) => {
         await restoreItemsToStore(existingSale.store, existingSale.items);
       }
 
-      const items = await Promise.all(body.items.map(async (i) => {
-        const product = await Product.findById(i.item_id);
-        const price = product?.price?.amount ?? 0;
-        return {
-          item_id: i.item_id,
-          quantity: i.quantity,
-          price,
-        };
+      const items = body.items.map((i) => ({
+        item_id: i.item_id,
+        quantity: i.quantity,
+        price: i.price ?? 0,
       }));
 
       // Deduct new quantities
