@@ -437,6 +437,33 @@ export function StockForm({
     }))
   }
 
+  function addAllProducts() {
+    if (!products || products.length === 0) return
+    setForm((prev) => {
+      const existingIds = new Set(
+        prev.items.map((i) => i.item_id).filter(Boolean)
+      )
+      const newItems = [...prev.items.filter((i) => i.item_id)]
+
+      for (const product of products) {
+        if (!existingIds.has(product._id)) {
+          newItems.push({
+            _key: nextKey(),
+            item_id: product._id,
+            quantity: "1",
+            group: null,
+          })
+        }
+      }
+
+      if (newItems.length === 0) {
+        newItems.push(createEmptyItem())
+      }
+
+      return { ...prev, items: newItems }
+    })
+  }
+
   function removeItem(rowKey: string) {
     setForm((prev) => {
       if (prev.items.length <= 1) return prev
@@ -722,15 +749,24 @@ export function StockForm({
               ))}
             </div>
 
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="mt-1"
-              onClick={addItem}
-            >
-              + Add Item
-            </Button>
+            <div className="flex gap-2 mt-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addItem}
+              >
+                + Add Item
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={addAllProducts}
+              >
+                Add All Products
+              </Button>
+            </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 border-t pt-4">
