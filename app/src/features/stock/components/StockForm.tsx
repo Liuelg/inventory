@@ -438,13 +438,19 @@ export function StockForm({
   }
 
   function addAllProducts() {
-    if (!products || products.length === 0) return
+    console.log("Add All Products clicked. products:", products)
+    if (!products || products.length === 0) {
+      console.warn("No products available to add.")
+      setError("No products available. Please make sure products are loaded.")
+      return
+    }
     setForm((prev) => {
       const existingIds = new Set(
         prev.items.map((i) => i.item_id).filter(Boolean)
       )
       const newItems = [...prev.items.filter((i) => i.item_id)]
 
+      let addedCount = 0
       for (const product of products) {
         if (!existingIds.has(product._id)) {
           newItems.push({
@@ -453,8 +459,11 @@ export function StockForm({
             quantity: "1",
             group: null,
           })
+          addedCount++
         }
       }
+
+      console.log(`Added ${addedCount} products. Total items now: ${newItems.length}`)
 
       if (newItems.length === 0) {
         newItems.push(createEmptyItem())
@@ -763,8 +772,17 @@ export function StockForm({
                 variant="secondary"
                 size="sm"
                 onClick={addAllProducts}
+                disabled={!products || products.length === 0}
+                title={
+                  !products
+                    ? "Products are still loading..."
+                    : products.length === 0
+                    ? "No products found in the catalog."
+                    : `Add all ${products.length} products`
+                }
               >
                 Add All Products
+                {products ? ` (${products.length})` : ""}
               </Button>
             </div>
           </div>
