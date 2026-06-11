@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { Pencil, Trash2 } from "lucide-react"
 import { useAuthSession } from "@/hooks/use-auth-session"
-import { useDeleteProduct, useProducts } from "../hooks"
+import { useDeleteProduct } from "../hooks"
 import { getProductImageUrl } from "../utils"
 import type { Product } from "../types"
 
@@ -33,11 +33,12 @@ function formatPrice(product: Product) {
 }
 
 interface ProductTableProps {
+  products: Product[]
+  isLoading?: boolean
   onEdit: (product: Product) => void
 }
 
-export function ProductTable({ onEdit }: ProductTableProps) {
-  const { data: products, isLoading } = useProducts()
+export function ProductTable({ products, isLoading, onEdit }: ProductTableProps) {
   const { data: session } = useAuthSession()
   const isAdmin = session?.role === "admin"
   const remove = useDeleteProduct()
@@ -118,7 +119,7 @@ export function ProductTable({ onEdit }: ProductTableProps) {
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
       <DataTable
-        data={products ?? []}
+        data={products}
         columns={columns}
         keyExtractor={(product) => product._id}
         loading={isLoading}
