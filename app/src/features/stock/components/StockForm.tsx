@@ -604,19 +604,19 @@ export function StockForm({
       })
     }
 
-    // Create new stock entry for brand-new products
+    // Create individual stock entry for each brand-new product
     if (itemsToCreate.length > 0) {
-      const totalAmount = itemsToCreate.reduce(
-        (sum, i) => sum + i.quantity * i.price,
-        0
+      await Promise.all(
+        itemsToCreate.map((item) =>
+          create.mutateAsync({
+            created_by: userId,
+            date: new Date(form.date).toISOString(),
+            items: [item],
+            totalAmount: item.quantity * item.price,
+            note: form.note.trim() || undefined,
+          })
+        )
       )
-      await create.mutateAsync({
-        created_by: userId,
-        date: new Date(form.date).toISOString(),
-        items: itemsToCreate,
-        totalAmount,
-        note: form.note.trim() || undefined,
-      })
     }
   }
 
