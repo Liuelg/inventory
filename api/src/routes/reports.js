@@ -4,6 +4,7 @@ import Sale from "../models/Sale.js"
 import GoodIn from "../models/Goodin.js"
 import Stockout from "../models/Stockout.js"
 import Stock from "../models/Stock.js"
+import Store from "../models/Stores.js"
 
 const router = Router()
 
@@ -59,15 +60,23 @@ router.get("/", async (req, res, next) => {
     }
 
     if (type === "remaining") {
-      const stocks = await Stock.find().populate("items.item_id", "name category")
-
       let totalItems = 0
       let totalValue = 0
       const productMap = new Map()
+      let recordCount = 0
 
-      for (const stock of stocks) {
-        for (const item of stock.items || []) {
-          const qty = item.remaining || 0
+      if (store && isValidObjectId(store)) {
+        // Filter remaining products by a specific store
+        const storeDoc = await Store.findById(store).populate("items.item_id", "name category")
+
+        if (!storeDoc) {
+          return res.status(404).json({ success: false, message: "Store not found" })
+        }
+
+        recordCount = 1
+
+        for (const item of storeDoc.items || []) {
+          const qty = item.quantity || 0
           const price = item.price || 0
           const itemValue = qty * price
 
@@ -88,6 +97,35 @@ router.get("/", async (req, res, next) => {
             productMap.set(productId, existing)
           }
         }
+      } else {
+        // No store filter — aggregate from all central stock
+        const stocks = await Stock.find().populate("items.item_id", "name category")
+        recordCount = stocks.length
+
+        for (const stock of stocks) {
+          for (const item of stock.items || []) {
+            const qty = item.remaining || 0
+            const price = item.price || 0
+            const itemValue = qty * price
+
+            totalItems += qty
+            totalValue += itemValue
+
+            const productId = item.item_id?._id?.toString?.() || item.item_id?.toString?.()
+            const productName = item.item_id?.name || "Unknown Product"
+
+            if (productId) {
+              const existing = productMap.get(productId) || {
+                product: { _id: productId, name: productName },
+                quantity: 0,
+                value: 0,
+              }
+              existing.quantity += qty
+              existing.value += itemValue
+              productMap.set(productId, existing)
+            }
+          }
+        }
       }
 
       const breakdown = Array.from(productMap.values()).sort((a, b) => b.quantity - a.quantity)
@@ -100,9 +138,9 @@ router.get("/", async (req, res, next) => {
           period: "daily",
           start: now.toISOString(),
           end: now.toISOString(),
-          storeFilter: null,
+          storeFilter: store || null,
           summary: {
-            totalRecords: stocks.length,
+            totalRecords: recordCount,
             totalItems,
             totalValue,
           },
