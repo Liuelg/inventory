@@ -249,17 +249,7 @@ export function StockoutForm({
       return
     }
 
-    // Validate that selected products have a price set
     for (const item of validItems) {
-      const price = getProductPrice(products, item.item_id)
-      if (price === undefined || price === null) {
-        const productName = products?.find((p) => p._id === item.item_id)?.name || item.item_id
-        setError(
-          `${productName} does not have a price set. Contact an admin to set the price.`
-        )
-        return
-      }
-
       const available = availableMap.get(item.item_id) || 0
       const requested = Number(item.quantity)
       if (requested > available) {
