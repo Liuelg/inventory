@@ -730,8 +730,15 @@ export function StockForm({
                   </div>
 
                   <div className="grid gap-1">
-                    <span className="text-xs font-medium text-muted-foreground sm:hidden">Qty</span>
+                    <label
+                      htmlFor={`stock-qty-${item._key}`}
+                      className="text-xs font-medium text-muted-foreground sm:hidden"
+                    >
+                      Qty
+                    </label>
                     <Input
+                      id={`stock-qty-${item._key}`}
+                      name={`stock-qty-${item._key}`}
                       type="number"
                       min="0"
                       placeholder="0"
