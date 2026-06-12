@@ -15,7 +15,6 @@ import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
 import { getProductImageUrl } from "@/features/products/utils"
 import type { Product } from "@/features/products/types"
-import type { ProductGroup } from "@/features/product-groups/types"
 import { useCreateStock, useStocks, useUpdateStock } from "../hooks"
 import type { Stock, StockPayload, StockItem } from "../types"
 
@@ -154,22 +153,16 @@ function getGroupId(
   return group._id ?? null
 }
 
-type DropdownItem =
-  | { type: "product"; id: string; name: string; image?: string }
-  | { type: "group"; id: string; name: string; image?: string; count: number }
+type DropdownItem = { type: "product"; id: string; name: string; image?: string }
 
 function ProductSearchSelect({
   products,
-  groups,
   value,
   onChange,
-  onGroupSelect,
 }: {
   products: Product[]
-  groups?: ProductGroup[]
   value: string
   onChange: (id: string) => void
-  onGroupSelect?: (id: string) => void
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
@@ -178,28 +171,13 @@ function ProductSearchSelect({
   const selectedProduct = products.find((p) => p._id === value)
 
   const allItems: DropdownItem[] = useMemo(() => {
-    const items: DropdownItem[] = []
-    if (groups && groups.length > 0) {
-      for (const g of groups) {
-        items.push({
-          type: "group",
-          id: g._id,
-          name: g.name,
-          image: g.image,
-          count: g.items?.length || 0,
-        })
-      }
-    }
-    for (const p of products) {
-      items.push({
-        type: "product",
-        id: p._id,
-        name: p.name,
-        image: p.image,
-      })
-    }
-    return items
-  }, [products, groups])
+    return products.map((p) => ({
+      type: "product" as const,
+      id: p._id,
+      name: p.name,
+      image: p.image,
+    }))
+  }, [products])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -217,7 +195,7 @@ function ProductSearchSelect({
     return () => document.removeEventListener("mousedown", handleDocClick)
   }, [])
 
-  const selectedLabel = selectedProduct?.name || (value ? "" : "Select product or group")
+  const selectedLabel = selectedProduct?.name || (value ? "" : "Select product")
   const selectedImage = selectedProduct?.image
 
   return (
@@ -263,7 +241,7 @@ function ProductSearchSelect({
               <p className="px-3 py-2 text-sm text-muted-foreground">No items found.</p>
             ) : (
               filtered.map((item) => {
-                const isSelected = item.type === "product" && item.id === value
+                const isSelected = item.id === value
                 return (
                   <button
                     key={item.id}
@@ -272,11 +250,7 @@ function ProductSearchSelect({
                       isSelected ? "bg-accent text-accent-foreground" : ""
                     }`}
                     onClick={() => {
-                      if (item.type === "group") {
-                        onGroupSelect?.(item.id)
-                      } else {
-                        onChange(item.id)
-                      }
+                      onChange(item.id)
                       setOpen(false)
                       setQuery("")
                     }}
@@ -287,11 +261,6 @@ function ProductSearchSelect({
                       <div className="h-6 w-6 rounded bg-muted shrink-0" />
                     )}
                     <span className="flex-1 truncate text-left">{item.name}</span>
-                    {item.type === "group" && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary shrink-0">
-                        GROUP ({item.count})
-                      </span>
-                    )}
                     {isSelected ? <Check className="h-4 w-4 shrink-0" /> : null}
                   </button>
                 )
