@@ -56,8 +56,9 @@ router.get('/:id', async (req, res) => {
     const store = await Store.findById(req.params.id)
       .populate('manager_id')
       .populate({ path: 'items.item_id', populate: { path: 'category', select: 'name' } })
-      .populate('items.group', 'name image');
-    
+      .populate('items.group', 'name image')
+      .lean();
+
     if (!store) return res.status(404).json({ message: 'Store not found' });
     res.json(store);
   } catch (err) {

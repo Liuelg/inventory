@@ -15,6 +15,7 @@ import {
 import { Plus, Layers, Search } from "lucide-react"
 import { useProducts } from "../hooks"
 import { useCategories } from "@/features/categories/hooks"
+import { useSubCategories } from "@/features/sub-categories/hooks"
 import type { Product } from "../types"
 
 function getCategoryId(product: Product): string {
@@ -24,15 +25,30 @@ function getCategoryId(product: Product): string {
     : product.category._id
 }
 
+function getSubCategoryId(product: Product): string {
+  if (!product.subCategory) return ""
+  return typeof product.subCategory === "string"
+    ? product.subCategory
+    : product.subCategory._id
+}
+
 export function ProductPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [groupFormOpen, setGroupFormOpen] = useState(false)
   const [editing, setEditing] = useState<Product | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
+  const [selectedSubCategory, setSelectedSubCategory] = useState<string>("all")
 
   const { data: products, isLoading } = useProducts()
   const { data: categories } = useCategories()
+  const { data: subCategories } = useSubCategories()
+
+  const visibleSubCategories = useMemo(() => {
+    if (!subCategories) return []
+    if (selectedCategory === "all") return subCategories
+    return subCategories.filter((sc) => sc.categoryId === selectedCategory)
+  }, [subCategories, selectedCategory])
 
   const filteredProducts = useMemo(() => {
     if (!products) return []
@@ -47,8 +63,12 @@ export function ProductPage() {
       result = result.filter((p) => getCategoryId(p) === selectedCategory)
     }
 
+    if (selectedSubCategory && selectedSubCategory !== "all") {
+      result = result.filter((p) => getSubCategoryId(p) === selectedSubCategory)
+    }
+
     return result
-  }, [products, searchQuery, selectedCategory])
+  }, [products, searchQuery, selectedCategory, selectedSubCategory])
 
   const openAdd = () => {
     setEditing(null)
@@ -103,7 +123,10 @@ export function ProductPage() {
           <Label className="text-xs text-muted-foreground">Filter by category</Label>
           <Select
             value={selectedCategory}
-            onValueChange={setSelectedCategory}
+            onValueChange={(val) => {
+              setSelectedCategory(val)
+              setSelectedSubCategory("all")
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="All categories" />
@@ -113,6 +136,25 @@ export function ProductPage() {
               {categories?.map((c) => (
                 <SelectItem key={c._id} value={c._id}>
                   {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid gap-1.5 w-full sm:w-[220px]">
+          <Label className="text-xs text-muted-foreground">Filter by subcategory</Label>
+          <Select
+            value={selectedSubCategory}
+            onValueChange={setSelectedSubCategory}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All subcategories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All subcategories</SelectItem>
+              {visibleSubCategories.map((sc) => (
+                <SelectItem key={sc._id} value={sc._id}>
+                  {sc.name}
                 </SelectItem>
               ))}
             </SelectContent>

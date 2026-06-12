@@ -38,7 +38,7 @@ function formatItems(items: Stock["items"]) {
   if (items.length === 0) return "—"
   if (items.length === 1) {
     const name = getProductName(items[0])
-    return `${name} (${items[0].quantity})`
+    return name
   }
   return `${items.length} products`
 }

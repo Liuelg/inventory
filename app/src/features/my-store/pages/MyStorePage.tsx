@@ -1,6 +1,8 @@
+import { useMemo } from "react"
 import { DataTable, type ColumnDef } from "@/components/Table.tsx"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useStore } from "@/features/stores/hooks"
+import { useCategories } from "@/features/categories/hooks"
 import { getProductImageUrl } from "@/features/products/utils"
 
 type PopulatedStoreItem = {
@@ -28,6 +30,13 @@ export function MyStorePage() {
   const { data: session } = useAuthSession()
   const storeId = session?.store
   const { data: store, isLoading } = useStore(storeId || "")
+  const { data: categories } = useCategories()
+
+  const categoryMap = useMemo(() => {
+    const map = new Map<string, string>()
+    categories?.forEach((c) => map.set(c._id, c.name))
+    return map
+  }, [categories])
 
   const items = ((store?.items || []) as unknown as PopulatedStoreItem[]).filter(
     (item) => item.quantity > 0 && item.item_id?._id
@@ -58,7 +67,9 @@ export function MyStorePage() {
       cell: (item) => {
         const cat = item.item_id?.category
         if (!cat) return "—"
-        if (typeof cat === "string") return cat
+        if (typeof cat === "string") {
+          return categoryMap.get(cat) || cat
+        }
         return cat.name || "—"
       },
     },
