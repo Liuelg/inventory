@@ -377,27 +377,35 @@ export function StockForm({
       setError("No products available. Please make sure products are loaded.")
       return
     }
-    const qty = Number(bulkQty) > 0 ? String(Number(bulkQty)) : "1"
+    const qtyNum = Number(bulkQty) > 0 ? Number(bulkQty) : 1
+    const qtyStr = String(qtyNum)
     setForm((prev) => {
-      const existingIds = new Set(
-        prev.items.map((i) => i.item_id).filter(Boolean)
-      )
       const newItems = [...prev.items.filter((i) => i.item_id)]
+      const itemMap = new Map<string, StockItemForm>()
+      for (const item of newItems) {
+        itemMap.set(item.item_id, item)
+      }
 
       let addedCount = 0
+      let incrementedCount = 0
       for (const product of products) {
-        if (!existingIds.has(product._id)) {
+        const existing = itemMap.get(product._id)
+        if (existing) {
+          existing.quantity = String(Number(existing.quantity) + qtyNum)
+          incrementedCount++
+        } else {
           newItems.push({
             _key: nextKey(),
             item_id: product._id,
-            quantity: qty,
+            quantity: qtyStr,
             group: null,
           })
+          itemMap.set(product._id, newItems[newItems.length - 1])
           addedCount++
         }
       }
 
-      console.log(`Added ${addedCount} products. Total items now: ${newItems.length}`)
+      console.log(`Added ${addedCount} new products, incremented ${incrementedCount} existing. Total items: ${newItems.length}`)
 
       if (newItems.length === 0) {
         newItems.push(createEmptyItem())
