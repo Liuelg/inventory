@@ -1,6 +1,7 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useStoreDaily } from "@/features/dashboard/hooks"
+import { useCategories } from "@/features/categories/hooks"
 import { DataTable, type ColumnDef } from "@/components/Table.tsx"
 import { Button } from "@/components/ui/button.tsx"
 import {
@@ -101,6 +102,13 @@ export function StoreDetailPage() {
   const { data, isLoading } = useStoreDaily(id || "")
   const deleteItem = useDeleteStoreItem()
   const [deleteRow, setDeleteRow] = useState<UnifiedRow | null>(null)
+  const { data: categories } = useCategories()
+
+  const categoryMap = useMemo(() => {
+    const map = new Map<string, string>()
+    categories?.forEach((c) => map.set(c._id, c.name))
+    return map
+  }, [categories])
 
   const rows = data?.remainingProducts
     ? buildUnifiedRows(data.remainingProducts)
@@ -185,7 +193,10 @@ export function StoreDetailPage() {
     },
     {
       header: "Category",
-      cell: (r) => r.category || "—",
+      cell: (r) => {
+        if (!r.category) return "—"
+        return categoryMap.get(r.category) || r.category
+      },
     },
     {
       header: "Quantity",

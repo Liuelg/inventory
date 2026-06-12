@@ -1,6 +1,7 @@
 import { Router } from "express"
 import Sale from "../models/Sale.js"
 import Store from "../models/Stores.js"
+import Products from "../models/Products.js"
 
 const router = Router()
 
@@ -86,7 +87,7 @@ router.get("/store/:storeId", async (req, res, next) => {
     const storeId = req.params.storeId
 
     const store = await Store.findById(storeId)
-      .populate("items.item_id", "name category image")
+      .populate("items.item_id", "name image")
       .populate("items.group", "name image")
       .populate("manager_id", "name email")
 
@@ -117,16 +118,29 @@ router.get("/store/:storeId", async (req, res, next) => {
       )
     }
 
+    // Fetch products with populated categories separately
+    const productIds = store.items
+      .map((i) => i.item_id)
+      .filter(Boolean)
+    const products = await Products.find({ _id: { $in: productIds } })
+      .populate("category", "name")
+      .lean()
+    const productMap = new Map()
+    for (const p of products) {
+      productMap.set(p._id.toString(), p)
+    }
+
     const remainingProducts = store.items
       .filter((item) => item.quantity > 0 && item.item_id)
       .map((item) => {
-        const product = item.item_id
+        const product = productMap.get(item.item_id?.toString?.())
         const group = item.group
+        const categoryObj = product?.category
         return {
           product: {
             _id: product?._id?.toString?.() || item.item_id?.toString?.(),
             name: product?.name || "—",
-            category: product?.category || "—",
+            category: categoryObj?.name || categoryObj?.toString?.() || "—",
             image: product?.image || null,
           },
           quantity: item.quantity,
