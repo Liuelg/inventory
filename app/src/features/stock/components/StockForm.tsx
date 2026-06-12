@@ -15,6 +15,7 @@ import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
 import { getProductImageUrl } from "@/features/products/utils"
 import type { Product } from "@/features/products/types"
+import type { ProductGroup } from "@/features/product-groups/types"
 import { useCreateStock, useStocks, useUpdateStock } from "../hooks"
 import type { Stock, StockPayload, StockItem } from "../types"
 
