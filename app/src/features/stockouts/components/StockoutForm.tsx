@@ -20,7 +20,6 @@ import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
 import { getProductImageUrl } from "@/features/products/utils"
 import { useStores } from "@/features/stores/hooks"
-import { useStocks } from "@/features/stock/hooks"
 import { useCreateStockout, useUpdateStockout } from "../hooks"
 import type { Product } from "@/features/products/types"
 import type { Stockout, StockoutPayload } from "../types"
@@ -118,35 +117,8 @@ export function StockoutForm({
   const { data: session } = useAuthSession()
   const { data: products } = useProducts()
   const { data: stores } = useStores()
-  const { data: stocks } = useStocks()
   const create = useCreateStockout()
   const update = useUpdateStockout()
-
-  // Compute available stock map directly from Stock data (same source as Stock page)
-  const availableMap = (() => {
-    const map = new Map<string, number>()
-    for (const stock of stocks || []) {
-      for (const item of stock.items || []) {
-        const productId =
-          typeof item.item_id === "string"
-            ? item.item_id
-            : item.item_id?._id ?? ""
-        if (!productId) continue
-        const existing = map.get(productId) || 0
-        map.set(productId, existing + (item.remaining || 0))
-      }
-    }
-    // Add back editing quantities so the user can re-allocate them
-    if (editing?.items) {
-      for (const item of editing.items) {
-        const productId =
-          typeof item.item_id === "string" ? item.item_id : item.item_id._id
-        const current = map.get(productId) || 0
-        map.set(productId, current + item.quantity)
-      }
-    }
-    return map
-  })()
 
   useEffect(() => {
     setForm(getInitialState(editing))
@@ -216,14 +188,6 @@ export function StockoutForm({
         setError(
           `${productName} does not have a price set. Contact an admin to set the price.`
         )
-        return
-      }
-
-      const available = availableMap.get(item.item_id) || 0
-      const requested = Number(item.quantity)
-      if (requested > available) {
-        const productName = products?.find((p) => p._id === item.item_id)?.name || item.item_id
-        setError(`${productName}: requested ${requested} but only ${available} available in stock.`)
         return
       }
     }
@@ -337,26 +301,18 @@ export function StockoutForm({
                     <SelectValue placeholder="Select product" />
                   </SelectTrigger>
                   <SelectContent>
-                    {products?.map((p) => {
-                      const available = availableMap.get(p._id)
-                      return (
-                        <SelectItem key={p._id} value={p._id} textValue={p.name}>
-                          <div className="flex items-center gap-2">
-                            {p.image ? (
-                              <img src={getProductImageUrl(p.image)} alt="" className="h-6 w-6 rounded object-cover" />
-                            ) : (
-                              <div className="h-6 w-6 rounded bg-muted" />
-                            )}
-                            <span>{p.name}</span>
-                            {available !== undefined ? (
-                              <span className="text-muted-foreground ml-1 text-xs">
-                                ({available} in stock)
-                              </span>
-                            ) : null}
-                          </div>
-                        </SelectItem>
-                      )
-                    })}
+                    {products?.map((p) => (
+                      <SelectItem key={p._id} value={p._id} textValue={p.name}>
+                        <div className="flex items-center gap-2">
+                          {p.image ? (
+                            <img src={getProductImageUrl(p.image)} alt="" className="h-6 w-6 rounded object-cover" />
+                          ) : (
+                            <div className="h-6 w-6 rounded bg-muted" />
+                          )}
+                          <span>{p.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 {item.item_id && (
@@ -366,18 +322,10 @@ export function StockoutForm({
                 )}
               </div>
               <div className="grid gap-1">
-                <Label className="text-xs">
-                  Qty
-                  {item.item_id && (
-                    <span className="text-muted-foreground ml-1">
-                      (max:{availableMap.get(item.item_id) ?? 0})
-                    </span>
-                  )}
-                </Label>
+                <Label className="text-xs">Qty</Label>
                 <Input
                   type="number"
                   min="1"
-                  max={availableMap.get(item.item_id) ?? undefined}
                   value={item.quantity}
                   onChange={(e) =>
                     setItemField(index, "quantity", e.target.value)

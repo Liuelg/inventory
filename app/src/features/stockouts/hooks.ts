@@ -4,8 +4,6 @@ import type { StockoutPayload } from "./types"
 
 function invalidateStockoutRelated(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ["stockouts"] })
-  qc.invalidateQueries({ queryKey: ["stocks"] })
-  qc.invalidateQueries({ queryKey: ["stock", "available"] })
   qc.invalidateQueries({ queryKey: ["stores"] })
   qc.invalidateQueries({ queryKey: ["dashboard"] })
 }

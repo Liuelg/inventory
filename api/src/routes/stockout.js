@@ -1,8 +1,6 @@
 import { Router } from 'express'
-import mongoose from 'mongoose'
 import Stockout from '../models/Stockout.js'
 import Store from '../models/Stores.js'
-import Stock from '../models/Stock.js'
 import Product from '../models/Products.js'
 
 const router = Router()
@@ -35,78 +33,7 @@ async function addItemsToStore(storeId, items) {
   return store
 }
 
-// Helper to get available stock per product
-async function getAvailableStock() {
-  const stocks = await Stock.find()
-  const availableMap = new Map()
-
-  for (const stock of stocks) {
-    for (const item of stock.items || []) {
-      const productId = item.item_id?.toString?.()
-      if (!productId) continue
-      const remaining = item.remaining || 0
-      availableMap.set(productId, (availableMap.get(productId) || 0) + remaining)
-    }
-  }
-
-  return availableMap
-}
-
-// Helper to deduct stock (FIFO)
-async function deductStock(items) {
-  for (const { item_id: productId, quantity: requestedQty } of items) {
-    let remainingToDeduct = requestedQty
-
-    const stocks = await Stock.find({ 'items.item_id': new mongoose.Types.ObjectId(productId) })
-      .sort({ date: 1, createdAt: 1 })
-
-    for (const stock of stocks) {
-      if (remainingToDeduct <= 0) break
-
-      for (const item of stock.items) {
-        if (item.item_id.toString() !== productId) continue
-        if (remainingToDeduct <= 0) break
-
-        const deduct = Math.min(item.remaining, remainingToDeduct)
-        item.remaining -= deduct
-        remainingToDeduct -= deduct
-      }
-
-      await stock.save()
-    }
-
-    if (remainingToDeduct > 0) {
-      throw new Error(`Insufficient stock for product ${productId}`)
-    }
-  }
-}
-
-// Helper to restore stock when stockout is deleted or updated (reverse FIFO)
-async function restoreStock(items) {
-  for (const { item_id: productId, quantity } of items) {
-    let remainingToRestore = quantity
-
-    const stocks = await Stock.find({ 'items.item_id': new mongoose.Types.ObjectId(productId) })
-      .sort({ date: -1, createdAt: -1 })
-
-    for (const stock of stocks) {
-      if (remainingToRestore <= 0) break
-
-      for (const item of stock.items) {
-        if (item.item_id.toString() !== productId) continue
-        if (remainingToRestore <= 0) break
-
-        const restoreQty = Math.min(item.quantity - item.remaining, remainingToRestore)
-        item.remaining += restoreQty
-        remainingToRestore -= restoreQty
-      }
-
-      await stock.save()
-    }
-  }
-}
-
-// Create a stockout (stock controllers)
+// Create a stockout
 router.post('/', async (req, res, next) => {
   try {
     const body = req.body
@@ -119,31 +46,6 @@ router.post('/', async (req, res, next) => {
         price,
       }
     }))
-
-    // Validate available stock
-    const availableMap = await getAvailableStock()
-    const insufficient = []
-
-    for (const item of items) {
-      const productId = item.item_id.toString()
-      const available = availableMap.get(productId) || 0
-      if (item.quantity > available) {
-        insufficient.push({ productId, requested: item.quantity, available })
-      }
-    }
-
-    if (insufficient.length > 0) {
-      const details = insufficient.map((i) =>
-        `Requested ${i.requested} but only ${i.available} available`
-      ).join('; ')
-      return res.status(400).json({
-        success: false,
-        message: `Insufficient stock: ${details}`
-      })
-    }
-
-    // Deduct stock
-    await deductStock(items)
 
     const stockout = new Stockout({
       created_by: body.created_by,
@@ -162,7 +64,7 @@ router.post('/', async (req, res, next) => {
   }
 })
 
-// List all stockouts (optionally filter by store and/or status)
+// List all stockouts
 router.get('/', async (req, res, next) => {
   try {
     const filter = {}
@@ -200,7 +102,7 @@ router.get('/:id', async (req, res, next) => {
   }
 })
 
-// Accept a stockout (store personnel)
+// Accept a stockout
 router.patch('/:id/accept', async (req, res, next) => {
   try {
     const { accepted_by } = req.body
@@ -218,7 +120,6 @@ router.patch('/:id/accept', async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Cannot accept a rejected stockout' })
     }
 
-    // Add items to the destination store
     await addItemsToStore(stockout.store, stockout.items)
 
     stockout.status = 'accepted'
@@ -254,9 +155,6 @@ router.patch('/:id/reject', async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Stockout already rejected' })
     }
 
-    // Restore deducted stock
-    await restoreStock(stockout.items)
-
     stockout.status = 'rejected'
     await stockout.save()
 
@@ -270,7 +168,7 @@ router.patch('/:id/reject', async (req, res, next) => {
   }
 })
 
-// Update a pending stockout (stock controllers)
+// Update a pending stockout
 router.patch('/:id', async (req, res, next) => {
   try {
     const stockout = await Stockout.findById(req.params.id)
@@ -295,39 +193,6 @@ router.patch('/:id', async (req, res, next) => {
         }
       }))
       : undefined
-
-    // If items are changing, validate and adjust stock
-    if (newItems) {
-      // Restore old stock first
-      await restoreStock(stockout.items)
-
-      // Validate new stock availability
-      const availableMap = await getAvailableStock()
-      const insufficient = []
-
-      for (const item of newItems) {
-        const productId = item.item_id.toString()
-        const available = availableMap.get(productId) || 0
-        if (item.quantity > available) {
-          insufficient.push({ productId, requested: item.quantity, available })
-        }
-      }
-
-      if (insufficient.length > 0) {
-        // Re-deduct the old stock since we restored it
-        await deductStock(stockout.items)
-        const details = insufficient.map((i) =>
-          `Requested ${i.requested} but only ${i.available} available`
-        ).join('; ')
-        return res.status(400).json({
-          success: false,
-          message: `Insufficient stock: ${details}`
-        })
-      }
-
-      // Deduct new stock
-      await deductStock(newItems)
-    }
 
     const update = {}
     if (body.date !== undefined) update.date = body.date
@@ -357,11 +222,6 @@ router.delete('/:id', async (req, res, next) => {
 
     if (!stockout) {
       return res.status(404).json({ success: false, message: 'Stockout not found' })
-    }
-
-    // Restore deducted stock for pending stockouts
-    if (stockout.status === 'pending') {
-      await restoreStock(stockout.items)
     }
 
     await Stockout.findByIdAndDelete(req.params.id)
