@@ -1,7 +1,7 @@
 import { Router } from "express"
 import Sale from "../models/Sale.js"
 import Store from "../models/Stores.js"
-import Products from "../models/Products.js"
+import Category from "../models/Category.js"
 
 const router = Router()
 
@@ -87,7 +87,7 @@ router.get("/store/:storeId", async (req, res, next) => {
     const storeId = req.params.storeId
 
     const store = await Store.findById(storeId)
-      .populate("items.item_id", "name image")
+      .populate("items.item_id", "name image category")
       .populate("items.group", "name image")
       .populate("manager_id", "name email")
 
@@ -118,33 +118,35 @@ router.get("/store/:storeId", async (req, res, next) => {
       )
     }
 
-    // Fetch products with populated categories separately
-    const productIds = store.items
-      .map((i) =>
-        i.item_id?._id?.toString?.() || i.item_id?.toString?.()
-      )
-      .filter(Boolean)
-    const products = await Products.find({ _id: { $in: productIds } })
-      .populate("category", "name")
-      .lean()
-    const productMap = new Map()
-    for (const p of products) {
-      productMap.set(p._id.toString(), p)
+    // Collect category IDs and fetch names
+    const categoryIds = new Set()
+    for (const item of store.items) {
+      const cat = item.item_id?.category
+      if (cat && typeof cat !== "string") {
+        categoryIds.add(cat._id.toString())
+      } else if (cat) {
+        categoryIds.add(cat.toString())
+      }
+    }
+
+    const categories = await Category.find({ _id: { $in: Array.from(categoryIds) } }).select("name").lean()
+    const categoryMap = new Map()
+    for (const c of categories) {
+      categoryMap.set(c._id.toString(), c.name)
     }
 
     const remainingProducts = store.items
       .filter((item) => item.quantity > 0 && item.item_id)
       .map((item) => {
-        const itemIdStr =
-          item.item_id?._id?.toString?.() || item.item_id?.toString?.()
-        const product = productMap.get(itemIdStr)
+        const product = item.item_id
         const group = item.group
-        const categoryObj = product?.category
+        const cat = product?.category
+        const catId = cat && typeof cat !== "string" ? cat._id.toString() : cat
         return {
           product: {
-            _id: product?._id?.toString?.() || itemIdStr,
+            _id: product?._id?.toString?.() || "—",
             name: product?.name || "—",
-            category: categoryObj?.name || categoryObj?.toString?.() || "—",
+            category: catId ? categoryMap.get(catId) || catId : "—",
             image: product?.image || null,
           },
           quantity: item.quantity,

@@ -2,7 +2,7 @@ import { Router } from 'express';
 const router = Router();
 import Store from '../models/Stores.js';
 import User from '../models/User.js';
-import Products from '../models/Products.js';
+import Category from '../models/Category.js';
 import { authMiddleware } from '../middleware/auth.js';
 
 
@@ -56,31 +56,38 @@ router.get('/:id', async (req, res) => {
   try {
     const store = await Store.findById(req.params.id)
       .populate('manager_id')
-      .populate('items.group', 'name image')
-      .lean();
+      .populate('items.item_id', 'name image category')
+      .populate('items.group', 'name image');
 
     if (!store) return res.status(404).json({ message: 'Store not found' });
 
-    const productIds = store.items
-      .map(i => i.item_id?._id?.toString?.() || i.item_id?.toString?.())
-      .filter(Boolean);
-
-    const products = await Products.find({ _id: { $in: productIds } })
-      .populate('category', 'name')
-      .lean();
-
-    const productMap = new Map();
-    for (const p of products) {
-      productMap.set(p._id.toString(), p);
+    // Collect category IDs and fetch names
+    const categoryIds = new Set();
+    for (const item of store.items) {
+      const cat = item.item_id?.category;
+      if (cat && typeof cat !== 'string') {
+        categoryIds.add(cat._id.toString());
+      } else if (cat) {
+        categoryIds.add(cat.toString());
+      }
     }
 
-    store.items = store.items.map(item => {
-      const itemIdStr = item.item_id?._id?.toString?.() || item.item_id?.toString?.();
-      const product = productMap.get(itemIdStr);
-      return product ? { ...item, item_id: product } : item;
-    });
+    const categories = await Category.find({ _id: { $in: Array.from(categoryIds) } }).select('name').lean();
+    const categoryMap = new Map();
+    for (const c of categories) {
+      categoryMap.set(c._id.toString(), c.name);
+    }
 
-    res.json(store);
+    const storeObj = store.toObject();
+    for (const item of storeObj.items) {
+      const cat = item.item_id?.category;
+      if (cat) {
+        const catId = typeof cat === 'string' ? cat : cat._id.toString();
+        item.item_id.category = { _id: catId, name: categoryMap.get(catId) || catId };
+      }
+    }
+
+    res.json(storeObj);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
