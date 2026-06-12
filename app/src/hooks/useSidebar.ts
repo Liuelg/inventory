@@ -10,7 +10,6 @@ import {
   Store,
   Truck,
   Users,
-  Warehouse,
 } from "lucide-react"
 import { useLocation } from "react-router-dom"
 import { useAuthSession } from "./use-auth-session.ts"
@@ -62,13 +61,6 @@ const SIDEBAR_NAV_ITEMS: SidebarNavItem[] = [
     to: "/products",
     icon: Package,
     tooltip: "Products",
-    roles: ["admin", "stock"],
-  },
-  {
-    title: "Stock",
-    to: "/stock",
-    icon: Warehouse,
-    tooltip: "Central Stock",
     roles: ["admin", "stock"],
   },
   {
@@ -132,7 +124,7 @@ export function getDefaultRouteForRole(role: UserRole | string): string {
     case "sales":
       return "/my-store"
     case "stock":
-      return "/stock"
+      return "/stockouts"
     case "admin":
     default:
       return "/"

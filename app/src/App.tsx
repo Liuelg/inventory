@@ -17,7 +17,6 @@ import { StorePage } from "@/features/stores/pages/StorePage.tsx"
 import { StoreDetailPage } from "@/features/stores/pages/StoreDetailPage.tsx"
 import { SalesPage } from "@/features/sales/pages/SalesPage.tsx"
 import { GoodInPage } from "@/features/good-ins/pages/GoodInPage.tsx"
-import { StockPage } from "@/features/stock/pages/StockPage.tsx"
 import { StockoutPage } from "@/features/stockouts/pages/StockoutPage.tsx"
 import { MyStorePage } from "@/features/my-store/pages/MyStorePage.tsx"
 import { Home } from "@/pages/Home.tsx"
@@ -180,14 +179,6 @@ export function App() {
             element={
               <RequireRole allowedRoles={["admin", "stock"]}>
                 <ProductPage />
-              </RequireRole>
-            }
-          />
-          <Route
-            path="/stock"
-            element={
-              <RequireRole allowedRoles={["admin", "stock"]}>
-                <StockPage />
               </RequireRole>
             }
           />
