@@ -61,7 +61,9 @@ router.get('/:id', async (req, res) => {
 
     if (!store) return res.status(404).json({ message: 'Store not found' });
 
-    const productIds = store.items.map(i => i.item_id).filter(Boolean);
+    const productIds = store.items
+      .map(i => i.item_id?._id?.toString?.() || i.item_id?.toString?.())
+      .filter(Boolean);
 
     const products = await Products.find({ _id: { $in: productIds } })
       .populate('category', 'name')
@@ -73,7 +75,8 @@ router.get('/:id', async (req, res) => {
     }
 
     store.items = store.items.map(item => {
-      const product = productMap.get(item.item_id?.toString?.());
+      const itemIdStr = item.item_id?._id?.toString?.() || item.item_id?.toString?.();
+      const product = productMap.get(itemIdStr);
       return product ? { ...item, item_id: product } : item;
     });
 

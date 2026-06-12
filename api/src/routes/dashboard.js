@@ -120,7 +120,9 @@ router.get("/store/:storeId", async (req, res, next) => {
 
     // Fetch products with populated categories separately
     const productIds = store.items
-      .map((i) => i.item_id)
+      .map((i) =>
+        i.item_id?._id?.toString?.() || i.item_id?.toString?.()
+      )
       .filter(Boolean)
     const products = await Products.find({ _id: { $in: productIds } })
       .populate("category", "name")
@@ -133,12 +135,14 @@ router.get("/store/:storeId", async (req, res, next) => {
     const remainingProducts = store.items
       .filter((item) => item.quantity > 0 && item.item_id)
       .map((item) => {
-        const product = productMap.get(item.item_id?.toString?.())
+        const itemIdStr =
+          item.item_id?._id?.toString?.() || item.item_id?.toString?.()
+        const product = productMap.get(itemIdStr)
         const group = item.group
         const categoryObj = product?.category
         return {
           product: {
-            _id: product?._id?.toString?.() || item.item_id?.toString?.(),
+            _id: product?._id?.toString?.() || itemIdStr,
             name: product?.name || "—",
             category: categoryObj?.name || categoryObj?.toString?.() || "—",
             image: product?.image || null,
