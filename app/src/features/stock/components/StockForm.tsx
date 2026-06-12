@@ -315,6 +315,7 @@ export function StockForm({
     getInitialState(editing)
   )
   const [error, setError] = useState<string | null>(null)
+  const [bulkQty, setBulkQty] = useState<string>("1")
   const { data: session } = useAuthSession()
   const { data: products } = useProducts()
   const { data: productGroups } = useProductGroups()
@@ -444,6 +445,7 @@ export function StockForm({
       setError("No products available. Please make sure products are loaded.")
       return
     }
+    const qty = Number(bulkQty) > 0 ? String(Number(bulkQty)) : "1"
     setForm((prev) => {
       const existingIds = new Set(
         prev.items.map((i) => i.item_id).filter(Boolean)
@@ -456,7 +458,7 @@ export function StockForm({
           newItems.push({
             _key: nextKey(),
             item_id: product._id,
-            quantity: "1",
+            quantity: qty,
             group: null,
           })
           addedCount++
@@ -765,7 +767,7 @@ export function StockForm({
               ))}
             </div>
 
-            <div className="flex gap-2 mt-1">
+            <div className="flex flex-wrap gap-2 mt-1 items-end">
               <Button
                 type="button"
                 variant="outline"
@@ -774,23 +776,35 @@ export function StockForm({
               >
                 + Add Item
               </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={addAllProducts}
-                disabled={!products || products.length === 0}
-                title={
-                  !products
-                    ? "Products are still loading..."
-                    : products.length === 0
-                    ? "No products found in the catalog."
-                    : `Add all ${products.length} products`
-                }
-              >
-                Add All Products
-                {products ? ` (${products.length})` : ""}
-              </Button>
+              <div className="flex items-center gap-2">
+                <div className="grid gap-1">
+                  <Label className="text-[10px] text-muted-foreground">Qty per product</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={bulkQty}
+                    onChange={(e) => setBulkQty(e.target.value)}
+                    className="h-8 w-20 text-sm"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={addAllProducts}
+                  disabled={!products || products.length === 0}
+                  title={
+                    !products
+                      ? "Products are still loading..."
+                      : products.length === 0
+                      ? "No products found in the catalog."
+                      : `Add all ${products.length} products with qty ${bulkQty || 1}`
+                  }
+                >
+                  Add All Products
+                  {products ? ` (${products.length})` : ""}
+                </Button>
+              </div>
             </div>
           </div>
 
