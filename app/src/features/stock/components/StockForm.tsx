@@ -13,10 +13,8 @@ import {
 
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
-import { useProductGroups } from "@/features/product-groups/hooks"
 import { getProductImageUrl } from "@/features/products/utils"
 import type { Product } from "@/features/products/types"
-import type { ProductGroup } from "@/features/product-groups/types"
 import { useCreateStock, useStocks, useUpdateStock } from "../hooks"
 import type { Stock, StockPayload, StockItem } from "../types"
 
@@ -318,7 +316,6 @@ export function StockForm({
   const [bulkQty, setBulkQty] = useState<string>("1")
   const { data: session } = useAuthSession()
   const { data: products } = useProducts()
-  const { data: productGroups } = useProductGroups()
   const { data: existingStocks } = useStocks()
   const create = useCreateStock()
   const update = useUpdateStock()
@@ -393,41 +390,6 @@ export function StockForm({
         item._key === rowKey ? { ...item, item_id: productId } : item
       )
       return { ...prev, items }
-    })
-  }
-
-  function handleGroupSelect(groupId: string) {
-    if (!groupId) return
-    const group = productGroups?.find((g) => g._id === groupId)
-    if (!group) return
-
-    setForm((prev) => {
-      const newItems = [...prev.items.filter((i) => i.item_id)]
-
-      for (const groupItem of group.items) {
-        const productId = typeof groupItem.product === "string" ? groupItem.product : groupItem.product._id
-        const quantity = groupItem.quantity
-        const existing = newItems.find((i) => i.item_id === productId)
-        if (existing) {
-          existing.quantity = String(Number(existing.quantity) + quantity)
-          if (!existing.group) {
-            existing.group = groupId
-          }
-        } else {
-          newItems.push({
-            _key: nextKey(),
-            item_id: productId,
-            quantity: String(quantity),
-            group: groupId,
-          })
-        }
-      }
-
-      if (newItems.length === 0) {
-        newItems.push(createEmptyItem())
-      }
-
-      return { ...prev, items: newItems }
     })
   }
 
@@ -724,10 +686,8 @@ export function StockForm({
                     <span className="text-xs font-medium text-muted-foreground sm:hidden">Product</span>
                     <ProductSearchSelect
                       products={products ?? []}
-                      groups={productGroups ?? []}
                       value={item.item_id}
                       onChange={(v) => handleProductSelect(item._key, v)}
-                      onGroupSelect={(gId) => handleGroupSelect(gId)}
                     />
                   </div>
 
