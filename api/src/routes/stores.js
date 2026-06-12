@@ -2,6 +2,7 @@ import { Router } from 'express';
 const router = Router();
 import Store from '../models/Stores.js';
 import User from '../models/User.js';
+import Products from '../models/Products.js';
 import { authMiddleware } from '../middleware/auth.js';
 
 
@@ -55,11 +56,27 @@ router.get('/:id', async (req, res) => {
   try {
     const store = await Store.findById(req.params.id)
       .populate('manager_id')
-      .populate({ path: 'items.item_id', populate: { path: 'category', select: 'name' } })
       .populate('items.group', 'name image')
       .lean();
 
     if (!store) return res.status(404).json({ message: 'Store not found' });
+
+    const productIds = store.items.map(i => i.item_id).filter(Boolean);
+
+    const products = await Products.find({ _id: { $in: productIds } })
+      .populate('category', 'name')
+      .lean();
+
+    const productMap = new Map();
+    for (const p of products) {
+      productMap.set(p._id.toString(), p);
+    }
+
+    store.items = store.items.map(item => {
+      const product = productMap.get(item.item_id?.toString?.());
+      return product ? { ...item, item_id: product } : item;
+    });
+
     res.json(store);
   } catch (err) {
     res.status(500).json({ message: err.message });
