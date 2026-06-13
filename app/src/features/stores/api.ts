@@ -28,7 +28,7 @@ export const storeApi = {
     }),
 
   deleteItem: (storeId: string, itemId: string) =>
-    fetcher<{ success: boolean; message: string }>(`/stores/${storeId}/items/${itemId}`, {
+    fetcher<{ success: boolean; message: string }>(`/api/stores/${storeId}/items/${itemId}`, {
       method: "DELETE",
     }),
 }
