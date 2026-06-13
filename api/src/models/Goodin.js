@@ -52,4 +52,7 @@ const goodSchema = Schema({
 
 }, { timestamps: true });
 
+goodSchema.index({ store: 1 })
+goodSchema.index({ date: -1 })
+
 export default model('GoodIn', goodSchema)

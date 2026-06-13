@@ -79,13 +79,17 @@ router.get('/:id', async (req, res) => {
     }
 
     const storeObj = store.toObject();
+    const visibleItems = [];
     for (const item of storeObj.items) {
+      if (!item.item_id || item.quantity <= 0) continue;
       const cat = item.item_id?.category;
       if (cat) {
         const catId = typeof cat === 'string' ? cat : cat._id.toString();
         item.item_id.category = { _id: catId, name: categoryMap.get(catId) || catId };
       }
+      visibleItems.push(item);
     }
+    storeObj.items = visibleItems;
 
     res.json(storeObj);
   } catch (err) {

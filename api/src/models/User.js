@@ -14,4 +14,6 @@ const userSchema = new Schema({
   store: { type: Schema.Types.ObjectId, ref: 'Store' }
 }, { timestamps: true });
 
+userSchema.index({ role: 1, store: 1 })
+
 export default model('User', userSchema);

@@ -40,4 +40,9 @@ const saleSchema = Schema({
   invoiceNumber: { type: String, required: true, unique: true }
 }, { timestamps: true });
 
+saleSchema.index({ store: 1 })
+saleSchema.index({ date_time: -1 })
+saleSchema.index({ store: 1, date_time: -1 })
+saleSchema.index({ invoiceNumber: 1 })
+
 export default model('Sale', saleSchema);

@@ -59,4 +59,9 @@ const stockoutSchema = new Schema({
   }
 }, { timestamps: true })
 
+stockoutSchema.index({ store: 1 })
+stockoutSchema.index({ status: 1 })
+stockoutSchema.index({ store: 1, status: 1 })
+stockoutSchema.index({ createdAt: -1 })
+
 export default model('Stockout', stockoutSchema)

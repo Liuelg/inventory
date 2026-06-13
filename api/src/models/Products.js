@@ -17,6 +17,7 @@ const productSchema = new Schema({
 productSchema.index({ category: 1 });
 productSchema.index({ subCategory: 1 });
 productSchema.index({ name: 1 });
+productSchema.index({ name: "text" });
 productSchema.index({ tags: 1 });
 
 export default model('Products', productSchema);
