@@ -14,6 +14,7 @@ import {
 import { Pencil, Trash2 } from "lucide-react"
 import { useDeleteStore, useStores } from "../hooks"
 import type { Store } from "../types"
+import { Link } from "react-router-dom"
 
 function getManagerLabel(store: Store) {
   // Prefer sales person (store staff) over manager_id
@@ -48,7 +49,12 @@ export function StoreTable({ onEdit }: StoreTableProps) {
     {
       header: "Name",
       cell: (store) => (
-        <span className="font-medium">{store.name || "-"}</span>
+        <Link
+        to={`/stores/${store._id}`}
+        className="font-medium text-primary underline-offset-4 hover:underline"
+      >
+        {store.name}
+      </Link>
       ),
     },
     {
