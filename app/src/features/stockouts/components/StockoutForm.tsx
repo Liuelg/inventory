@@ -221,17 +221,6 @@ export function StockoutForm({
       return
     }
 
-    for (const item of validItems) {
-      const price = getProductPrice(products, item.item_id)
-      if (price === undefined || price === null) {
-        const productName = products?.find((p) => p._id === item.item_id)?.name || item.item_id
-        setError(
-          `${productName} does not have a price set. Contact an admin to set the price.`
-        )
-        return
-      }
-    }
-
     const userId = session?.id
     if (!userId) {
       setError("You must be logged in.")
