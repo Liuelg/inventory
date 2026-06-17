@@ -350,60 +350,54 @@ export function ProductGroupForm({
                   key={item._key}
                   className="grid grid-cols-1 sm:grid-cols-[1fr_100px_40px] gap-3 items-start border p-3 rounded-lg"
                 >
-                  {/* Product name + image */}
-                  <div className="grid gap-2">
-                    <div className="grid gap-1">
-                      <Label className="text-xs text-muted-foreground">Product Name</Label>
+                  {/* Product name + image on same row */}
+                  <div className="grid gap-1">
+                    <Label className="text-xs text-muted-foreground">Product Name</Label>
+                    <div className="flex items-center gap-2">
+                      <label className="flex cursor-pointer shrink-0 items-center justify-center rounded-md border border-input bg-background h-9 w-9 hover:bg-accent">
+                        <ImagePlus className="h-4 w-4" />
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            if (file.size > 2 * 1024 * 1024) {
+                              setError("Image must be smaller than 2MB")
+                              return
+                            }
+                            const reader = new FileReader()
+                            reader.onloadend = () => {
+                              setItemImage(item._key, reader.result as string)
+                            }
+                            reader.readAsDataURL(file)
+                          }}
+                        />
+                      </label>
+                      {item.image ? (
+                        <div className="relative shrink-0">
+                          <img
+                            src={item.image}
+                            alt="Preview"
+                            className="h-9 w-9 rounded-md object-cover border"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setItemImage(item._key, "")}
+                            className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
+                          >
+                            <X className="h-2.5 w-2.5" />
+                          </button>
+                        </div>
+                      ) : null}
                       <Input
                         type="text"
                         placeholder="Enter product name"
                         value={item.name}
                         onChange={(e) => setItemField(item._key, "name", e.target.value)}
+                        className="flex-1"
                       />
-                    </div>
-
-                    <div className="grid gap-1">
-                      <Label className="text-xs text-muted-foreground">Product Image</Label>
-                      <div className="flex items-center gap-3">
-                        {item.image ? (
-                          <div className="relative">
-                            <img
-                              src={item.image}
-                              alt="Preview"
-                              className="h-14 w-14 rounded-md object-cover border"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setItemImage(item._key, "")}
-                              className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </div>
-                        ) : null}
-                        <label className="flex cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm hover:bg-accent">
-                          <ImagePlus className="h-4 w-4" />
-                          {item.image ? "Change" : "Upload"}
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0]
-                              if (!file) return
-                              if (file.size > 2 * 1024 * 1024) {
-                                setError("Image must be smaller than 2MB")
-                                return
-                              }
-                              const reader = new FileReader()
-                              reader.onloadend = () => {
-                                setItemImage(item._key, reader.result as string)
-                              }
-                              reader.readAsDataURL(file)
-                            }}
-                          />
-                        </label>
-                      </div>
                     </div>
                   </div>
 
@@ -422,7 +416,7 @@ export function ProductGroupForm({
                   </div>
 
                   {/* Remove */}
-                  <div className="flex justify-end pt-6">
+                  <div className="flex justify-end">
                     <Button
                       type="button"
                       variant="ghost"
