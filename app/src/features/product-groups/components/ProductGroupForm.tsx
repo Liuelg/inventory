@@ -32,6 +32,7 @@ type GroupItemForm = {
   _key: string
   name: string
   quantity: string
+  image: string
 }
 
 type ProductGroupFormState = {
@@ -48,7 +49,7 @@ function nextKey(): string {
 }
 
 function createEmptyItem(): GroupItemForm {
-  return { _key: nextKey(), name: "", quantity: "1" }
+  return { _key: nextKey(), name: "", quantity: "1", image: "" }
 }
 
 const initialState: ProductGroupFormState = {
@@ -63,6 +64,14 @@ function getId(value: string | { _id: string } | undefined | null): string {
   if (!value) return ""
   if (typeof value === "string") return value
   return value._id ?? ""
+}
+
+function getProductImage(
+  product: string | { _id: string; image?: string } | undefined | null
+): string {
+  if (!product) return ""
+  if (typeof product === "string") return ""
+  return product.image ?? ""
 }
 
 function getInitialState(editing?: ProductGroup | null): ProductGroupFormState {
@@ -80,6 +89,7 @@ function getInitialState(editing?: ProductGroup | null): ProductGroupFormState {
           _key: nextKey(),
           name: typeof i.product === "object" ? i.product.name ?? "" : "",
           quantity: String(i.quantity),
+          image: getProductImage(i.product),
         }))
       : [createEmptyItem()],
   }
@@ -96,6 +106,7 @@ function toPayload(form: ProductGroupFormState): ProductGroupPayload {
       .map((i) => ({
         name: i.name.trim(),
         quantity: Number(i.quantity),
+        image: i.image.trim() || undefined,
       })),
   }
 }
@@ -140,12 +151,21 @@ export function ProductGroupForm({
 
   function setItemField(
     rowKey: string,
-    key: keyof Omit<GroupItemForm, "_key">,
+    key: keyof Omit<GroupItemForm, "_key" | "image">,
     value: string
   ) {
     setForm((prev) => {
       const items = prev.items.map((item) =>
         item._key === rowKey ? { ...item, [key]: value } : item
+      )
+      return { ...prev, items }
+    })
+  }
+
+  function setItemImage(rowKey: string, image: string) {
+    setForm((prev) => {
+      const items = prev.items.map((item) =>
+        item._key === rowKey ? { ...item, image } : item
       )
       return { ...prev, items }
     })
@@ -328,17 +348,63 @@ export function ProductGroupForm({
               {form.items.map((item) => (
                 <div
                   key={item._key}
-                  className="grid grid-cols-1 sm:grid-cols-[1fr_100px_40px] gap-3 items-end border p-3 rounded-lg"
+                  className="grid grid-cols-1 sm:grid-cols-[1fr_100px_40px] gap-3 items-start border p-3 rounded-lg"
                 >
-                  {/* Product name input */}
-                  <div className="grid gap-1">
-                    <Label className="text-xs text-muted-foreground">Product Name</Label>
-                    <Input
-                      type="text"
-                      placeholder="Enter product name"
-                      value={item.name}
-                      onChange={(e) => setItemField(item._key, "name", e.target.value)}
-                    />
+                  {/* Product name + image */}
+                  <div className="grid gap-2">
+                    <div className="grid gap-1">
+                      <Label className="text-xs text-muted-foreground">Product Name</Label>
+                      <Input
+                        type="text"
+                        placeholder="Enter product name"
+                        value={item.name}
+                        onChange={(e) => setItemField(item._key, "name", e.target.value)}
+                      />
+                    </div>
+
+                    <div className="grid gap-1">
+                      <Label className="text-xs text-muted-foreground">Product Image</Label>
+                      <div className="flex items-center gap-3">
+                        {item.image ? (
+                          <div className="relative">
+                            <img
+                              src={item.image}
+                              alt="Preview"
+                              className="h-14 w-14 rounded-md object-cover border"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setItemImage(item._key, "")}
+                              className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ) : null}
+                        <label className="flex cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm hover:bg-accent">
+                          <ImagePlus className="h-4 w-4" />
+                          {item.image ? "Change" : "Upload"}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0]
+                              if (!file) return
+                              if (file.size > 2 * 1024 * 1024) {
+                                setError("Image must be smaller than 2MB")
+                                return
+                              }
+                              const reader = new FileReader()
+                              reader.onloadend = () => {
+                                setItemImage(item._key, reader.result as string)
+                              }
+                              reader.readAsDataURL(file)
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Quantity */}
@@ -356,7 +422,7 @@ export function ProductGroupForm({
                   </div>
 
                   {/* Remove */}
-                  <div className="flex justify-end">
+                  <div className="flex justify-end pt-6">
                     <Button
                       type="button"
                       variant="ghost"

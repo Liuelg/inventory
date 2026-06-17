@@ -19,5 +19,8 @@ export type ProductGroupPayload = {
   image?: string
   category?: string
   subCategory?: string
-  items: ({ product: string; quantity: number } | { name: string; quantity: number })[]
+  items: (
+    | { product: string; quantity: number }
+    | { name: string; quantity: number; image?: string }
+  )[]
 }
