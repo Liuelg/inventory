@@ -274,55 +274,6 @@ export function ProductGroupForm({
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label>Default Category</Label>
-              <Select
-                value={form.category}
-                onValueChange={(v) => setField("category", v)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories?.map((c) => (
-                    <SelectItem key={c._id} value={c._id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-2">
-              <Label>Default Sub Category</Label>
-              <Select
-                value={form.subCategory}
-                onValueChange={(v) => setField("subCategory", v)}
-                disabled={!form.category}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue
-                    placeholder={
-                      form.category
-                        ? "Select sub category"
-                        : "Select a category first"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {(allSubCategories ?? [])
-                    .filter((sc) => getId(sc.category) === form.category)
-                    .map((sc) => (
-                      <SelectItem key={sc._id} value={sc._id}>
-                        {sc.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
           <div className="grid gap-2">
             <Label>Group Image</Label>
             <div className="flex items-center gap-3">

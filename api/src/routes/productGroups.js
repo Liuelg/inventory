@@ -18,9 +18,10 @@ async function resolveGroupItems(items, groupCategory, groupSubCategory) {
       } else {
         const newProduct = new Product({
           name: item.name.trim(),
-          category: groupCategory || undefined,
-          subCategory: groupSubCategory || undefined,
+          category: item.category || groupCategory || undefined,
+          subCategory: item.subCategory || groupSubCategory || undefined,
           price: { amount: 0, currency: 'USD' },
+          image: item.image || undefined,
         })
         await newProduct.save()
         resolved.push({ product: newProduct._id, quantity: item.quantity })
@@ -43,7 +44,14 @@ router.post('/', async (req, res, next) => {
       items: resolvedItems,
     })
     await group.save()
-    await group.populate('items.product', 'name price image')
+    await group.populate({
+      path: 'items.product',
+      select: 'name price image category subCategory',
+      populate: [
+        { path: 'category', select: 'name' },
+        { path: 'subCategory', select: 'name' }
+      ]
+    })
     await group.populate('category', 'name')
     await group.populate('subCategory', 'name')
     res.status(201).json(group)
@@ -55,7 +63,14 @@ router.post('/', async (req, res, next) => {
 router.get('/', async (req, res, next) => {
   try {
     const groups = await ProductGroup.find()
-      .populate('items.product', 'name price image')
+      .populate({
+        path: 'items.product',
+        select: 'name price image category subCategory',
+        populate: [
+          { path: 'category', select: 'name' },
+          { path: 'subCategory', select: 'name' }
+        ]
+      })
       .populate('category', 'name')
       .populate('subCategory', 'name')
       .sort({ createdAt: -1 })
@@ -68,7 +83,14 @@ router.get('/', async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
   try {
     const group = await ProductGroup.findById(req.params.id)
-      .populate('items.product', 'name price image')
+      .populate({
+        path: 'items.product',
+        select: 'name price image category subCategory',
+        populate: [
+          { path: 'category', select: 'name' },
+          { path: 'subCategory', select: 'name' }
+        ]
+      })
       .populate('category', 'name')
       .populate('subCategory', 'name')
 
@@ -100,7 +122,14 @@ router.put('/:id', async (req, res, next) => {
       update,
       { new: true, runValidators: true }
     )
-      .populate('items.product', 'name price image')
+      .populate({
+        path: 'items.product',
+        select: 'name price image category subCategory',
+        populate: [
+          { path: 'category', select: 'name' },
+          { path: 'subCategory', select: 'name' }
+        ]
+      })
       .populate('category', 'name')
       .populate('subCategory', 'name')
 
