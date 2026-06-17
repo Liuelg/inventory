@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useCategories } from "@/features/categories/hooks"
-import { useSubCategoriesByCategory } from "@/features/sub-categories/hooks"
+import { useSubCategories } from "@/features/sub-categories/hooks"
 import { useCreateProductGroup, useUpdateProductGroup } from "../hooks"
 import type { ProductGroup, ProductGroupPayload } from "../types"
 
@@ -33,6 +33,8 @@ type GroupItemForm = {
   name: string
   quantity: string
   image: string
+  category: string
+  subCategory: string
 }
 
 type ProductGroupFormState = {
@@ -49,7 +51,14 @@ function nextKey(): string {
 }
 
 function createEmptyItem(): GroupItemForm {
-  return { _key: nextKey(), name: "", quantity: "1", image: "" }
+  return {
+    _key: nextKey(),
+    name: "",
+    quantity: "1",
+    image: "",
+    category: "",
+    subCategory: "",
+  }
 }
 
 const initialState: ProductGroupFormState = {
@@ -90,6 +99,14 @@ function getInitialState(editing?: ProductGroup | null): ProductGroupFormState {
           name: typeof i.product === "object" ? i.product.name ?? "" : "",
           quantity: String(i.quantity),
           image: getProductImage(i.product),
+          category:
+            typeof i.product === "object"
+              ? getId(i.product.category)
+              : "",
+          subCategory:
+            typeof i.product === "object"
+              ? getId(i.product.subCategory)
+              : "",
         }))
       : [createEmptyItem()],
   }
@@ -107,6 +124,8 @@ function toPayload(form: ProductGroupFormState): ProductGroupPayload {
         name: i.name.trim(),
         quantity: Number(i.quantity),
         image: i.image.trim() || undefined,
+        category: i.category.trim() || undefined,
+        subCategory: i.subCategory.trim() || undefined,
       })),
   }
 }
@@ -122,7 +141,7 @@ export function ProductGroupForm({
   )
   const [error, setError] = useState<string | null>(null)
   const { data: categories } = useCategories()
-  const { data: subCategories } = useSubCategoriesByCategory(form.category)
+  const { data: allSubCategories } = useSubCategories()
   const create = useCreateProductGroup()
   const update = useUpdateProductGroup()
 
@@ -151,13 +170,18 @@ export function ProductGroupForm({
 
   function setItemField(
     rowKey: string,
-    key: keyof Omit<GroupItemForm, "_key" | "image">,
+    key: keyof Omit<GroupItemForm, "_key">,
     value: string
   ) {
     setForm((prev) => {
-      const items = prev.items.map((item) =>
-        item._key === rowKey ? { ...item, [key]: value } : item
-      )
+      const items = prev.items.map((item) => {
+        if (item._key !== rowKey) return item
+        const next = { ...item, [key]: value }
+        if (key === "category") {
+          next.subCategory = ""
+        }
+        return next
+      })
       return { ...prev, items }
     })
   }
@@ -226,7 +250,7 @@ export function ProductGroupForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-auto sm:max-w-[600px] md:max-w-[700px] w-full">
+      <DialogContent className="max-h-[90vh] overflow-auto sm:max-w-[600px] md:max-w-[800px] w-full">
         <DialogHeader>
           <DialogTitle>
             {editing ? "Edit Product Group" : "Add Product Group"}
@@ -252,7 +276,7 @@ export function ProductGroupForm({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label>Category</Label>
+              <Label>Default Category</Label>
               <Select
                 value={form.category}
                 onValueChange={(v) => setField("category", v)}
@@ -271,7 +295,7 @@ export function ProductGroupForm({
             </div>
 
             <div className="grid gap-2">
-              <Label>Sub Category</Label>
+              <Label>Default Sub Category</Label>
               <Select
                 value={form.subCategory}
                 onValueChange={(v) => setField("subCategory", v)}
@@ -287,11 +311,13 @@ export function ProductGroupForm({
                   />
                 </SelectTrigger>
                 <SelectContent>
-                  {subCategories?.map((sc) => (
-                    <SelectItem key={sc._id} value={sc._id}>
-                      {sc.name}
-                    </SelectItem>
-                  ))}
+                  {(allSubCategories ?? [])
+                    .filter((sc) => getId(sc.category) === form.category)
+                    .map((sc) => (
+                      <SelectItem key={sc._id} value={sc._id}>
+                        {sc.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -345,91 +371,151 @@ export function ProductGroupForm({
             <Label className="font-semibold text-sm block border-b pb-1.5">Products</Label>
 
             <div className="flex flex-col gap-3">
-              {form.items.map((item) => (
-                <div
-                  key={item._key}
-                  className="grid grid-cols-1 sm:grid-cols-[1fr_100px_40px] gap-3 items-start border p-3 rounded-lg"
-                >
-                  {/* Product name + image on same row */}
-                  <div className="grid gap-1">
-                    <Label className="text-xs text-muted-foreground">Product Name</Label>
-                    <div className="flex items-center gap-2">
-                      <label className="flex cursor-pointer shrink-0 items-center justify-center rounded-md border border-input bg-background h-9 w-9 hover:bg-accent">
-                        <ImagePlus className="h-4 w-4" />
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0]
-                            if (!file) return
-                            if (file.size > 2 * 1024 * 1024) {
-                              setError("Image must be smaller than 2MB")
-                              return
+              {form.items.map((item) => {
+                const itemSubs = (allSubCategories ?? []).filter(
+                  (sc) => getId(sc.category) === item.category
+                )
+                return (
+                  <div
+                    key={item._key}
+                    className="grid grid-cols-1 sm:grid-cols-[1fr_100px_40px] gap-3 items-start border p-3 rounded-lg"
+                  >
+                    {/* Left column: name row + category row */}
+                    <div className="grid gap-2">
+                      {/* Name + image on same row */}
+                      <div className="grid gap-1">
+                        <Label className="text-xs text-muted-foreground">Product Name</Label>
+                        <div className="flex items-center gap-2">
+                          <label className="flex cursor-pointer shrink-0 items-center justify-center rounded-md border border-input bg-background h-9 w-9 hover:bg-accent">
+                            <ImagePlus className="h-4 w-4" />
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0]
+                                if (!file) return
+                                if (file.size > 2 * 1024 * 1024) {
+                                  setError("Image must be smaller than 2MB")
+                                  return
+                                }
+                                const reader = new FileReader()
+                                reader.onloadend = () => {
+                                  setItemImage(item._key, reader.result as string)
+                                }
+                                reader.readAsDataURL(file)
+                              }}
+                            />
+                          </label>
+                          {item.image ? (
+                            <div className="relative shrink-0">
+                              <img
+                                src={item.image}
+                                alt="Preview"
+                                className="h-9 w-9 rounded-md object-cover border"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setItemImage(item._key, "")}
+                                className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
+                              >
+                                <X className="h-2.5 w-2.5" />
+                              </button>
+                            </div>
+                          ) : null}
+                          <Input
+                            type="text"
+                            placeholder="Enter product name"
+                            value={item.name}
+                            onChange={(e) =>
+                              setItemField(item._key, "name", e.target.value)
                             }
-                            const reader = new FileReader()
-                            reader.onloadend = () => {
-                              setItemImage(item._key, reader.result as string)
-                            }
-                            reader.readAsDataURL(file)
-                          }}
-                        />
-                      </label>
-                      {item.image ? (
-                        <div className="relative shrink-0">
-                          <img
-                            src={item.image}
-                            alt="Preview"
-                            className="h-9 w-9 rounded-md object-cover border"
+                            className="flex-1"
                           />
-                          <button
-                            type="button"
-                            onClick={() => setItemImage(item._key, "")}
-                            className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
-                          >
-                            <X className="h-2.5 w-2.5" />
-                          </button>
                         </div>
-                      ) : null}
+                      </div>
+
+                      {/* Category + SubCategory row */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="grid gap-1">
+                          <Label className="text-xs text-muted-foreground">Category</Label>
+                          <Select
+                            value={item.category}
+                            onValueChange={(v) =>
+                              setItemField(item._key, "category", v)
+                            }
+                          >
+                            <SelectTrigger className="w-full h-9 text-xs">
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {categories?.map((c) => (
+                                <SelectItem key={c._id} value={c._id}>
+                                  {c.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="grid gap-1">
+                          <Label className="text-xs text-muted-foreground">Sub Category</Label>
+                          <Select
+                            value={item.subCategory}
+                            onValueChange={(v) =>
+                              setItemField(item._key, "subCategory", v)
+                            }
+                            disabled={!item.category}
+                          >
+                            <SelectTrigger className="w-full h-9 text-xs">
+                              <SelectValue
+                                placeholder={
+                                  item.category ? "Select" : "Category first"
+                                }
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {itemSubs.map((sc) => (
+                                <SelectItem key={sc._id} value={sc._id}>
+                                  {sc.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quantity */}
+                    <div className="grid gap-1">
+                      <Label className="text-xs text-muted-foreground">Qty</Label>
                       <Input
-                        type="text"
-                        placeholder="Enter product name"
-                        value={item.name}
-                        onChange={(e) => setItemField(item._key, "name", e.target.value)}
-                        className="flex-1"
+                        type="number"
+                        min="1"
+                        placeholder="1"
+                        value={item.quantity}
+                        onChange={(e) =>
+                          setItemField(item._key, "quantity", e.target.value)
+                        }
                       />
                     </div>
-                  </div>
 
-                  {/* Quantity */}
-                  <div className="grid gap-1">
-                    <Label className="text-xs text-muted-foreground">Qty</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      placeholder="1"
-                      value={item.quantity}
-                      onChange={(e) =>
-                        setItemField(item._key, "quantity", e.target.value)
-                      }
-                    />
+                    {/* Remove */}
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeItem(item._key)}
+                        disabled={form.items.length <= 1}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-
-                  {/* Remove */}
-                  <div className="flex justify-end">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9 text-muted-foreground hover:text-destructive"
-                      onClick={() => removeItem(item._key)}
-                      disabled={form.items.length <= 1}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
 
             <Button

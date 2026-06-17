@@ -1,5 +1,14 @@
 export type ProductGroupItem = {
-  product: string | { _id: string; name?: string; price?: { amount?: number }; image?: string }
+  product:
+    | string
+    | {
+        _id: string
+        name?: string
+        price?: { amount?: number }
+        image?: string
+        category?: string | { _id: string; name?: string }
+        subCategory?: string | { _id: string; name?: string }
+      }
   quantity: number
 }
 
