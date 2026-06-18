@@ -22,6 +22,7 @@ export type StoreSale = {
   _id: string
   invoiceNumber: string
   customerName?: string
+  salesName?: string
   totalAmount: number
   items: StoreSaleItem[]
   processedBy: string

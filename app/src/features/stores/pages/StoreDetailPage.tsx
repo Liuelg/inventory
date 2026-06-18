@@ -144,6 +144,10 @@ export function StoreDetailPage() {
       cell: (s) => s.customerName || "—",
     },
     {
+      header: "Sales Person",
+      cell: (s) => s.salesName || "—",
+    },
+    {
       header: "Items",
       cell: (s) => s.items.map((i) => `${i.name} (${i.quantity})`).join(", "),
     },

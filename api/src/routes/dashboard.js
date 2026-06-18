@@ -174,6 +174,7 @@ router.get("/store/:storeId", async (req, res, next) => {
           _id: s._id.toString(),
           invoiceNumber: s.invoiceNumber,
           customerName: s.customerName,
+          salesName: s.salesName,
           totalAmount: s.totalAmount,
           items: s.items.map((i) => ({
             name: i.item_id?.name || "—",

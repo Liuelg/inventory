@@ -22,6 +22,7 @@ const saleSchema = Schema({
   items: [SaleItemSchema],
   totalAmount: { type: Number, required: true },
   customerName: { type: String},
+  salesName: { type: String },
   store: {
     type: Schema.Types.ObjectId,
     ref: 'Store', 

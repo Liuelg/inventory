@@ -47,6 +47,10 @@ export function SalesTable({ onEdit }: SalesTableProps) {
       cell: (sale) => sale.customerName || "-",
     },
     {
+      header: "Sales Person",
+      cell: (sale) => sale.salesName || "-",
+    },
+    {
       header: "Store",
       cell: (sale) => getStoreName(sale.store),
     },
