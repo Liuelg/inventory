@@ -23,7 +23,5 @@ export type SalePayload = {
   items: Omit<SaleItem, "_id">[]
   totalAmount: number
   customerName?: string
-  salesName?: string
-  processedBy: string
   date_time?: string
 }

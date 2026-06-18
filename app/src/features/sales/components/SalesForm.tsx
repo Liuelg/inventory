@@ -38,7 +38,6 @@ type SaleItemForm = {
 
 type SaleFormState = {
   customerName: string
-  salesName: string
   items: SaleItemForm[]
 }
 
@@ -46,7 +45,6 @@ const emptyItem: SaleItemForm = { item_id: "", quantity: "1", price: "" }
 
 const initialState: SaleFormState = {
   customerName: "",
-  salesName: "",
   items: [{ ...emptyItem }],
 }
 
@@ -54,7 +52,6 @@ function getInitialState(editing?: Sale | null): SaleFormState {
   if (!editing) return { ...initialState }
   return {
     customerName: editing.customerName ?? "",
-    salesName: editing.salesName ?? "",
     items: editing.items.length
       ? editing.items.map((i) => ({
           item_id: i.item_id,
@@ -72,10 +69,7 @@ function getProductImage(
   return products?.find((p) => p._id === itemId)?.image
 }
 
-function toPayload(
-  form: SaleFormState,
-  userId: string
-): SalePayload {
+function toPayload(form: SaleFormState): SalePayload {
   const items = form.items
     .filter((i) => i.item_id && Number(i.quantity) > 0)
     .map((i) => ({
@@ -91,8 +85,6 @@ function toPayload(
 
   return {
     customerName: form.customerName.trim() || undefined,
-    salesName: form.salesName.trim() || undefined,
-    processedBy: userId,
     items,
     totalAmount,
     date_time: new Date().toISOString(),
@@ -235,13 +227,12 @@ export function SalesForm({
       }
     }
 
-    const userId = session?.id
-    if (!userId) {
+    if (!session?.id) {
       setError("You must be logged in.")
       return
     }
 
-    const payload = toPayload(form, userId)
+    const payload = toPayload(form)
     if (editing) {
       update.mutate(
         { id: editing._id, payload },
@@ -293,16 +284,6 @@ export function SalesForm({
               placeholder="Customer name"
               value={form.customerName}
               onChange={(e) => setField("customerName", e.target.value)}
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="sale-salesperson">Sales Person</Label>
-            <Input
-              id="sale-salesperson"
-              placeholder="Sales person name"
-              value={form.salesName}
-              onChange={(e) => setField("salesName", e.target.value)}
             />
           </div>
 

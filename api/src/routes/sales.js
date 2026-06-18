@@ -108,6 +108,8 @@ router.post('/', async (req, res) => {
       invoiceNumber,
       items,
       totalAmount,
+      processedBy: req.user?.sub,
+      salesName: req.user?.name || undefined,
     });
     await sale.save();
     res.status(201).json(sale);
@@ -166,8 +168,10 @@ router.patch('/:id', async (req, res) => {
     const isAdmin = req.user?.role === 'admin';
     const body = { ...req.body };
 
-    // Prevent changing the store from the request body
+    // Prevent changing protected fields from the request body
     delete body.store;
+    delete body.processedBy;
+    delete body.salesName;
 
     // Non-admins can only edit their own store's sales
     let existingSale = null;
