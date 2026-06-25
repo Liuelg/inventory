@@ -432,7 +432,7 @@ export function SalesForm({
           {form.items.map((item, index) => (
             <div
               key={index}
-              className="grid grid-cols-[48px_1fr_70px_60px_50px_36px] gap-3 items-center"
+              className="grid grid-cols-[48px_1fr_70px_55px_65px_36px] gap-3 items-center"
             >
               <div className="flex items-center justify-center">
                 <div className="h-10 w-10 rounded-md border bg-muted overflow-hidden">
@@ -487,9 +487,14 @@ export function SalesForm({
               </div>
               <div className="grid gap-1">
                 <Label className="text-xs">Currency</Label>
-                <div className="h-9 flex items-center justify-center rounded-md border border-input bg-muted px-2 text-xs font-medium text-muted-foreground">
-                  {item.currency}
-                </div>
+                <Input
+                  type="text"
+                  value={item.currency}
+                  onChange={(e) =>
+                    setItemField(index, "currency", e.target.value)
+                  }
+                  className="text-xs"
+                />
               </div>
               <Button
                 type="button"
