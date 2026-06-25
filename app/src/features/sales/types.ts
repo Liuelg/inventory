@@ -2,6 +2,7 @@ export type SaleItem = {
   item_id: string
   quantity: number
   price: number
+  currency?: string
   _id?: string
 }
 

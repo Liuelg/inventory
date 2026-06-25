@@ -29,6 +29,7 @@ type SaleItemForm = {
   item_id: string
   quantity: string
   price: string
+  currency: string
 }
 
 type SaleFormState = {
@@ -36,7 +37,7 @@ type SaleFormState = {
   items: SaleItemForm[]
 }
 
-const emptyItem: SaleItemForm = { item_id: "", quantity: "1", price: "" }
+const emptyItem: SaleItemForm = { item_id: "", quantity: "1", price: "", currency: "USD" }
 
 const initialState: SaleFormState = {
   customerName: "",
@@ -52,6 +53,7 @@ function getInitialState(editing?: Sale | null): SaleFormState {
           item_id: i.item_id,
           quantity: String(i.quantity),
           price: String(i.price),
+          currency: i.currency || "USD",
         }))
       : [{ ...emptyItem }],
   }
@@ -71,6 +73,7 @@ function toPayload(form: SaleFormState): SalePayload {
       item_id: i.item_id,
       quantity: Number(i.quantity),
       price: Number(i.price) || 0,
+      currency: i.currency || "USD",
     }))
 
   const totalAmount = items.reduce(
@@ -294,6 +297,16 @@ export function SalesForm({
     })
   }
 
+  function handleProductChange(index: number, productId: string) {
+    const product = products?.find((p) => p._id === productId)
+    const currency = product?.price?.currency || "USD"
+    setForm((prev) => {
+      const items = [...prev.items]
+      items[index] = { ...items[index], item_id: productId, currency }
+      return { ...prev, items }
+    })
+  }
+
   function addItem() {
     setForm((prev) => ({
       ...prev,
@@ -419,7 +432,7 @@ export function SalesForm({
           {form.items.map((item, index) => (
             <div
               key={index}
-              className="grid grid-cols-[48px_1fr_80px_80px_36px] gap-3 items-center"
+              className="grid grid-cols-[48px_1fr_70px_60px_50px_36px] gap-3 items-center"
             >
               <div className="flex items-center justify-center">
                 <div className="h-10 w-10 rounded-md border bg-muted overflow-hidden">
@@ -438,7 +451,7 @@ export function SalesForm({
                   products={availableProducts}
                   storeItemsMap={storeItemsMap}
                   value={item.item_id}
-                  onChange={(v) => setItemField(index, "item_id", v)}
+                  onChange={(v) => handleProductChange(index, v)}
                 />
               </div>
               <div className="grid gap-1">
@@ -471,6 +484,12 @@ export function SalesForm({
                     setItemField(index, "price", e.target.value)
                   }
                 />
+              </div>
+              <div className="grid gap-1">
+                <Label className="text-xs">Currency</Label>
+                <div className="h-9 flex items-center justify-center rounded-md border border-input bg-muted px-2 text-xs font-medium text-muted-foreground">
+                  {item.currency}
+                </div>
               </div>
               <Button
                 type="button"
