@@ -9,6 +9,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Search, Check } from "lucide-react"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
@@ -487,14 +494,18 @@ export function SalesForm({
               </div>
               <div className="grid gap-1">
                 <Label className="text-xs">Currency</Label>
-                <Input
-                  type="text"
+                <Select
                   value={item.currency}
-                  onChange={(e) =>
-                    setItemField(index, "currency", e.target.value)
-                  }
-                  className="text-xs"
-                />
+                  onValueChange={(v) => setItemField(index, "currency", v)}
+                >
+                  <SelectTrigger className="h-9 text-xs w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ETB">ETB</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <Button
                 type="button"
