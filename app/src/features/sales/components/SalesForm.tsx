@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,19 +9,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Search, Check } from "lucide-react"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
 import { getProductImageUrl } from "@/features/products/utils"
 import { useStore } from "@/features/stores/hooks"
 import { useCreateSale, useUpdateSale } from "../hooks"
 import type { Sale, SalePayload } from "../types"
+import type { Product } from "@/features/products/types"
 
 interface SalesFormProps {
   open: boolean
@@ -89,6 +84,133 @@ function toPayload(form: SaleFormState): SalePayload {
     totalAmount,
     date_time: new Date().toISOString(),
   }
+}
+
+function ProductSearchSelect({
+  products,
+  storeItemsMap,
+  value,
+  onChange,
+}: {
+  products: Product[]
+  storeItemsMap: Map<string, number>
+  value: string
+  onChange: (id: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState("")
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const selectedProduct = products.find((p) => p._id === value)
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return products
+    return products.filter((p) => p.name.toLowerCase().includes(q))
+  }, [products, query])
+
+  useEffect(() => {
+    function handleDocClick(e: MouseEvent) {
+      if (!containerRef.current?.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleDocClick)
+    return () => document.removeEventListener("mousedown", handleDocClick)
+  }, [])
+
+  const selectedLabel = selectedProduct?.name || (value ? "" : "Select product")
+  const selectedImage = selectedProduct?.image
+
+  return (
+    <div ref={containerRef} className="relative">
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full justify-start font-normal"
+        onClick={() => {
+          setOpen((v) => !v)
+          if (!open) setQuery("")
+        }}
+      >
+        {selectedProduct ? (
+          <div className="flex items-center gap-2 overflow-hidden">
+            {selectedImage ? (
+              <img
+                src={getProductImageUrl(selectedImage)}
+                alt=""
+                className="h-5 w-5 rounded object-cover shrink-0"
+              />
+            ) : (
+              <div className="h-5 w-5 rounded bg-muted shrink-0" />
+            )}
+            <span className="truncate">{selectedLabel}</span>
+          </div>
+        ) : (
+          <span className="text-muted-foreground">{selectedLabel}</span>
+        )}
+      </Button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
+          <div className="flex items-center gap-2 border-b px-2 py-1.5">
+            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+            <Input
+              type="text"
+              placeholder="Search products..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="h-8 border-0 bg-transparent shadow-none focus-visible:ring-0 px-0"
+              autoFocus
+            />
+          </div>
+          <div className="max-h-60 overflow-auto py-1">
+            {filtered.length === 0 ? (
+              <p className="px-3 py-2 text-sm text-muted-foreground">
+                No products found.
+              </p>
+            ) : (
+              filtered.map((p) => {
+                const isSelected = p._id === value
+                const available = storeItemsMap.get(p._id) || 0
+                return (
+                  <button
+                    key={p._id}
+                    type="button"
+                    className={`flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground ${
+                      isSelected ? "bg-accent text-accent-foreground" : ""
+                    }`}
+                    onClick={() => {
+                      onChange(p._id)
+                      setOpen(false)
+                      setQuery("")
+                    }}
+                  >
+                    {p.image ? (
+                      <img
+                        src={getProductImageUrl(p.image)}
+                        alt=""
+                        className="h-6 w-6 rounded object-cover shrink-0"
+                      />
+                    ) : (
+                      <div className="h-6 w-6 rounded bg-muted shrink-0" />
+                    )}
+                    <span className="flex-1 truncate text-left">{p.name}</span>
+                    <span className="text-muted-foreground text-xs shrink-0">
+                      ({available} in stock)
+                    </span>
+                    {isSelected ? (
+                      <Check className="h-4 w-4 shrink-0" />
+                    ) : null}
+                  </button>
+                )
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function SalesForm({
@@ -312,34 +434,12 @@ export function SalesForm({
               </div>
               <div className="grid gap-1">
                 <Label className="text-xs">Product</Label>
-                <Select
+                <ProductSearchSelect
+                  products={availableProducts}
+                  storeItemsMap={storeItemsMap}
                   value={item.item_id}
-                  onValueChange={(v) => setItemField(index, "item_id", v)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select product" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableProducts.map((p) => {
-                      const available = storeItemsMap.get(p._id) || 0
-                      return (
-                        <SelectItem key={p._id} value={p._id} textValue={p.name}>
-                          <div className="flex items-center gap-2">
-                            {p.image ? (
-                              <img src={getProductImageUrl(p.image)} alt="" className="h-6 w-6 rounded object-cover" />
-                            ) : (
-                              <div className="h-6 w-6 rounded bg-muted" />
-                            )}
-                            <span>{p.name}</span>
-                            <span className="text-muted-foreground ml-1 text-xs">
-                              ({available} in stock)
-                            </span>
-                          </div>
-                        </SelectItem>
-                      )
-                    })}
-                  </SelectContent>
-                </Select>
+                  onChange={(v) => setItemField(index, "item_id", v)}
+                />
               </div>
               <div className="grid gap-1">
                 <Label className="text-xs">
