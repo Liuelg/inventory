@@ -60,7 +60,7 @@ router.post('/', async (req, res, next) => {
       note: body.note
     })
     await stockout.save()
-    await stockout.populate('items.item_id', 'name category')
+    await stockout.populate('items.item_id', 'name category image')
     await stockout.populate('store', 'name address')
     await stockout.populate('created_by', 'name email')
     res.status(201).json({ success: true, data: stockout })
@@ -77,7 +77,7 @@ router.get('/', async (req, res, next) => {
     if (req.query.status) filter.status = req.query.status
 
     const stockouts = await Stockout.find(filter)
-      .populate('items.item_id', 'name category')
+      .populate('items.item_id', 'name category image')
       .populate('store', 'name address')
       .populate('created_by', 'name email')
       .populate('accepted_by', 'name email')
@@ -92,7 +92,7 @@ router.get('/', async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
   try {
     const stockout = await Stockout.findById(req.params.id)
-      .populate('items.item_id', 'name category')
+      .populate('items.item_id', 'name category image')
       .populate('store', 'name address')
       .populate('created_by', 'name email')
       .populate('accepted_by', 'name email')
@@ -132,7 +132,7 @@ router.patch('/:id/accept', async (req, res, next) => {
     stockout.accepted_at = new Date()
     await stockout.save()
 
-    await stockout.populate('items.item_id', 'name category')
+    await stockout.populate('items.item_id', 'name category image')
     await stockout.populate('store', 'name address')
     await stockout.populate('created_by', 'name email')
     await stockout.populate('accepted_by', 'name email')
@@ -163,7 +163,7 @@ router.patch('/:id/reject', async (req, res, next) => {
     stockout.status = 'rejected'
     await stockout.save()
 
-    await stockout.populate('items.item_id', 'name category')
+    await stockout.populate('items.item_id', 'name category image')
     await stockout.populate('store', 'name address')
     await stockout.populate('created_by', 'name email')
 
@@ -211,7 +211,7 @@ router.patch('/:id', async (req, res, next) => {
       { $set: update },
       { new: true, runValidators: true }
     )
-      .populate('items.item_id', 'name category')
+      .populate('items.item_id', 'name category image')
       .populate('store', 'name address')
       .populate('created_by', 'name email')
 

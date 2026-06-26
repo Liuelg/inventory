@@ -16,6 +16,7 @@ import {
 } from "@/features/stockouts/hooks"
 import type { Stockout, StockoutItemPopulated } from "@/features/stockouts/types"
 import { Eye, Check, X } from "lucide-react"
+import { ProductImageCell } from "@/components/ProductImageCell"
 
 function getStoreName(store: Stockout["store"]) {
   if (!store) return "-"
@@ -55,9 +56,14 @@ function StatusBadge({ status }: { status: Stockout["status"] }) {
 function ItemRow({ item }: { item: StockoutItemPopulated }) {
   const name =
     typeof item.item_id === "string" ? item.item_id : item.item_id.name
+  const image =
+    typeof item.item_id === "string" ? undefined : item.item_id.image
   return (
     <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-      <span className="font-medium">{name}</span>
+      <div className="flex items-center gap-3">
+        <ProductImageCell image={image} altName={name || "Product image"} />
+        <span className="font-medium">{name}</span>
+      </div>
       <span className="text-muted-foreground">
         {item.quantity} × {item.price.toFixed(2)}
       </span>
