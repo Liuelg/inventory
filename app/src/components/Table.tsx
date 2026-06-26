@@ -29,6 +29,7 @@ export interface DataTableProps<T> {
   loading?: boolean
   containerClassName?: string
   tableClassName?: string
+  onRowClick?: (row: T) => void
 }
 
 export function DataTable<T>({
@@ -39,6 +40,7 @@ export function DataTable<T>({
   loading = false,
   containerClassName,
   tableClassName,
+  onRowClick,
 }: DataTableProps<T>) {
   if (loading) {
     return (
@@ -77,7 +79,13 @@ export function DataTable<T>({
           </TableRow>
         ) : (
           data.map((row, rowIndex) => (
-            <TableRow key={keyExtractor(row)}>
+            <TableRow
+              key={keyExtractor(row)}
+              onClick={() => onRowClick?.(row)}
+              className={cn(
+                onRowClick && "cursor-pointer hover:bg-muted/50"
+              )}
+            >
               {columns.map((col, colIndex) => (
                 <TableCell key={colIndex} className={col.className}>
                   {col.cell(row, rowIndex)}

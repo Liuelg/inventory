@@ -89,7 +89,10 @@ export function GoodInTable() {
           variant="ghost"
           size="sm"
           className="h-auto px-2 py-0.5 text-xs font-medium"
-          onClick={() => setViewing(s)}
+          onClick={(e) => {
+            e.stopPropagation()
+            setViewing(s)
+          }}
         >
           {getTotalItems(s)} items
         </Button>
@@ -118,7 +121,7 @@ export function GoodInTable() {
       cell: (s) => {
         const isPending = s.status === "pending"
         return (
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
             {isPending ? (
               <>
                 <Button
@@ -174,6 +177,7 @@ export function GoodInTable() {
         keyExtractor={(s) => s._id}
         loading={isLoading}
         emptyMessage="No incoming stock requests."
+        onRowClick={(s) => setViewing(s)}
       />
 
       <Dialog open={!!viewing} onOpenChange={() => setViewing(null)}>
