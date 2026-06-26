@@ -3,7 +3,7 @@ import { DataTable, type ColumnDef } from "@/components/Table.tsx"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useStore } from "@/features/stores/hooks"
 import { useCategories } from "@/features/categories/hooks"
-import { getProductImageUrl } from "@/features/products/utils"
+import { ProductImageCell } from "@/components/ProductImageCell"
 
 type PopulatedStoreItem = {
   item_id: {
@@ -47,17 +47,10 @@ export function MyStorePage() {
       header: "Product",
       cell: (item) => (
         <div className="flex items-center gap-3">
-          {item.item_id?.image ? (
-            <img
-              src={getProductImageUrl(item.item_id.image)}
-              alt={item.item_id.name}
-              className="h-10 w-10 rounded-md object-cover border"
-            />
-          ) : (
-            <div className="h-10 w-10 rounded-md border bg-muted flex items-center justify-center text-xs text-muted-foreground">
-              No img
-            </div>
-          )}
+          <ProductImageCell
+            image={item.item_id?.image || undefined}
+            altName={item.item_id?.name || "Product image"}
+          />
           <span className="font-medium">{item.item_id?.name || "Unknown"}</span>
         </div>
       ),

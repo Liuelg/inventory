@@ -12,7 +12,11 @@ export function ProductImageCell({ image, altName = "Product image" }: ProductIm
   const src = getProductImageUrl(image)
 
   if (!src) {
-    return <div className="h-10 w-10 rounded-md border bg-muted" />
+    return (
+      <div className="h-10 w-10 rounded-md border bg-muted flex items-center justify-center text-xs text-muted-foreground">
+        No img
+      </div>
+    )
   }
 
   return (

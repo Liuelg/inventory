@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Pencil, Trash2 } from "lucide-react"
 import { useDeleteSale, useSales } from "../hooks"
-import { getProductImageUrl } from "@/features/products/utils"
+import { ProductImageCell } from "@/components/ProductImageCell"
 import type { Sale, SaleItem } from "../types"
 
 function getStoreName(store: Sale["store"]) {
@@ -61,11 +61,10 @@ export function SalesTable({ onEdit }: SalesTableProps) {
         return (
           <div className="flex items-center gap-1">
             {images.slice(0, 3).map((img, i) => (
-              <img
+              <ProductImageCell
                 key={i}
-                src={getProductImageUrl(img)}
-                alt=""
-                className="h-8 w-8 rounded-md object-cover border"
+                image={img}
+                altName="Product image"
               />
             ))}
             {extra > 0 ? (

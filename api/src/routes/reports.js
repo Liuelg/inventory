@@ -54,9 +54,17 @@ function isValidObjectId(id) {
 router.get("/", async (req, res, next) => {
   try {
     const { type, period, date, store } = req.query
+    const isAdmin = req.user?.role === 'admin'
+    const userStore = req.user?.store?.toString?.()
 
     if (!type || !["sales", "goodIns", "stockouts", "remaining"].includes(type)) {
       return res.status(400).json({ success: false, message: "Invalid or missing type. Use sales, goodIns, stockouts, or remaining." })
+    }
+
+    // Non-admins can only view their own store's data
+    const effectiveStore = isAdmin ? store : userStore
+    if (!isAdmin && !userStore) {
+      return res.status(400).json({ success: false, message: "Your account is not assigned to a store. Contact an admin." })
     }
 
     if (type === "remaining") {
@@ -65,9 +73,9 @@ router.get("/", async (req, res, next) => {
       const productMap = new Map()
       let recordCount = 0
 
-      if (store && isValidObjectId(store)) {
+      if (effectiveStore && isValidObjectId(effectiveStore)) {
         // Filter remaining products by a specific store
-        const storeDoc = await Store.findById(store).populate("items.item_id", "name category")
+        const storeDoc = await Store.findById(effectiveStore).populate("items.item_id", "name category")
 
         if (!storeDoc) {
           return res.status(404).json({ success: false, message: "Store not found" })
@@ -98,7 +106,7 @@ router.get("/", async (req, res, next) => {
           }
         }
       } else {
-        // No store filter — aggregate from all central stock
+        // No store filter — aggregate from all central stock (admin only)
         const stocks = await Stock.find().populate("items.item_id", "name category")
         recordCount = stocks.length
 
@@ -138,7 +146,7 @@ router.get("/", async (req, res, next) => {
           period: "daily",
           start: now.toISOString(),
           end: now.toISOString(),
-          storeFilter: store || null,
+          storeFilter: effectiveStore || null,
           summary: {
             totalRecords: recordCount,
             totalItems,
@@ -162,8 +170,8 @@ router.get("/", async (req, res, next) => {
       [dateField]: { $gte: start, $lt: end },
     }
 
-    if (store && isValidObjectId(store)) {
-      query.store = store
+    if (effectiveStore && isValidObjectId(effectiveStore)) {
+      query.store = effectiveStore
     }
 
     const records = await Model.find(query)
