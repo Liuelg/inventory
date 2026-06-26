@@ -1,6 +1,6 @@
 export type AuthUser = {
   id: string
-  email: string
+  email?: string
   phone?: string
   name: string
   role: string
@@ -19,7 +19,7 @@ export type LoginPayload = {
 
 export type RegisterPayload = {
   name: string
-  email: string
+  email?: string
   phone?: string
   password: string
   role: string

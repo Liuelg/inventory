@@ -1,7 +1,7 @@
 export type AccountUser = {
   _id: string
   name: string
-  email: string
+  email?: string
   phone?: string
   role: string
   is_active?: boolean
@@ -11,7 +11,7 @@ export type AccountUser = {
 
 export type CreateAccountPayload = {
   name: string
-  email: string
+  email?: string
   phone?: string
   password: string
   role: "sales" | "stock"

@@ -35,7 +35,7 @@ export function AccountTable() {
       header: "Name",
       cell: (u) => <span className="font-medium">{u.name}</span>,
     },
-    { header: "Email", cell: (u) => u.email },
+    { header: "Email", cell: (u) => u.email || "-" },
     { header: "Role", cell: (u) => u.role },
     {
       header: "Phone",

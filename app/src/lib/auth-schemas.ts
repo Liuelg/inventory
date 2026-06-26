@@ -21,8 +21,11 @@ export const signupSchema = yup.object({
   name: yup.string().required("Name is required"),
   email: yup
     .string()
-    .email("Enter a valid email address")
-    .required("Email is required"),
+    .default("")
+    .test("email-or-empty", "Enter a valid email address", (value) => {
+      if (!value) return true
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+    }),
   password: yup
     .string()
     .min(8, "Password must be at least 8 characters")

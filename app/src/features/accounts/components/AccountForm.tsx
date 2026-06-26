@@ -69,10 +69,6 @@ export function AccountForm({
       setError("Name is required")
       return
     }
-    if (!form.email.trim()) {
-      setError("Email is required")
-      return
-    }
     if (!form.password) {
       setError("Password is required")
       return
@@ -92,7 +88,7 @@ export function AccountForm({
 
     const payload = {
       name: form.name.trim(),
-      email: form.email.trim(),
+      email: form.email.trim() || undefined,
       phone: form.phone.trim() || undefined,
       password: form.password,
       role: form.role,
@@ -134,7 +130,7 @@ export function AccountForm({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="account-email">Email</Label>
+            <Label htmlFor="account-email">Email (optional)</Label>
             <Input
               id="account-email"
               type="email"

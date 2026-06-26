@@ -59,7 +59,7 @@ export function SignupPage() {
     try {
       setServerError(null)
       const user = await registerUser({
-        email: data.email,
+        email: data.email || undefined,
         password: data.password,
         name: data.name,
         role: data.role,
@@ -153,7 +153,7 @@ export function SignupPage() {
             </div>
           ) : null}
           <div className="grid gap-2">
-            <Label htmlFor="signup-email">Email</Label>
+            <Label htmlFor="signup-email">Email (optional)</Label>
             <Input
               id="signup-email"
               type="email"

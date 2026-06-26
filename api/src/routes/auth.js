@@ -43,19 +43,21 @@ router.post('/register', authMiddleware, async (req, res, next) => {
     }
 
     const { email, phone, password, name, role, store } = req.body;
-    if (!email || !password || !name) {
-      return res.status(400).json({ message: 'Name, email and password are required' });
+    if (!password || !name) {
+      return res.status(400).json({ message: 'Name and password are required' });
     }
-    if (typeof email !== 'string' || !email.includes('@')) {
+    if (email && (typeof email !== 'string' || !email.includes('@'))) {
       return res.status(400).json({ message: 'Invalid email' });
     }
     if (typeof password !== 'string' || password.length < 6) {
       return res.status(400).json({ message: 'Password must be at least 6 characters' });
     }
 
-    const existingEmail = await User.findOne({ email });
-    if (existingEmail) {
-      return res.status(400).json({ message: 'Email already registered' });
+    if (email) {
+      const existingEmail = await User.findOne({ email });
+      if (existingEmail) {
+        return res.status(400).json({ message: 'Email already registered' });
+      }
     }
 
     if (phone) {
@@ -69,13 +71,13 @@ router.post('/register', authMiddleware, async (req, res, next) => {
     const userRole = allowedRoles.includes(role) ? role : 'stock';
 
     const userData = {
-      email,
       password: await bcrypt.hash(password, 10),
       name,
       role: userRole,
       is_active: true,
     };
 
+    if (email) userData.email = email;
     if (phone) userData.phone = phone;
     if (store && userRole === 'sales') {
       userData.store = store;
