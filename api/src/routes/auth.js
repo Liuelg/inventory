@@ -91,6 +91,14 @@ router.post('/register', authMiddleware, async (req, res, next) => {
     if (user.store) userResponse.store = user.store.toString();
     res.json({ token, user: userResponse });
   } catch (err) {
+    // Return 400 for known client errors (validation, duplicates)
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ message: err.message });
+    }
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyValue || {}).join(', ') || 'field';
+      return res.status(400).json({ message: `A user with that ${field} already exists.` });
+    }
     next(err);
   }
 });
