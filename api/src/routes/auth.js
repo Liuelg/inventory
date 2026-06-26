@@ -53,12 +53,6 @@ router.post('/register', authMiddleware, async (req, res, next) => {
       return res.status(400).json({ message: 'Password must be at least 6 characters' });
     }
 
-    if (email) {
-      const existingEmail = await User.findOne({ email });
-      if (existingEmail) {
-        return res.status(400).json({ message: 'Email already registered' });
-      }
-    }
 
     if (phone) {
       const existingPhone = await User.findOne({ phone });
