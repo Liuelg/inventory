@@ -209,7 +209,7 @@ export function App() {
           <Route
             path="/reports"
             element={
-              <RequireRole allowedRoles={["admin"]}>
+              <RequireRole allowedRoles={["admin", "sales"]}>
                 <ReportsPage />
               </RequireRole>
             }

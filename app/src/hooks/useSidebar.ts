@@ -96,7 +96,7 @@ const SIDEBAR_NAV_ITEMS: SidebarNavItem[] = [
     to: "/reports",
     icon: BarChart3,
     tooltip: "Reports",
-    roles: ["admin"],
+    roles: ["admin", "sales"],
   },
 ]
 

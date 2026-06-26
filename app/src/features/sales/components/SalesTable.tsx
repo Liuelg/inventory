@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Pencil, Trash2 } from "lucide-react"
 import { useDeleteSale, useSales } from "../hooks"
-import type { Sale } from "../types"
+import { getProductImageUrl } from "@/features/products/utils"
+import type { Sale, SaleItem } from "../types"
 
 function getStoreName(store: Sale["store"]) {
   if (!store) return "-"
@@ -23,6 +24,16 @@ function getStoreName(store: Sale["store"]) {
 
 function getTotalItems(sale: Sale) {
   return sale.items.reduce((sum, item) => sum + item.quantity, 0)
+}
+
+function getProductImages(items: SaleItem[]) {
+  return items
+    .map((item) =>
+      typeof item.item_id === "object" && item.item_id !== null
+        ? item.item_id.image
+        : undefined
+    )
+    .filter(Boolean) as string[]
 }
 
 interface SalesTableProps {
@@ -41,6 +52,34 @@ export function SalesTable({ onEdit }: SalesTableProps) {
         <span className="font-medium">{sale.invoiceNumber || "-"}</span>
       ),
       className: "w-[120px]",
+    },
+    {
+      header: "Products",
+      cell: (sale) => {
+        const images = getProductImages(sale.items)
+        const extra = images.length - 3
+        return (
+          <div className="flex items-center gap-1">
+            {images.slice(0, 3).map((img, i) => (
+              <img
+                key={i}
+                src={getProductImageUrl(img)}
+                alt=""
+                className="h-8 w-8 rounded-md object-cover border"
+              />
+            ))}
+            {extra > 0 ? (
+              <span className="h-8 w-8 rounded-md border bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                +{extra}
+              </span>
+            ) : null}
+            {images.length === 0 ? (
+              <span className="text-xs text-muted-foreground">—</span>
+            ) : null}
+          </div>
+        )
+      },
+      className: "w-[140px]",
     },
     {
       header: "Customer",

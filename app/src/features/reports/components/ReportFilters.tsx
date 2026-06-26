@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useStores } from "@/features/stores/hooks"
+import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import type { ReportType, ReportPeriod, ReportParams } from "../types"
 import { BarChart3 } from "lucide-react"
 
@@ -40,12 +41,21 @@ type Props = {
 }
 
 export function ReportFilters({ onGenerate, isLoading }: Props) {
+  const { data: session } = useAuthSession()
+  const isAdmin = session?.role === "admin"
+  const userStore = session?.store
+
   const [type, setType] = useState<ReportType>("sales")
   const [period, setPeriod] = useState<ReportPeriod>("daily")
   const [date, setDate] = useState(formatDateInput(new Date()))
-  const [store, setStore] = useState<string>("all")
+  const [store, setStore] = useState<string>(userStore || "all")
 
   const { data: storesData } = useStores()
+
+  const storeLabel = useMemo(() => {
+    if (isAdmin) return "Store (optional)"
+    return "Store"
+  }, [isAdmin])
 
   const handleGenerate = () => {
     const params: ReportParams = {
@@ -53,8 +63,9 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
       period,
       date,
     }
-    if (store && store !== "all") {
-      params.store = store
+    const effectiveStore = isAdmin ? store : userStore
+    if (effectiveStore && effectiveStore !== "all") {
+      params.store = effectiveStore
     }
     onGenerate(params)
   }
@@ -112,13 +123,17 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
         )}
 
         <div className="flex flex-1 flex-col gap-2 px-4 py-2">
-          <Label htmlFor="report-store">Store (optional)</Label>
-          <Select value={store} onValueChange={setStore}>
+          <Label htmlFor="report-store">{storeLabel}</Label>
+          <Select
+            value={isAdmin ? store : userStore || "all"}
+            onValueChange={setStore}
+            disabled={!isAdmin}
+          >
             <SelectTrigger id="report-store">
               <SelectValue placeholder="All stores" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Stores</SelectItem>
+              {isAdmin && <SelectItem value="all">All Stores</SelectItem>}
               {storesData?.map((s) => (
                 <SelectItem key={s._id} value={s._id}>
                   {s.name}

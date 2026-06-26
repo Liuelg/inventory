@@ -15,6 +15,10 @@ const SaleItemSchema = Schema({
     type: Number,
     required: true,
     min: 0
+  },
+  currency: {
+    type: String,
+    default: 'USD'
   }
 })
 

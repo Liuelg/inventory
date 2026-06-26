@@ -95,6 +95,7 @@ router.post('/', async (req, res) => {
       item_id: i.item_id,
       quantity: i.quantity,
       price: i.price ?? 0,
+      currency: i.currency || 'USD',
     }));
 
     // Deduct from store inventory
@@ -197,6 +198,7 @@ router.patch('/:id', async (req, res) => {
         item_id: i.item_id,
         quantity: i.quantity,
         price: i.price ?? 0,
+        currency: i.currency || 'USD',
       }));
 
       // Deduct new quantities

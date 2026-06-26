@@ -1,5 +1,7 @@
+import type { Product } from "@/features/products/types"
+
 export type SaleItem = {
-  item_id: string
+  item_id: string | Product
   quantity: number
   price: number
   currency?: string

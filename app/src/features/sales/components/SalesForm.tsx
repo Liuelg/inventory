@@ -51,13 +51,17 @@ const initialState: SaleFormState = {
   items: [{ ...emptyItem }],
 }
 
+function getItemId(item_id: string | Product): string {
+  return typeof item_id === "object" && item_id !== null ? item_id._id : item_id
+}
+
 function getInitialState(editing?: Sale | null): SaleFormState {
   if (!editing) return { ...initialState }
   return {
     customerName: editing.customerName ?? "",
     items: editing.items.length
       ? editing.items.map((i) => ({
-          item_id: i.item_id,
+          item_id: getItemId(i.item_id),
           quantity: String(i.quantity),
           price: String(i.price),
           currency: i.currency || "USD",
@@ -260,7 +264,7 @@ export function SalesForm({
 
   // Track products already in the editing sale so they remain selectable
   const editingItemIds = useMemo(() => {
-    return new Set(editing?.items.map((i) => i.item_id) || [])
+    return new Set(editing?.items.map((i) => getItemId(i.item_id)) || [])
   }, [editing])
 
   // Filter products to only those in store with stock > 0 (or already in sale)
