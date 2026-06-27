@@ -79,7 +79,7 @@ app.get("/health", (_req, res) => {
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ message: "Something went wrong on the server" });
+  res.status(500).json({ message: err.message || "Something went wrong on the server" });
 });
 
 // eslint-disable-next-line no-undef

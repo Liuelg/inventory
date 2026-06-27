@@ -43,6 +43,8 @@ router.post('/register', authMiddleware, async (req, res, next) => {
     }
 
     const { email, phone, password, name, role, store } = req.body;
+    console.log('[REGISTER] body:', { email, phone, name, role, store });
+
     if (!password || !name) {
       return res.status(400).json({ message: 'Name and password are required' });
     }
@@ -53,6 +55,12 @@ router.post('/register', authMiddleware, async (req, res, next) => {
       return res.status(400).json({ message: 'Password must be at least 6 characters' });
     }
 
+    if (email) {
+      const existingEmail = await User.findOne({ email });
+      if (existingEmail) {
+        return res.status(400).json({ message: 'Email already registered' });
+      }
+    }
 
     if (phone) {
       const existingPhone = await User.findOne({ phone });
@@ -77,16 +85,19 @@ router.post('/register', authMiddleware, async (req, res, next) => {
       userData.store = store;
     }
 
+    console.log('[REGISTER] userData:', JSON.stringify(userData));
     const user = new User(userData);
     await user.save();
+    console.log('[REGISTER] saved user id:', user._id.toString());
     const token = buildToken(user);
 
     const userResponse = { id: user._id.toString(), email: user.email, phone: user.phone, name: user.name, role: user.role };
     if (user.store) userResponse.store = user.store.toString();
     res.json({ token, user: userResponse });
   } catch (err) {
-    // Return 400 for known client errors (validation, duplicates)
-    if (err.name === 'ValidationError') {
+    console.error('[REGISTER] ERROR:', err.name, err.message, err.code, err.keyValue);
+    // Return 400 for known client errors (validation, duplicates, cast)
+    if (err.name === 'ValidationError' || err.name === 'CastError') {
       return res.status(400).json({ message: err.message });
     }
     if (err.code === 11000) {
