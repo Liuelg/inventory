@@ -45,7 +45,29 @@ app.use("/uploads", express.static("uploads"));
 const dbURI = process.env.MONGO_URI || "mongodb://localhost:27017/inventory_db";
 mongoose
   .connect(dbURI)
-  .then(() => console.log("Successfully connected to MongoDB"))
+  .then(async () => {
+    console.log("Successfully connected to MongoDB")
+
+    // Auto-fix: ensure email index is sparse so null/undefined emails don't collide
+    try {
+      const db = mongoose.connection.db
+      const indexes = await db.collection("users").indexes()
+      const emailIdx = indexes.find((i) => i.key && i.key.email === 1)
+      if (emailIdx && !emailIdx.sparse) {
+        console.log("[INDEX-FIX] Dropping old non-sparse email index:", emailIdx.name)
+        await db.collection("users").dropIndex(emailIdx.name)
+        await db.collection("users").createIndex(
+          { email: 1 },
+          { unique: true, sparse: true }
+        )
+        console.log("[INDEX-FIX] Sparse email index created successfully")
+      } else {
+        console.log("[INDEX-FIX] Email index OK (sparse or missing)")
+      }
+    } catch (idxErr) {
+      console.error("[INDEX-FIX] Failed to fix email index:", idxErr.message)
+    }
+  })
   .catch((err) => console.error("Initial MongoDB connection error:", err));
 
 mongoose.connection.on("error", (err) => {

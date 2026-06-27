@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -111,6 +112,9 @@ export function AccountForm({
       <DialogContent className="max-h-[90vh] overflow-auto">
         <DialogHeader>
           <DialogTitle>Create Account</DialogTitle>
+          <DialogDescription>
+            Fill in the details below to create a new user account.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {error ? (
