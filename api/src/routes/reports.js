@@ -198,7 +198,9 @@ router.get("/", async (req, res, next) => {
 
       for (const item of record.items || []) {
         const qty = item.quantity || 0
-        const price = item.price || 0
+        const price = type === 'sales'
+          ? ((item.eur || 0) + (item.usd || 0) + (item.birr || 0) + (item.visa || 0))
+          : (item.price || 0)
         const itemValue = qty * price
 
         totalItems += qty

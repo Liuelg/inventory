@@ -179,7 +179,7 @@ router.get("/store/:storeId", async (req, res, next) => {
           items: s.items.map((i) => ({
             name: i.item_id?.name || "—",
             quantity: i.quantity,
-            price: i.price,
+            price: (i.eur || 0) + (i.usd || 0) + (i.birr || 0) + (i.visa || 0),
           })),
           processedBy: s.processedBy?.name || "—",
           date_time: s.date_time,

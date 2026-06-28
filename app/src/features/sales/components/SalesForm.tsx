@@ -9,13 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Search, Check } from "lucide-react"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
@@ -35,11 +28,6 @@ interface SalesFormProps {
 type SaleItemForm = {
   item_id: string
   quantity: string
-  price: string
-  currency: string
-}
-
-type PaymentForm = {
   eur: string
   usd: string
   birr: string
@@ -49,21 +37,51 @@ type PaymentForm = {
 type SaleFormState = {
   customerName: string
   items: SaleItemForm[]
-  payments: PaymentForm
 }
 
-const emptyItem: SaleItemForm = { item_id: "", quantity: "1", price: "", currency: "USD" }
-
-const emptyPayments: PaymentForm = { eur: "", usd: "", birr: "", visa: "" }
+const emptyItem: SaleItemForm = {
+  item_id: "",
+  quantity: "1",
+  eur: "",
+  usd: "",
+  birr: "",
+  visa: "",
+}
 
 const initialState: SaleFormState = {
   customerName: "",
   items: [{ ...emptyItem }],
-  payments: { ...emptyPayments },
 }
 
 function getItemId(item_id: string | Product): string {
   return typeof item_id === "object" && item_id !== null ? item_id._id : item_id
+}
+
+function migrateOldPrice(item: Sale["items"][number]): Omit<SaleItemForm, "item_id" | "quantity"> {
+  // New format: item already has eur/usd/birr/visa
+  if (
+    "eur" in item ||
+    "usd" in item ||
+    "birr" in item ||
+    "visa" in item
+  ) {
+    return {
+      eur: item.eur ? String(item.eur) : "",
+      usd: item.usd ? String(item.usd) : "",
+      birr: item.birr ? String(item.birr) : "",
+      visa: item.visa ? String(item.visa) : "",
+    }
+  }
+  // Old format: item has price + currency — map to the right field
+  const price = (item as unknown as { price?: number }).price ?? 0
+  const currency = (item as unknown as { currency?: string }).currency || "USD"
+  if (currency === "ETB") {
+    return { eur: "", usd: "", birr: String(price), visa: "" }
+  }
+  if (currency === "EUR") {
+    return { eur: String(price), usd: "", birr: "", visa: "" }
+  }
+  return { eur: "", usd: String(price), birr: "", visa: "" }
 }
 
 function getInitialState(editing?: Sale | null): SaleFormState {
@@ -74,16 +92,9 @@ function getInitialState(editing?: Sale | null): SaleFormState {
       ? editing.items.map((i) => ({
           item_id: getItemId(i.item_id),
           quantity: String(i.quantity),
-          price: String(i.price),
-          currency: i.currency || "USD",
+          ...migrateOldPrice(i),
         }))
       : [{ ...emptyItem }],
-    payments: {
-      eur: editing.payments?.eur ? String(editing.payments.eur) : "",
-      usd: editing.payments?.usd ? String(editing.payments.usd) : "",
-      birr: editing.payments?.birr ? String(editing.payments.birr) : "",
-      visa: editing.payments?.visa ? String(editing.payments.visa) : "",
-    },
   }
 }
 
@@ -100,12 +111,15 @@ function toPayload(form: SaleFormState): SalePayload {
     .map((i) => ({
       item_id: i.item_id,
       quantity: Number(i.quantity),
-      price: Number(i.price) || 0,
-      currency: i.currency || "USD",
+      eur: Number(i.eur) || 0,
+      usd: Number(i.usd) || 0,
+      birr: Number(i.birr) || 0,
+      visa: Number(i.visa) || 0,
     }))
 
   const totalAmount = items.reduce(
-    (sum, i) => sum + i.quantity * i.price,
+    (sum, i) =>
+      sum + i.quantity * (i.eur + i.usd + i.birr + i.visa),
     0
   )
 
@@ -114,12 +128,6 @@ function toPayload(form: SaleFormState): SalePayload {
     items,
     totalAmount,
     date_time: new Date().toISOString(),
-    payments: {
-      eur: Number(form.payments.eur) || 0,
-      usd: Number(form.payments.usd) || 0,
-      birr: Number(form.payments.birr) || 0,
-      visa: Number(form.payments.visa) || 0,
-    },
   }
 }
 
@@ -307,19 +315,13 @@ export function SalesForm({
   const totalAmount = useMemo(() => {
     return form.items.reduce((sum, item) => {
       const qty = Number(item.quantity) || 0
-      const price = Number(item.price) || 0
-      return sum + qty * price
+      const eur = Number(item.eur) || 0
+      const usd = Number(item.usd) || 0
+      const birr = Number(item.birr) || 0
+      const visa = Number(item.visa) || 0
+      return sum + qty * (eur + usd + birr + visa)
     }, 0)
   }, [form.items])
-
-  const paymentTotal = useMemo(() => {
-    return (
-      (Number(form.payments.eur) || 0) +
-      (Number(form.payments.usd) || 0) +
-      (Number(form.payments.birr) || 0) +
-      (Number(form.payments.visa) || 0)
-    )
-  }, [form.payments])
 
   function setField<Key extends keyof SaleFormState>(
     key: Key,
@@ -340,19 +342,10 @@ export function SalesForm({
     })
   }
 
-  function setPaymentField(key: keyof PaymentForm, value: string) {
-    setForm((prev) => ({
-      ...prev,
-      payments: { ...prev.payments, [key]: value },
-    }))
-  }
-
   function handleProductChange(index: number, productId: string) {
-    const product = products?.find((p) => p._id === productId)
-    const currency = product?.price?.currency || "USD"
     setForm((prev) => {
       const items = [...prev.items]
-      items[index] = { ...items[index], item_id: productId, currency }
+      items[index] = { ...items[index], item_id: productId }
       return { ...prev, items }
     })
   }
@@ -388,18 +381,8 @@ export function SalesForm({
       return
     }
 
-    // Validate that each item has a price entered and enough stock
+    // Validate stock availability
     for (const item of validItems) {
-      const price = Number(item.price)
-      if (!price || price <= 0) {
-        const productName =
-          products?.find((p) => p._id === item.item_id)?.name || item.item_id
-        setError(
-          `${productName} does not have a valid price. Please enter a price.`
-        )
-        return
-      }
-
       const available = storeItemsMap.get(item.item_id) || 0
       const requested = Number(item.quantity)
       if (requested > available) {
@@ -472,20 +455,15 @@ export function SalesForm({
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <Label>Items</Label>
-            <span className="text-sm font-medium">
-              Total: {totalAmount.toFixed(2)}
-            </span>
-          </div>
+          <Label>Items</Label>
 
           {form.items.map((item, index) => (
             <div
               key={index}
-              className="grid grid-cols-[48px_1fr_70px_55px_65px_36px] gap-3 items-center"
+              className="grid grid-cols-[36px_1fr_50px_48px_48px_48px_48px_28px] gap-2 items-center"
             >
               <div className="flex items-center justify-center">
-                <div className="h-10 w-10 rounded-md border bg-muted overflow-hidden">
+                <div className="h-9 w-9 rounded-md border bg-muted overflow-hidden">
                   {item.item_id && getProductImage(products, item.item_id) ? (
                     <img
                       src={getProductImage(products, item.item_id)}
@@ -495,8 +473,8 @@ export function SalesForm({
                   ) : null}
                 </div>
               </div>
-              <div className="grid gap-1">
-                <Label className="text-xs">Product</Label>
+              <div className="grid gap-1 min-w-0">
+                <Label className="text-[10px] leading-none">Product</Label>
                 <ProductSearchSelect
                   products={availableProducts}
                   storeItemsMap={storeItemsMap}
@@ -505,11 +483,11 @@ export function SalesForm({
                 />
               </div>
               <div className="grid gap-1">
-                <Label className="text-xs">
+                <Label className="text-[10px] leading-none">
                   Qty
                   {item.item_id && (
-                    <span className="text-muted-foreground ml-1">
-                      (max:{storeItemsMap.get(item.item_id) ?? 0})
+                    <span className="text-muted-foreground ml-0.5">
+                      /{storeItemsMap.get(item.item_id) ?? 0}
                     </span>
                   )}
                 </Label>
@@ -521,34 +499,64 @@ export function SalesForm({
                   onChange={(e) =>
                     setItemField(index, "quantity", e.target.value)
                   }
+                  className="h-8 px-1.5 text-xs"
                 />
               </div>
               <div className="grid gap-1">
-                <Label className="text-xs">Price</Label>
+                <Label className="text-[10px] leading-none">EUR</Label>
                 <Input
                   type="number"
                   min="0"
                   step="0.01"
-                  value={item.price}
+                  placeholder="0"
+                  value={item.eur}
                   onChange={(e) =>
-                    setItemField(index, "price", e.target.value)
+                    setItemField(index, "eur", e.target.value)
                   }
+                  className="h-8 px-1.5 text-xs"
                 />
               </div>
               <div className="grid gap-1">
-                <Label className="text-xs">Currency</Label>
-                <Select
-                  value={item.currency}
-                  onValueChange={(v) => setItemField(index, "currency", v)}
-                >
-                  <SelectTrigger className="h-9 text-xs w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ETB">ETB</SelectItem>
-                    <SelectItem value="USD">USD</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label className="text-[10px] leading-none">USD</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                  value={item.usd}
+                  onChange={(e) =>
+                    setItemField(index, "usd", e.target.value)
+                  }
+                  className="h-8 px-1.5 text-xs"
+                />
+              </div>
+              <div className="grid gap-1">
+                <Label className="text-[10px] leading-none">BIRR</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                  value={item.birr}
+                  onChange={(e) =>
+                    setItemField(index, "birr", e.target.value)
+                  }
+                  className="h-8 px-1.5 text-xs"
+                />
+              </div>
+              <div className="grid gap-1">
+                <Label className="text-[10px] leading-none">VISA</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                  value={item.visa}
+                  onChange={(e) =>
+                    setItemField(index, "visa", e.target.value)
+                  }
+                  className="h-8 px-1.5 text-xs"
+                />
               </div>
               <Button
                 type="button"
@@ -556,6 +564,7 @@ export function SalesForm({
                 size="icon-sm"
                 onClick={() => removeItem(index)}
                 disabled={form.items.length <= 1}
+                className="h-8 w-8"
               >
                 <span className="text-destructive">×</span>
               </Button>
@@ -577,74 +586,6 @@ export function SalesForm({
               No products available in store inventory.
             </p>
           )}
-
-          <div className="border-t pt-4 mt-2">
-            <div className="flex items-center justify-between mb-3">
-              <Label className="text-sm font-semibold">Payment Breakdown</Label>
-              <span className="text-sm">
-                Paid: {paymentTotal.toFixed(2)}{" "}
-                <span
-                  className={
-                    paymentTotal === totalAmount
-                      ? "text-green-600"
-                      : "text-amber-600"
-                  }
-                >
-                  {paymentTotal === totalAmount
-                    ? "(balanced)"
-                    : paymentTotal > totalAmount
-                      ? "(over)"
-                      : "(under)"}
-                </span>
-              </span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="grid gap-1">
-                <Label className="text-xs">EUR</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={form.payments.eur}
-                  onChange={(e) => setPaymentField("eur", e.target.value)}
-                />
-              </div>
-              <div className="grid gap-1">
-                <Label className="text-xs">USD</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={form.payments.usd}
-                  onChange={(e) => setPaymentField("usd", e.target.value)}
-                />
-              </div>
-              <div className="grid gap-1">
-                <Label className="text-xs">BIRR</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={form.payments.birr}
-                  onChange={(e) => setPaymentField("birr", e.target.value)}
-                />
-              </div>
-              <div className="grid gap-1">
-                <Label className="text-xs">VISA</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={form.payments.visa}
-                  onChange={(e) => setPaymentField("visa", e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <Button

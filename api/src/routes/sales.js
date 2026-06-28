@@ -54,7 +54,7 @@ async function restoreItemsToStore(storeId, items) {
       store.items.push({
         item_id: item.item_id,
         quantity: item.quantity,
-        price: item.price,
+        price: (item.eur || 0) + (item.usd || 0) + (item.birr || 0) + (item.visa || 0),
       });
     }
   }
@@ -94,21 +94,16 @@ router.post('/', async (req, res) => {
     const items = body.items.map((i) => ({
       item_id: i.item_id,
       quantity: i.quantity,
-      price: i.price ?? 0,
-      currency: i.currency || 'USD',
+      eur: i.eur ?? 0,
+      usd: i.usd ?? 0,
+      birr: i.birr ?? 0,
+      visa: i.visa ?? 0,
     }));
 
     // Deduct from store inventory
     await deductItemsFromStore(storeId, items);
 
-    const totalAmount = items.reduce((sum, i) => sum + (i.quantity * i.price), 0);
-
-    const payments = body.payments ? {
-      eur: body.payments.eur ?? 0,
-      usd: body.payments.usd ?? 0,
-      birr: body.payments.birr ?? 0,
-      visa: body.payments.visa ?? 0,
-    } : undefined;
+    const totalAmount = items.reduce((sum, i) => sum + (i.quantity * ((i.eur || 0) + (i.usd || 0) + (i.birr || 0) + (i.visa || 0))), 0);
 
     const sale = new Sale({
       ...body,
@@ -116,7 +111,6 @@ router.post('/', async (req, res) => {
       invoiceNumber,
       items,
       totalAmount,
-      payments,
       processedBy: req.user?.sub,
       salesName: req.user?.name || undefined,
     });
@@ -182,16 +176,6 @@ router.patch('/:id', async (req, res) => {
     delete body.processedBy;
     delete body.salesName;
 
-    // Normalize payments if provided
-    if (body.payments !== undefined) {
-      body.payments = {
-        eur: body.payments.eur ?? 0,
-        usd: body.payments.usd ?? 0,
-        birr: body.payments.birr ?? 0,
-        visa: body.payments.visa ?? 0,
-      };
-    }
-
     // Non-admins can only edit their own store's sales
     let existingSale = null;
     if (!isAdmin) {
@@ -215,8 +199,10 @@ router.patch('/:id', async (req, res) => {
       const items = body.items.map((i) => ({
         item_id: i.item_id,
         quantity: i.quantity,
-        price: i.price ?? 0,
-        currency: i.currency || 'USD',
+        eur: i.eur ?? 0,
+        usd: i.usd ?? 0,
+        birr: i.birr ?? 0,
+        visa: i.visa ?? 0,
       }));
 
       // Deduct new quantities
@@ -232,7 +218,7 @@ router.patch('/:id', async (req, res) => {
       }
 
       body.items = items;
-      body.totalAmount = items.reduce((sum, i) => sum + (i.quantity * i.price), 0);
+      body.totalAmount = items.reduce((sum, i) => sum + (i.quantity * ((i.eur || 0) + (i.usd || 0) + (i.birr || 0) + (i.visa || 0))), 0);
     }
 
     const updatedSale = await Sale.findByIdAndUpdate(
