@@ -99,7 +99,24 @@ export function SalesTable({ onEdit }: SalesTableProps) {
     },
     {
       header: "Total",
-      cell: (sale) => `${sale.totalAmount.toFixed(2)}`,
+      cell: (sale) => (
+        <div className="text-right">
+          <div className="font-medium">{sale.totalAmount.toFixed(2)}</div>
+          {sale.payments &&
+          (sale.payments.eur || sale.payments.usd || sale.payments.birr || sale.payments.visa) ? (
+            <div className="text-[10px] text-muted-foreground leading-tight">
+              {[
+                sale.payments.eur ? `€${sale.payments.eur}` : "",
+                sale.payments.usd ? `$${sale.payments.usd}` : "",
+                sale.payments.birr ? `Br${sale.payments.birr}` : "",
+                sale.payments.visa ? `Visa${sale.payments.visa}` : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            </div>
+          ) : null}
+        </div>
+      ),
       className: "w-[100px] text-right whitespace-nowrap",
     },
     {

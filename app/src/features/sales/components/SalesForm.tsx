@@ -39,16 +39,27 @@ type SaleItemForm = {
   currency: string
 }
 
+type PaymentForm = {
+  eur: string
+  usd: string
+  birr: string
+  visa: string
+}
+
 type SaleFormState = {
   customerName: string
   items: SaleItemForm[]
+  payments: PaymentForm
 }
 
 const emptyItem: SaleItemForm = { item_id: "", quantity: "1", price: "", currency: "USD" }
 
+const emptyPayments: PaymentForm = { eur: "", usd: "", birr: "", visa: "" }
+
 const initialState: SaleFormState = {
   customerName: "",
   items: [{ ...emptyItem }],
+  payments: { ...emptyPayments },
 }
 
 function getItemId(item_id: string | Product): string {
@@ -67,6 +78,12 @@ function getInitialState(editing?: Sale | null): SaleFormState {
           currency: i.currency || "USD",
         }))
       : [{ ...emptyItem }],
+    payments: {
+      eur: editing.payments?.eur ? String(editing.payments.eur) : "",
+      usd: editing.payments?.usd ? String(editing.payments.usd) : "",
+      birr: editing.payments?.birr ? String(editing.payments.birr) : "",
+      visa: editing.payments?.visa ? String(editing.payments.visa) : "",
+    },
   }
 }
 
@@ -97,6 +114,12 @@ function toPayload(form: SaleFormState): SalePayload {
     items,
     totalAmount,
     date_time: new Date().toISOString(),
+    payments: {
+      eur: Number(form.payments.eur) || 0,
+      usd: Number(form.payments.usd) || 0,
+      birr: Number(form.payments.birr) || 0,
+      visa: Number(form.payments.visa) || 0,
+    },
   }
 }
 
@@ -289,6 +312,15 @@ export function SalesForm({
     }, 0)
   }, [form.items])
 
+  const paymentTotal = useMemo(() => {
+    return (
+      (Number(form.payments.eur) || 0) +
+      (Number(form.payments.usd) || 0) +
+      (Number(form.payments.birr) || 0) +
+      (Number(form.payments.visa) || 0)
+    )
+  }, [form.payments])
+
   function setField<Key extends keyof SaleFormState>(
     key: Key,
     value: SaleFormState[Key]
@@ -306,6 +338,13 @@ export function SalesForm({
       items[index] = { ...items[index], [key]: value }
       return { ...prev, items }
     })
+  }
+
+  function setPaymentField(key: keyof PaymentForm, value: string) {
+    setForm((prev) => ({
+      ...prev,
+      payments: { ...prev.payments, [key]: value },
+    }))
   }
 
   function handleProductChange(index: number, productId: string) {
@@ -538,6 +577,74 @@ export function SalesForm({
               No products available in store inventory.
             </p>
           )}
+
+          <div className="border-t pt-4 mt-2">
+            <div className="flex items-center justify-between mb-3">
+              <Label className="text-sm font-semibold">Payment Breakdown</Label>
+              <span className="text-sm">
+                Paid: {paymentTotal.toFixed(2)}{" "}
+                <span
+                  className={
+                    paymentTotal === totalAmount
+                      ? "text-green-600"
+                      : "text-amber-600"
+                  }
+                >
+                  {paymentTotal === totalAmount
+                    ? "(balanced)"
+                    : paymentTotal > totalAmount
+                      ? "(over)"
+                      : "(under)"}
+                </span>
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid gap-1">
+                <Label className="text-xs">EUR</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={form.payments.eur}
+                  onChange={(e) => setPaymentField("eur", e.target.value)}
+                />
+              </div>
+              <div className="grid gap-1">
+                <Label className="text-xs">USD</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={form.payments.usd}
+                  onChange={(e) => setPaymentField("usd", e.target.value)}
+                />
+              </div>
+              <div className="grid gap-1">
+                <Label className="text-xs">BIRR</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={form.payments.birr}
+                  onChange={(e) => setPaymentField("birr", e.target.value)}
+                />
+              </div>
+              <div className="grid gap-1">
+                <Label className="text-xs">VISA</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={form.payments.visa}
+                  onChange={(e) => setPaymentField("visa", e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <Button

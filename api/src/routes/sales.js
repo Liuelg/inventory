@@ -103,12 +103,20 @@ router.post('/', async (req, res) => {
 
     const totalAmount = items.reduce((sum, i) => sum + (i.quantity * i.price), 0);
 
+    const payments = body.payments ? {
+      eur: body.payments.eur ?? 0,
+      usd: body.payments.usd ?? 0,
+      birr: body.payments.birr ?? 0,
+      visa: body.payments.visa ?? 0,
+    } : undefined;
+
     const sale = new Sale({
       ...body,
       store: storeId,
       invoiceNumber,
       items,
       totalAmount,
+      payments,
       processedBy: req.user?.sub,
       salesName: req.user?.name || undefined,
     });
@@ -173,6 +181,16 @@ router.patch('/:id', async (req, res) => {
     delete body.store;
     delete body.processedBy;
     delete body.salesName;
+
+    // Normalize payments if provided
+    if (body.payments !== undefined) {
+      body.payments = {
+        eur: body.payments.eur ?? 0,
+        usd: body.payments.usd ?? 0,
+        birr: body.payments.birr ?? 0,
+        visa: body.payments.visa ?? 0,
+      };
+    }
 
     // Non-admins can only edit their own store's sales
     let existingSale = null;

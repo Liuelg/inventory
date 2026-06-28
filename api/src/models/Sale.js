@@ -22,11 +22,19 @@ const SaleItemSchema = Schema({
   }
 })
 
+const PaymentSchema = Schema({
+  eur: { type: Number, default: 0, min: 0 },
+  usd: { type: Number, default: 0, min: 0 },
+  birr: { type: Number, default: 0, min: 0 },
+  visa: { type: Number, default: 0, min: 0 },
+}, { _id: false })
+
 const saleSchema = Schema({
   items: [SaleItemSchema],
   totalAmount: { type: Number, required: true },
   customerName: { type: String},
   salesName: { type: String },
+  payments: { type: PaymentSchema, default: () => ({}) },
   store: {
     type: Schema.Types.ObjectId,
     ref: 'Store', 
