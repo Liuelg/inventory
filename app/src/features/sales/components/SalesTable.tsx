@@ -36,6 +36,23 @@ function getProductImages(items: SaleItem[]) {
     .filter(Boolean) as string[]
 }
 
+function getSaleCurrencies(sale: Sale): { label: string; total: number }[] {
+  const sums = { eur: 0, usd: 0, birr: 0, visa: 0 }
+  for (const item of sale.items) {
+    sums.eur += (item.eur || 0) * item.quantity
+    sums.usd += (item.usd || 0) * item.quantity
+    sums.birr += (item.birr || 0) * item.quantity
+    sums.visa += (item.visa || 0) * item.quantity
+  }
+  const map = [
+    { label: "EUR", total: sums.eur },
+    { label: "USD", total: sums.usd },
+    { label: "BIRR", total: sums.birr },
+    { label: "VISA", total: sums.visa },
+  ]
+  return map.filter((c) => c.total > 0)
+}
+
 interface SalesTableProps {
   onEdit: (sale: Sale) => void
 }
@@ -99,8 +116,29 @@ export function SalesTable({ onEdit }: SalesTableProps) {
     },
     {
       header: "Total",
-      cell: (sale) => sale.totalAmount.toFixed(2),
-      className: "w-[100px] text-right whitespace-nowrap",
+      cell: (sale) => {
+        const currencies = getSaleCurrencies(sale)
+        return (
+          <div className="text-right">
+            <div className="font-medium">
+              {sale.totalAmount.toFixed(2)}
+            </div>
+            {currencies.length > 0 && (
+              <div className="flex justify-end gap-1 mt-0.5">
+                {currencies.map((c) => (
+                  <span
+                    key={c.label}
+                    className="inline-flex items-center rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+                  >
+                    {c.label} {c.total.toFixed(0)}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      },
+      className: "w-[120px] text-right whitespace-nowrap",
     },
     {
       header: "Date",
