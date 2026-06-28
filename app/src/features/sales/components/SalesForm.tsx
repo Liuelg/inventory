@@ -411,7 +411,7 @@ export function SalesForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-auto w-full sm:max-w-[650px]">
+      <DialogContent className="max-h-[90vh] overflow-auto w-full sm:max-w-[900px]">
         <DialogHeader>
           <DialogTitle>{editing ? "Edit Sale" : "Add Sale"}</DialogTitle>
           <DialogDescription>
@@ -449,10 +449,10 @@ export function SalesForm({
           {form.items.map((item, index) => (
             <div
               key={index}
-              className="grid grid-cols-[36px_1fr_50px_48px_48px_48px_48px_28px] gap-2 items-center"
+              className="grid grid-cols-[48px_1fr_60px_72px_72px_72px_72px_32px] gap-3 items-center"
             >
               <div className="flex items-center justify-center">
-                <div className="h-9 w-9 rounded-md border bg-muted overflow-hidden">
+                <div className="h-10 w-10 rounded-md border bg-muted overflow-hidden">
                   {item.item_id && getProductImage(products, item.item_id) ? (
                     <img
                       src={getProductImage(products, item.item_id)}
