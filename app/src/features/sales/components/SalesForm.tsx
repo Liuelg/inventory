@@ -312,17 +312,6 @@ export function SalesForm({
 
   const userStoreName = userStore?.name ?? session?.store ?? "Not assigned"
 
-  const totalAmount = useMemo(() => {
-    return form.items.reduce((sum, item) => {
-      const qty = Number(item.quantity) || 0
-      const eur = Number(item.eur) || 0
-      const usd = Number(item.usd) || 0
-      const birr = Number(item.birr) || 0
-      const visa = Number(item.visa) || 0
-      return sum + qty * (eur + usd + birr + visa)
-    }, 0)
-  }, [form.items])
-
   function setField<Key extends keyof SaleFormState>(
     key: Key,
     value: SaleFormState[Key]
