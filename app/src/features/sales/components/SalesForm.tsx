@@ -370,6 +370,23 @@ export function SalesForm({
       return
     }
 
+    // Validate that at least one price field is filled per item
+    for (const item of validItems) {
+      const hasPrice =
+        Number(item.eur) > 0 ||
+        Number(item.usd) > 0 ||
+        Number(item.birr) > 0 ||
+        Number(item.visa) > 0
+      if (!hasPrice) {
+        const productName =
+          products?.find((p) => p._id === item.item_id)?.name || item.item_id
+        setError(
+          `${productName}: at least one of the four price fields (EUR, USD, BIRR, VISA) must be filled.`
+        )
+        return
+      }
+    }
+
     // Validate stock availability
     for (const item of validItems) {
       const available = storeItemsMap.get(item.item_id) || 0
