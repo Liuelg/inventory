@@ -57,10 +57,9 @@ router.get("/daily-sales", async (req, res, next) => {
         itemsSold: 0,
       }
 
-      const productsInStock = store.items.reduce(
-        (sum, item) => sum + (item.quantity || 0),
-        0
-      )
+      const productsInStock = store.items
+        .filter((item) => item.item_id && item.quantity > 0)
+        .reduce((sum, item) => sum + item.quantity, 0)
 
       return {
         store: {
