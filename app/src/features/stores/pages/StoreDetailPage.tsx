@@ -23,77 +23,30 @@ function formatCurrency(amount: number) {
   return amount.toFixed(2)
 }
 
-type UnifiedRow =
-  | {
-      _id: string
-      type: "group"
-      image: string | null
-      name: string
-      category: string
-      quantity: number
-      price: number
-      items: StoreRemainingProduct[]
-    }
-  | {
-      _id: string
-      type: "individual"
-      image: string | null
-      name: string
-      category: string
-      quantity: number
-      price: number
-    }
+type UnifiedRow = {
+  key: string
+  _id: string
+  image: string | null
+  name: string
+  category: string
+  quantity: number
+  price: number
+}
 
 function buildUnifiedRows(
   products: StoreRemainingProduct[]
 ): UnifiedRow[] {
-  const groupMap = new Map<
-    string,
-    { group: NonNullable<StoreRemainingProduct["group"]>; items: StoreRemainingProduct[] }
-  >()
-  const rows: UnifiedRow[] = []
-
-  for (const p of products) {
-    // Skip items with missing product reference
-    if (!p.product._id) continue
-
-    if (p.group?._id) {
-      const existing = groupMap.get(p.group._id)
-      if (existing) {
-        existing.items.push(p)
-      } else {
-        groupMap.set(p.group._id, { group: p.group, items: [p] })
-      }
-    } else {
-      rows.push({
-        _id: p.product._id,
-        type: "individual",
-        image: p.product.image || null,
-        name: p.product.name,
-        category: typeof p.product.category === "string" ? p.product.category : "—",
-        quantity: p.quantity,
-        price: p.price,
-      })
-    }
-  }
-
-  for (const { group, items } of groupMap.values()) {
-    const totalQty = items.reduce((sum, i) => sum + i.quantity, 0)
-    const avgPrice =
-      items.reduce((sum, i) => sum + i.price * i.quantity, 0) / totalQty || 0
-    rows.push({
-      _id: group._id,
-      type: "group",
-      image: group.image || null,
-      name: group.name,
-      category: "",
-      quantity: totalQty,
-      price: avgPrice,
-      items,
-    })
-  }
-
-  return rows
+  return products
+    .filter((p) => p.product._id)
+    .map((p, index) => ({
+      key: `${p.product._id}-${index}`,
+      _id: p.product._id,
+      image: p.product.image || null,
+      name: p.product.name,
+      category: typeof p.product.category === "string" ? p.product.category : "—",
+      quantity: p.quantity,
+      price: p.price,
+    }))
 }
 
 export function StoreDetailPage() {
@@ -116,20 +69,7 @@ export function StoreDetailPage() {
 
   async function handleDelete() {
     if (!id || !deleteRow) return
-
-    if (deleteRow.type === "individual") {
-      await deleteItem.mutateAsync({ storeId: id, itemId: deleteRow._id })
-    } else {
-      // Delete all products in the group
-      await Promise.all(
-        deleteRow.items.map((item) =>
-          deleteItem.mutateAsync({
-            storeId: id,
-            itemId: item.product._id,
-          })
-        )
-      )
-    }
+    await deleteItem.mutateAsync({ storeId: id, itemId: deleteRow._id })
     setDeleteRow(null)
   }
 
@@ -179,11 +119,6 @@ export function StoreDetailPage() {
           />
           <div className="flex flex-col min-w-0">
             <span className="font-medium truncate">{r.name}</span>
-            {r.type === "group" && r.items.length > 0 && (
-              <span className="text-xs text-muted-foreground truncate">
-                {r.items.map((i) => `${i.product.name} (${i.quantity})`).join(", ")}
-              </span>
-            )}
           </div>
         </div>
       ),
@@ -288,7 +223,7 @@ export function StoreDetailPage() {
             <DataTable
               data={rows}
               columns={remainingColumns}
-              keyExtractor={(r) => r._id}
+              keyExtractor={(r) => r.key}
               emptyMessage="No products in stock."
             />
           </div>
@@ -301,9 +236,7 @@ export function StoreDetailPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Remove from store?</AlertDialogTitle>
             <AlertDialogDescription>
-              {deleteRow?.type === "group"
-                ? `This will remove all ${deleteRow.items.length} products in "${deleteRow.name}" from the store inventory.`
-                : `This will remove "${deleteRow?.name}" from the store inventory.`}
+              {`This will remove "${deleteRow?.name}" from the store inventory.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
