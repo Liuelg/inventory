@@ -85,7 +85,7 @@ export function MyStorePage() {
 
   return (
     <div className="flex h-full w-full flex-col gap-4">
-      <div className="flex w-full flex-row items-start justify-between gap-4">
+      <div className="flex w-full flex-col sm:flex-row items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">My Store</h1>
           <p className="text-sm text-gray-500">
@@ -99,7 +99,7 @@ export function MyStorePage() {
       </div>
 
       {store ? (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="rounded-lg border p-4">
             <p className="text-sm text-muted-foreground">Products</p>
             <p className="text-xl font-bold">{items.length}</p>

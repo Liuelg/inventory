@@ -66,18 +66,17 @@ export function Home() {
 
   return (
     <div className="flex h-full flex-col gap-4">
-      <div className="flex w-full flex-row items-start justify-between">
+      <div className="flex w-full flex-col sm:flex-row items-start justify-between gap-2">
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
           <p className="text-sm text-gray-500">{today}</p>
         </div>
-        
       </div>
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Today's Sales by Store</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-2 sm:px-6">
           <DailySalesChart data={rows ?? []} />
         </CardContent>
       </Card>

@@ -466,10 +466,10 @@ export function SalesForm({
           {form.items.map((item, index) => (
             <div
               key={index}
-              className="grid grid-cols-[48px_1fr_60px_72px_72px_72px_72px_32px] gap-3 items-center"
+              className="flex flex-col gap-3 rounded-lg border p-3 sm:grid sm:grid-cols-[48px_1fr_60px_72px_72px_72px_72px_32px] sm:gap-3 sm:items-center sm:border-0 sm:p-0"
             >
-              <div className="flex items-center justify-center">
-                <div className="h-10 w-10 rounded-md border bg-muted overflow-hidden">
+              <div className="flex items-center gap-3 sm:justify-center">
+                <div className="h-10 w-10 shrink-0 rounded-md border bg-muted overflow-hidden">
                   {item.item_id && getProductImage(products, item.item_id) ? (
                     <img
                       src={getProductImage(products, item.item_id)}
@@ -478,8 +478,27 @@ export function SalesForm({
                     />
                   ) : null}
                 </div>
+                <div className="flex-1 sm:hidden">
+                  <Label className="text-xs">Product</Label>
+                  <ProductSearchSelect
+                    products={availableProducts}
+                    storeItemsMap={storeItemsMap}
+                    value={item.item_id}
+                    onChange={(v) => handleProductChange(index, v)}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => removeItem(index)}
+                  disabled={form.items.length <= 1}
+                  className="h-8 w-8 sm:hidden"
+                >
+                  <span className="text-destructive">×</span>
+                </Button>
               </div>
-              <div className="grid gap-1 min-w-0">
+              <div className="hidden sm:grid gap-1 min-w-0">
                 <Label className="text-[10px] leading-none">Product</Label>
                 <ProductSearchSelect
                   products={availableProducts}
@@ -488,81 +507,83 @@ export function SalesForm({
                   onChange={(v) => handleProductChange(index, v)}
                 />
               </div>
-              <div className="grid gap-1">
-                <Label className="text-[10px] leading-none">
-                  Qty
-                  {item.item_id && (
-                    <span className="text-muted-foreground ml-0.5">
-                      /{storeItemsMap.get(item.item_id) ?? 0}
-                    </span>
-                  )}
-                </Label>
-                <Input
-                  type="number"
-                  min="1"
-                  max={storeItemsMap.get(item.item_id) ?? undefined}
-                  value={item.quantity}
-                  onChange={(e) =>
-                    setItemField(index, "quantity", e.target.value)
-                  }
-                  className="h-8 px-1.5 text-xs"
-                />
-              </div>
-              <div className="grid gap-1">
-                <Label className="text-[10px] leading-none">EUR</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0"
-                  value={item.eur}
-                  onChange={(e) =>
-                    setItemField(index, "eur", e.target.value)
-                  }
-                  className="h-8 px-1.5 text-xs"
-                />
-              </div>
-              <div className="grid gap-1">
-                <Label className="text-[10px] leading-none">USD</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0"
-                  value={item.usd}
-                  onChange={(e) =>
-                    setItemField(index, "usd", e.target.value)
-                  }
-                  className="h-8 px-1.5 text-xs"
-                />
-              </div>
-              <div className="grid gap-1">
-                <Label className="text-[10px] leading-none">BIRR</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0"
-                  value={item.birr}
-                  onChange={(e) =>
-                    setItemField(index, "birr", e.target.value)
-                  }
-                  className="h-8 px-1.5 text-xs"
-                />
-              </div>
-              <div className="grid gap-1">
-                <Label className="text-[10px] leading-none">VISA</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0"
-                  value={item.visa}
-                  onChange={(e) =>
-                    setItemField(index, "visa", e.target.value)
-                  }
-                  className="h-8 px-1.5 text-xs"
-                />
+              <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 sm:gap-1">
+                <div className="grid gap-1">
+                  <Label className="text-xs sm:text-[10px] leading-none">
+                    Qty
+                    {item.item_id && (
+                      <span className="text-muted-foreground ml-0.5">
+                        /{storeItemsMap.get(item.item_id) ?? 0}
+                      </span>
+                    )}
+                  </Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max={storeItemsMap.get(item.item_id) ?? undefined}
+                    value={item.quantity}
+                    onChange={(e) =>
+                      setItemField(index, "quantity", e.target.value)
+                    }
+                    className="h-9 sm:h-8 px-2 sm:px-1.5 text-sm sm:text-xs"
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <Label className="text-xs sm:text-[10px] leading-none">EUR</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0"
+                    value={item.eur}
+                    onChange={(e) =>
+                      setItemField(index, "eur", e.target.value)
+                    }
+                    className="h-9 sm:h-8 px-2 sm:px-1.5 text-sm sm:text-xs"
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <Label className="text-xs sm:text-[10px] leading-none">USD</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0"
+                    value={item.usd}
+                    onChange={(e) =>
+                      setItemField(index, "usd", e.target.value)
+                    }
+                    className="h-9 sm:h-8 px-2 sm:px-1.5 text-sm sm:text-xs"
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <Label className="text-xs sm:text-[10px] leading-none">BIRR</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0"
+                    value={item.birr}
+                    onChange={(e) =>
+                      setItemField(index, "birr", e.target.value)
+                    }
+                    className="h-9 sm:h-8 px-2 sm:px-1.5 text-sm sm:text-xs"
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <Label className="text-xs sm:text-[10px] leading-none">VISA</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0"
+                    value={item.visa}
+                    onChange={(e) =>
+                      setItemField(index, "visa", e.target.value)
+                    }
+                    className="h-9 sm:h-8 px-2 sm:px-1.5 text-sm sm:text-xs"
+                  />
+                </div>
               </div>
               <Button
                 type="button"
@@ -570,7 +591,7 @@ export function SalesForm({
                 size="icon-sm"
                 onClick={() => removeItem(index)}
                 disabled={form.items.length <= 1}
-                className="h-8 w-8"
+                className="hidden sm:flex h-8 w-8"
               >
                 <span className="text-destructive">×</span>
               </Button>

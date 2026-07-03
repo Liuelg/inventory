@@ -72,8 +72,8 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
 
   return (
     <Card>
-      <CardContent className="flex w-full flex-row divide-x divide-border pt-6">
-        <div className="flex flex-1 flex-col gap-2 px-4 py-2">
+      <CardContent className="flex w-full flex-col sm:flex-row sm:divide-x sm:divide-border pt-6 gap-4 sm:gap-0">
+        <div className="flex flex-1 flex-col gap-2 px-0 sm:px-4 py-0 sm:py-2">
           <Label htmlFor="report-type">Report Type</Label>
           <Select value={type} onValueChange={(v) => setType(v as ReportType)}>
             <SelectTrigger id="report-type">
@@ -91,7 +91,7 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
 
         {type !== "remaining" && (
           <>
-            <div className="flex flex-1 flex-col gap-2 px-4 py-2">
+            <div className="flex flex-1 flex-col gap-2 px-0 sm:px-4 py-0 sm:py-2">
               <Label htmlFor="report-period">Period</Label>
               <Select
                 value={period}
@@ -110,7 +110,7 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
               </Select>
             </div>
 
-            <div className="flex flex-1 flex-col gap-2 px-4 py-2">
+            <div className="flex flex-1 flex-col gap-2 px-0 sm:px-4 py-0 sm:py-2">
               <Label htmlFor="report-date">Date</Label>
               <Input
                 id="report-date"
@@ -122,7 +122,7 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
           </>
         )}
 
-        <div className="flex flex-1 flex-col gap-2 px-4 py-2">
+        <div className="flex flex-1 flex-col gap-2 px-0 sm:px-4 py-0 sm:py-2">
           <Label htmlFor="report-store">{storeLabel}</Label>
           <Select
             value={isAdmin ? store : userStore || "all"}
@@ -143,7 +143,7 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
           </Select>
         </div>
 
-        <div className="flex flex-1 items-end px-4 py-2">
+        <div className="flex flex-1 items-end px-0 sm:px-4 py-0 sm:py-2">
           <Button onClick={handleGenerate} disabled={isLoading} className="w-full">
             <BarChart3 className="mr-2 h-4 w-4" />
             {isLoading ? "Generating..." : "Generate Report"}

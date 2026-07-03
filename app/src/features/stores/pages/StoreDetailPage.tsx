@@ -187,7 +187,7 @@ export function StoreDetailPage() {
       ) : data ? (
         <>
           {/* Today's Summary Cards */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="rounded-lg border p-4">
               <p className="text-sm text-muted-foreground">Total Sales Today</p>
               <p className="text-xl font-bold">

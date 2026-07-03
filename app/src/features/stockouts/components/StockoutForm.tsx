@@ -302,10 +302,10 @@ export function StockoutForm({
             />
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <Label>Items</Label>
             {!editing && (
-              <div className="w-[280px]">
+              <div className="w-full sm:w-[280px]">
                 <Select onValueChange={handleGroupSelect}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Add from product group..." />
@@ -325,10 +325,10 @@ export function StockoutForm({
           {form.items.map((item, index) => (
             <div
               key={index}
-              className="grid grid-cols-[48px_1fr_90px_40px] gap-3 items-center"
+              className="flex flex-col gap-3 rounded-lg border p-3 sm:grid sm:grid-cols-[48px_1fr_90px_40px] sm:gap-3 sm:items-center sm:border-0 sm:p-0"
             >
-              <div className="flex items-center justify-center">
-                <div className="h-10 w-10 rounded-md border bg-muted overflow-hidden">
+              <div className="flex items-center gap-3 sm:justify-center">
+                <div className="h-10 w-10 shrink-0 rounded-md border bg-muted overflow-hidden">
                   {item.item_id && getProductImage(products, item.item_id) ? (
                     <img
                       src={getProductImage(products, item.item_id)}
@@ -337,8 +337,48 @@ export function StockoutForm({
                     />
                   ) : null}
                 </div>
+                <div className="flex-1 sm:hidden">
+                  <Label className="text-xs">Product</Label>
+                  <Select
+                    value={item.item_id}
+                    onValueChange={(v) => setItemField(index, "item_id", v)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select product" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products?.map((p) => (
+                        <SelectItem key={p._id} value={p._id} textValue={p.name}>
+                          <div className="flex items-center gap-2">
+                            {p.image ? (
+                              <img src={getProductImageUrl(p.image)} alt="" className="h-6 w-6 rounded object-cover" />
+                            ) : (
+                              <div className="h-6 w-6 rounded bg-muted" />
+                            )}
+                            <span>{p.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {item.item_id && (
+                    <span className="text-xs text-muted-foreground">
+                      Price: {getProductPrice(products, item.item_id)?.toFixed(2) ?? "—"}
+                    </span>
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => removeItem(index)}
+                  disabled={form.items.length <= 1}
+                  className="sm:hidden"
+                >
+                  <span className="text-destructive">×</span>
+                </Button>
               </div>
-              <div className="grid gap-1">
+              <div className="hidden sm:grid gap-1">
                 <Label className="text-xs">Product</Label>
                 <Select
                   value={item.item_id}
@@ -386,6 +426,7 @@ export function StockoutForm({
                 size="icon-sm"
                 onClick={() => removeItem(index)}
                 disabled={form.items.length <= 1}
+                className="hidden sm:flex"
               >
                 <span className="text-destructive">×</span>
               </Button>

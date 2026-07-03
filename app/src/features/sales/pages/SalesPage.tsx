@@ -21,12 +21,12 @@ export function SalesPage() {
 
   return (
     <div className="flex h-full w-full flex-col gap-4">
-      <div className="flex w-full flex-row items-start justify-between gap-4">
+      <div className="flex w-full flex-col sm:flex-row items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Sales</h1>
           <p className="text-sm text-gray-500">Manage sales and invoices.</p>
         </div>
-        <Button onClick={openAdd}>
+        <Button onClick={openAdd} className="w-full sm:w-auto">
           <Plus data-icon="inline-start" />
           Add Sale
         </Button>

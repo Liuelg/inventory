@@ -82,7 +82,7 @@ export function ProductPage() {
 
   return (
     <div className="flex h-full w-full flex-col gap-4">
-      <div className="flex w-full flex-row items-start justify-between gap-4">
+      <div className="flex w-full flex-col sm:flex-row items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold">Products</h1>
@@ -94,12 +94,12 @@ export function ProductPage() {
           </div>
           <p className="text-sm text-gray-500">Manage products and pricing.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setGroupFormOpen(true)}>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={() => setGroupFormOpen(true)} className="w-full sm:w-auto">
             <Layers className="mr-1 h-4 w-4" />
             Create Group
           </Button>
-          <Button onClick={openAdd}>
+          <Button onClick={openAdd} className="w-full sm:w-auto">
             <Plus data-icon="inline-start" />
             Add Product
           </Button>
