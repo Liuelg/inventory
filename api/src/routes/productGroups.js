@@ -1,33 +1,103 @@
 import { Router } from 'express'
+import fs from 'fs'
+import path from 'path'
 import ProductGroup from '../models/ProductGroup.js'
 import Product from '../models/Products.js'
 
 const router = Router()
+const uploadDir = 'uploads/products'
+
+function isBase64Image(str) {
+  return typeof str === 'string' && str.startsWith('data:image')
+}
+
+function extractBase64Data(dataUrl) {
+  const match = dataUrl.match(/^data:image\/(\w+);base64,(.+)$/)
+  if (!match) return null
+  return {
+    ext: match[1] === 'jpeg' ? 'jpg' : match[1],
+    data: match[2],
+  }
+}
+
+async function persistBase64Image(imageStr) {
+  if (!isBase64Image(imageStr)) return imageStr
+
+  const extracted = extractBase64Data(imageStr)
+  if (!extracted) return imageStr
+
+  const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}.${extracted.ext}`
+  const filepath = path.join(uploadDir, filename)
+
+  await fs.promises.mkdir(uploadDir, { recursive: true })
+  await fs.promises.writeFile(filepath, Buffer.from(extracted.data, 'base64'))
+
+  return `/uploads/products/${filename}`
+}
 
 async function resolveGroupItems(items, groupCategory, groupSubCategory) {
   const resolved = []
-  for (const item of items || []) {
+  const nameItems = []
+
+  for (const [index, item] of (items || []).entries()) {
     if (item.product) {
       // Existing product reference
-      resolved.push({ product: item.product, quantity: item.quantity })
+      resolved[index] = { product: item.product, quantity: item.quantity }
     } else if (item.name) {
-      // Create a new product from the name
-      const existing = await Product.findOne({ name: item.name.trim() })
+      nameItems.push({ ...item, index })
+    }
+  }
+
+  if (nameItems.length === 0) {
+    return resolved
+  }
+
+  // Batch query existing products by name
+  const names = nameItems.map((i) => i.name.trim())
+  const existingProducts = await Product.find({ name: { $in: names } })
+  const existingMap = new Map()
+  for (const p of existingProducts) {
+    if (!existingMap.has(p.name)) {
+      existingMap.set(p.name, p)
+    }
+  }
+
+  // Build new product docs (converting base64 images to files concurrently)
+  const newProductDocs = []
+  const newProductMeta = []
+
+  await Promise.all(
+    nameItems.map(async (item) => {
+      const trimmedName = item.name.trim()
+      const existing = existingMap.get(trimmedName)
+
       if (existing) {
-        resolved.push({ product: existing._id, quantity: item.quantity })
+        resolved[item.index] = { product: existing._id, quantity: item.quantity }
       } else {
-        const newProduct = new Product({
-          name: item.name.trim(),
+        const image = item.image ? await persistBase64Image(item.image) : undefined
+        newProductDocs.push({
+          name: trimmedName,
           category: item.category || groupCategory || undefined,
           subCategory: item.subCategory || groupSubCategory || undefined,
           price: { amount: 0, currency: 'USD' },
-          image: item.image || undefined,
+          image,
         })
-        await newProduct.save()
-        resolved.push({ product: newProduct._id, quantity: item.quantity })
+        newProductMeta.push({ index: item.index, quantity: item.quantity })
+      }
+    })
+  )
+
+  // Batch insert new products
+  if (newProductDocs.length > 0) {
+    const created = await Product.insertMany(newProductDocs)
+    for (let i = 0; i < created.length; i++) {
+      resolved[newProductMeta[i].index] = {
+        product: created[i]._id,
+        quantity: newProductMeta[i].quantity,
       }
     }
   }
+
   return resolved
 }
 
