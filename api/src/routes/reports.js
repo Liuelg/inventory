@@ -85,6 +85,8 @@ router.get("/", async (req, res, next) => {
 
         for (const item of storeDoc.items || []) {
           const qty = item.quantity || 0
+          if (qty <= 0) continue
+
           const price = item.price || 0
           const itemValue = qty * price
 
@@ -113,6 +115,8 @@ router.get("/", async (req, res, next) => {
         for (const stock of stocks) {
           for (const item of stock.items || []) {
             const qty = item.remaining || 0
+            if (qty <= 0) continue
+
             const price = item.price || 0
             const itemValue = qty * price
 
