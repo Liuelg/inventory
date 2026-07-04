@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import Stockout from '../models/Stockout.js'
+import Stock from '../models/Stock.js'
 import Store from '../models/Stores.js'
 import Product from '../models/Products.js'
 
@@ -126,6 +127,35 @@ router.patch('/:id/accept', async (req, res, next) => {
     }
 
     await addItemsToStore(stockout.store, stockout.items)
+
+    // Deduct from central stock (FIFO — oldest first)
+    for (const item of stockout.items) {
+      const productId = item.item_id?.toString?.() || item.item_id
+      let qtyToDeduct = item.quantity || 0
+      if (!productId || qtyToDeduct <= 0) continue
+
+      const stocks = await Stock.find({ 'items.item_id': productId }).sort({ date: 1 })
+
+      for (const stock of stocks) {
+        if (qtyToDeduct <= 0) break
+
+        let stockModified = false
+        for (const stockItem of stock.items) {
+          if (stockItem.item_id.toString() !== productId) continue
+          if (stockItem.remaining <= 0) continue
+          if (qtyToDeduct <= 0) break
+
+          const deduct = Math.min(qtyToDeduct, stockItem.remaining)
+          stockItem.remaining -= deduct
+          qtyToDeduct -= deduct
+          stockModified = true
+        }
+
+        if (stockModified) {
+          await stock.save()
+        }
+      }
+    }
 
     stockout.status = 'accepted'
     stockout.accepted_by = accepted_by

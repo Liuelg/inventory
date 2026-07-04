@@ -108,36 +108,63 @@ router.get("/", async (req, res, next) => {
           }
         }
       } else {
-        // No store filter — aggregate from all central stock (admin only)
+        // No store filter — calculate true remaining central inventory
+        // Remaining = total received - total sent out (accepted stockouts)
         const stocks = await Stock.find().populate("items.item_id", "name category")
-        recordCount = stocks.length
+        const acceptedStockouts = await Stockout.find({ status: "accepted" }).populate("items.item_id", "name category")
+
+        // Map: productId -> { received, sentOut, totalValue, productName }
+        const calcMap = new Map()
 
         for (const stock of stocks) {
           for (const item of stock.items || []) {
-            const qty = item.remaining || 0
-            if (qty <= 0) continue
-
-            const price = item.price || 0
-            const itemValue = qty * price
-
-            totalItems += qty
-            totalValue += itemValue
-
             const productId = item.item_id?._id?.toString?.() || item.item_id?.toString?.()
-            const productName = item.item_id?.name || "Unknown Product"
+            if (!productId) continue
 
-            if (productId) {
-              const existing = productMap.get(productId) || {
-                product: { _id: productId, name: productName },
-                quantity: 0,
-                value: 0,
-              }
-              existing.quantity += qty
-              existing.value += itemValue
-              productMap.set(productId, existing)
+            const existing = calcMap.get(productId) || {
+              productName: item.item_id?.name || "Unknown Product",
+              received: 0,
+              sentOut: 0,
+              valueSum: 0,
+              valueCount: 0,
+            }
+            existing.received += item.quantity || 0
+            existing.valueSum += (item.price || 0) * (item.quantity || 0)
+            existing.valueCount += item.quantity || 0
+            calcMap.set(productId, existing)
+          }
+        }
+
+        for (const so of acceptedStockouts) {
+          for (const item of so.items || []) {
+            const productId = item.item_id?._id?.toString?.() || item.item_id?.toString?.()
+            if (!productId) continue
+
+            const existing = calcMap.get(productId)
+            if (existing) {
+              existing.sentOut += item.quantity || 0
             }
           }
         }
+
+        for (const [productId, data] of calcMap) {
+          const remaining = data.received - data.sentOut
+          if (remaining <= 0) continue
+
+          const avgPrice = data.valueCount > 0 ? data.valueSum / data.valueCount : 0
+          const itemValue = remaining * avgPrice
+
+          totalItems += remaining
+          totalValue += itemValue
+
+          productMap.set(productId, {
+            product: { _id: productId, name: data.productName },
+            quantity: remaining,
+            value: itemValue,
+          })
+        }
+
+        recordCount = productMap.size
       }
 
       const breakdown = Array.from(productMap.values()).sort((a, b) => b.quantity - a.quantity)
