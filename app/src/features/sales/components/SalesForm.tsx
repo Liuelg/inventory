@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Search, Check } from "lucide-react"
+import { Search, Check, ImagePlus, X } from "lucide-react"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
 import { getProductImageUrl } from "@/features/products/utils"
@@ -32,6 +32,8 @@ type SaleItemForm = {
   usd: string
   birr: string
   visa: string
+  image: string
+  imageFile: File | null
 }
 
 type SaleFormState = {
@@ -46,6 +48,8 @@ const emptyItem: SaleItemForm = {
   usd: "",
   birr: "",
   visa: "",
+  image: "",
+  imageFile: null,
 }
 
 const initialState: SaleFormState = {
@@ -57,7 +61,7 @@ function getItemId(item_id: string | Product): string {
   return typeof item_id === "object" && item_id !== null ? item_id._id : item_id
 }
 
-function migrateOldPrice(item: Sale["items"][number]): Omit<SaleItemForm, "item_id" | "quantity"> {
+function migrateOldPrice(item: Sale["items"][number]): Omit<SaleItemForm, "item_id" | "quantity" | "image" | "imageFile"> {
   // New format: item already has eur/usd/birr/visa
   if (
     "eur" in item ||
@@ -92,17 +96,12 @@ function getInitialState(editing?: Sale | null): SaleFormState {
       ? editing.items.map((i) => ({
           item_id: getItemId(i.item_id),
           quantity: String(i.quantity),
+          image: i.image || "",
+          imageFile: null,
           ...migrateOldPrice(i),
         }))
       : [{ ...emptyItem }],
   }
-}
-
-function getProductImage(
-  products: { _id: string; image?: string }[] | undefined,
-  itemId: string
-): string | undefined {
-  return products?.find((p) => p._id === itemId)?.image
 }
 
 function toPayload(form: SaleFormState): SalePayload {
@@ -115,6 +114,7 @@ function toPayload(form: SaleFormState): SalePayload {
       usd: Number(i.usd) || 0,
       birr: Number(i.birr) || 0,
       visa: Number(i.visa) || 0,
+      image: i.image || "",
     }))
 
   const totalAmount = items.reduce(
@@ -273,6 +273,15 @@ export function SalesForm({
   const { data: userStore } = useStore(session?.store || "")
   const create = useCreateSale()
   const update = useUpdateSale()
+  const previewUrls = useRef<Map<number, string>>(new Map())
+
+  // Clean up object URLs on unmount / close
+  useEffect(() => {
+    if (!open) {
+      previewUrls.current.forEach((url) => URL.revokeObjectURL(url))
+      previewUrls.current.clear()
+    }
+  }, [open])
 
   // Build map of available quantities from store inventory
   const storeItemsMap = useMemo(() => {
@@ -322,7 +331,7 @@ export function SalesForm({
   function setItemField(
     index: number,
     key: keyof SaleItemForm,
-    value: string
+    value: string | File | null
   ) {
     setForm((prev) => {
       const items = [...prev.items]
@@ -339,6 +348,53 @@ export function SalesForm({
     })
   }
 
+  function handleImageChange(index: number, file: File | null) {
+    setForm((prev) => {
+      const items = [...prev.items]
+      const prevFile = items[index].imageFile
+      if (prevFile && previewUrls.current.has(index)) {
+        URL.revokeObjectURL(previewUrls.current.get(index)!)
+        previewUrls.current.delete(index)
+      }
+      items[index] = {
+        ...items[index],
+        imageFile: file,
+        image: file ? "" : items[index].image,
+      }
+      return { ...prev, items }
+    })
+  }
+
+  function clearImage(index: number) {
+    setForm((prev) => {
+      const items = [...prev.items]
+      const prevFile = items[index].imageFile
+      if (prevFile && previewUrls.current.has(index)) {
+        URL.revokeObjectURL(previewUrls.current.get(index)!)
+        previewUrls.current.delete(index)
+      }
+      items[index] = { ...items[index], imageFile: null, image: "" }
+      return { ...prev, items }
+    })
+  }
+
+  function getItemPreview(index: number, item: SaleItemForm): string | undefined {
+    if (item.imageFile) {
+      if (!previewUrls.current.has(index)) {
+        previewUrls.current.set(index, URL.createObjectURL(item.imageFile))
+      }
+      return previewUrls.current.get(index)
+    }
+    if (item.image) {
+      return getProductImageUrl(item.image)
+    }
+    if (previewUrls.current.has(index)) {
+      URL.revokeObjectURL(previewUrls.current.get(index)!)
+      previewUrls.current.delete(index)
+    }
+    return undefined
+  }
+
   function addItem() {
     setForm((prev) => ({
       ...prev,
@@ -350,6 +406,11 @@ export function SalesForm({
     setForm((prev) => {
       if (prev.items.length <= 1) return prev
       const items = prev.items.filter((_, i) => i !== index)
+      // Clean up preview URL for removed item
+      if (previewUrls.current.has(index)) {
+        URL.revokeObjectURL(previewUrls.current.get(index)!)
+        previewUrls.current.delete(index)
+      }
       return { ...prev, items }
     })
   }
@@ -407,9 +468,18 @@ export function SalesForm({
     }
 
     const payload = toPayload(form)
+    const fd = new FormData()
+    fd.append("data", JSON.stringify(payload))
+
+    form.items.forEach((item, index) => {
+      if (item.imageFile) {
+        fd.append(`image_${index}`, item.imageFile)
+      }
+    })
+
     if (editing) {
       update.mutate(
-        { id: editing._id, payload },
+        { id: editing._id, payload: fd },
         {
           onSuccess: () => onSuccess?.(),
           onError: (err) => setError(err.message),
@@ -418,7 +488,7 @@ export function SalesForm({
       return
     }
 
-    create.mutate(payload, {
+    create.mutate(fd, {
       onSuccess: () => onSuccess?.(),
       onError: (err) => setError(err.message),
     })
@@ -463,23 +533,49 @@ export function SalesForm({
 
           <Label>Items</Label>
 
-          {form.items.map((item, index) => (
-            <div
-              key={index}
-              className="flex flex-col gap-3 rounded-lg border p-3 sm:grid sm:grid-cols-[48px_1fr_60px_72px_72px_72px_72px_32px] sm:gap-3 sm:items-center sm:border-0 sm:p-0"
-            >
-              <div className="flex items-center gap-3 sm:justify-center">
-                <div className="h-10 w-10 shrink-0 rounded-md border bg-muted overflow-hidden">
-                  {item.item_id && getProductImage(products, item.item_id) ? (
-                    <img
-                      src={getProductImage(products, item.item_id)}
-                      alt=""
-                      className="h-full w-full object-cover"
+          {form.items.map((item, index) => {
+            const preview = getItemPreview(index, item)
+            return (
+              <div
+                key={index}
+                className="flex flex-col gap-3 rounded-lg border p-3 sm:grid sm:grid-cols-[48px_1fr_60px_72px_72px_72px_72px_32px] sm:gap-3 sm:items-center sm:border-0 sm:p-0"
+              >
+                <div className="flex items-center gap-3 sm:justify-center">
+                  <div className="relative h-10 w-10 shrink-0 rounded-md border bg-muted overflow-hidden">
+                    {preview ? (
+                      <img
+                        src={preview}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center">
+                        <ImagePlus className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 sm:hidden">
+                    <Label className="text-xs">Product</Label>
+                    <ProductSearchSelect
+                      products={availableProducts}
+                      storeItemsMap={storeItemsMap}
+                      value={item.item_id}
+                      onChange={(v) => handleProductChange(index, v)}
                     />
-                  ) : null}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => removeItem(index)}
+                    disabled={form.items.length <= 1}
+                    className="h-8 w-8 sm:hidden"
+                  >
+                    <span className="text-destructive">×</span>
+                  </Button>
                 </div>
-                <div className="flex-1 sm:hidden">
-                  <Label className="text-xs">Product</Label>
+                <div className="hidden sm:grid gap-1 min-w-0">
+                  <Label className="text-[10px] leading-none">Product</Label>
                   <ProductSearchSelect
                     products={availableProducts}
                     storeItemsMap={storeItemsMap}
@@ -487,116 +583,125 @@ export function SalesForm({
                     onChange={(v) => handleProductChange(index, v)}
                   />
                 </div>
+                <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 sm:gap-1">
+                  <div className="grid gap-1">
+                    <Label className="text-xs sm:text-[10px] leading-none">
+                      Qty
+                      {item.item_id && (
+                        <span className="text-muted-foreground ml-0.5">
+                          /{storeItemsMap.get(item.item_id) ?? 0}
+                        </span>
+                      )}
+                    </Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max={storeItemsMap.get(item.item_id) ?? undefined}
+                      value={item.quantity}
+                      onChange={(e) =>
+                        setItemField(index, "quantity", e.target.value)
+                      }
+                      className="h-9 sm:h-8 px-2 sm:px-1.5 text-sm sm:text-xs"
+                    />
+                  </div>
+                  <div className="grid gap-1">
+                    <Label className="text-xs sm:text-[10px] leading-none">EUR</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0"
+                      value={item.eur}
+                      onChange={(e) =>
+                        setItemField(index, "eur", e.target.value)
+                      }
+                      className="h-9 sm:h-8 px-2 sm:px-1.5 text-sm sm:text-xs"
+                    />
+                  </div>
+                  <div className="grid gap-1">
+                    <Label className="text-xs sm:text-[10px] leading-none">USD</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0"
+                      value={item.usd}
+                      onChange={(e) =>
+                        setItemField(index, "usd", e.target.value)
+                      }
+                      className="h-9 sm:h-8 px-2 sm:px-1.5 text-sm sm:text-xs"
+                    />
+                  </div>
+                  <div className="grid gap-1">
+                    <Label className="text-xs sm:text-[10px] leading-none">BIRR</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0"
+                      value={item.birr}
+                      onChange={(e) =>
+                        setItemField(index, "birr", e.target.value)
+                      }
+                      className="h-9 sm:h-8 px-2 sm:px-1.5 text-sm sm:text-xs"
+                    />
+                  </div>
+                  <div className="grid gap-1">
+                    <Label className="text-xs sm:text-[10px] leading-none">VISA</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0"
+                      value={item.visa}
+                      onChange={(e) =>
+                        setItemField(index, "visa", e.target.value)
+                      }
+                      className="h-9 sm:h-8 px-2 sm:px-1.5 text-sm sm:text-xs"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 sm:justify-center">
+                  <label className="flex cursor-pointer items-center gap-1 rounded-md border border-input bg-background px-2 py-1.5 text-xs hover:bg-accent">
+                    <ImagePlus className="h-3 w-3" />
+                    <span className="hidden sm:inline">Photo</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null
+                        if (file && file.size > 2 * 1024 * 1024) {
+                          setError("Each image must be smaller than 2MB")
+                          return
+                        }
+                        handleImageChange(index, file)
+                      }}
+                    />
+                  </label>
+                  {preview ? (
+                    <button
+                      type="button"
+                      onClick={() => clearImage(index)}
+                      className="flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  ) : null}
+                </div>
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon-sm"
                   onClick={() => removeItem(index)}
                   disabled={form.items.length <= 1}
-                  className="h-8 w-8 sm:hidden"
+                  className="hidden sm:flex h-8 w-8"
                 >
                   <span className="text-destructive">×</span>
                 </Button>
               </div>
-              <div className="hidden sm:grid gap-1 min-w-0">
-                <Label className="text-[10px] leading-none">Product</Label>
-                <ProductSearchSelect
-                  products={availableProducts}
-                  storeItemsMap={storeItemsMap}
-                  value={item.item_id}
-                  onChange={(v) => handleProductChange(index, v)}
-                />
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 sm:gap-1">
-                <div className="grid gap-1">
-                  <Label className="text-xs sm:text-[10px] leading-none">
-                    Qty
-                    {item.item_id && (
-                      <span className="text-muted-foreground ml-0.5">
-                        /{storeItemsMap.get(item.item_id) ?? 0}
-                      </span>
-                    )}
-                  </Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max={storeItemsMap.get(item.item_id) ?? undefined}
-                    value={item.quantity}
-                    onChange={(e) =>
-                      setItemField(index, "quantity", e.target.value)
-                    }
-                    className="h-9 sm:h-8 px-2 sm:px-1.5 text-sm sm:text-xs"
-                  />
-                </div>
-                <div className="grid gap-1">
-                  <Label className="text-xs sm:text-[10px] leading-none">EUR</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0"
-                    value={item.eur}
-                    onChange={(e) =>
-                      setItemField(index, "eur", e.target.value)
-                    }
-                    className="h-9 sm:h-8 px-2 sm:px-1.5 text-sm sm:text-xs"
-                  />
-                </div>
-                <div className="grid gap-1">
-                  <Label className="text-xs sm:text-[10px] leading-none">USD</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0"
-                    value={item.usd}
-                    onChange={(e) =>
-                      setItemField(index, "usd", e.target.value)
-                    }
-                    className="h-9 sm:h-8 px-2 sm:px-1.5 text-sm sm:text-xs"
-                  />
-                </div>
-                <div className="grid gap-1">
-                  <Label className="text-xs sm:text-[10px] leading-none">BIRR</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0"
-                    value={item.birr}
-                    onChange={(e) =>
-                      setItemField(index, "birr", e.target.value)
-                    }
-                    className="h-9 sm:h-8 px-2 sm:px-1.5 text-sm sm:text-xs"
-                  />
-                </div>
-                <div className="grid gap-1">
-                  <Label className="text-xs sm:text-[10px] leading-none">VISA</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0"
-                    value={item.visa}
-                    onChange={(e) =>
-                      setItemField(index, "visa", e.target.value)
-                    }
-                    className="h-9 sm:h-8 px-2 sm:px-1.5 text-sm sm:text-xs"
-                  />
-                </div>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => removeItem(index)}
-                disabled={form.items.length <= 1}
-                className="hidden sm:flex h-8 w-8"
-              >
-                <span className="text-destructive">×</span>
-              </Button>
-            </div>
-          ))}
+            )
+          })}
 
           <Button
             type="button"

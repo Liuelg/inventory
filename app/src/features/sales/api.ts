@@ -17,10 +17,22 @@ export const saleApi = {
       body: JSON.stringify(payload),
     }),
 
+  createWithImages: (formData: FormData) =>
+    fetcher<Sale>("/api/sales", {
+      method: "POST",
+      body: formData,
+    }),
+
   update: (id: string, payload: Partial<SalePayload>) =>
     fetcher<Sale>(`/api/sales/${id}`, {
       method: "PATCH",
       body: JSON.stringify(payload),
+    }),
+
+  updateWithImages: (id: string, formData: FormData) =>
+    fetcher<Sale>(`/api/sales/${id}`, {
+      method: "PATCH",
+      body: formData,
     }),
 
   delete: (id: string) =>

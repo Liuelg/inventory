@@ -1,9 +1,45 @@
 import { Router } from 'express';
+import fs from 'fs';
+import path from 'path';
 import Sale from '../models/Sale.js';
 import Store from '../models/Stores.js';
 import InvoiceCounter from '../models/InvoiceCounter.js';
+import { uploadSaleImages } from '../middleware/upload.js';
 
 const router = Router();
+
+function deleteImage(imagePath) {
+  if (!imagePath) return;
+  const fullPath = path.isAbsolute(imagePath) ? imagePath : path.join(process.cwd(), imagePath);
+  fs.promises.unlink(fullPath).catch((err) => {
+    if (err.code !== 'ENOENT') console.error('Failed to delete image:', err);
+  });
+}
+
+function parseBody(req) {
+  if (req.body.data) {
+    try {
+      return JSON.parse(req.body.data);
+    } catch {
+      return { ...req.body };
+    }
+  }
+  return { ...req.body };
+}
+
+function mapImagesToItems(body, files) {
+  if (!body.items || !Array.isArray(body.items)) return body;
+  const items = body.items.map((item, index) => {
+    const fieldName = `image_${index}`;
+    const uploaded = files?.[fieldName];
+    if (uploaded && uploaded[0]) {
+      return { ...item, image: `/uploads/sales/${uploaded[0].filename}` };
+    }
+    // If item already has an image path, keep it unless explicitly cleared
+    return item;
+  });
+  return { ...body, items };
+}
 
 // Helper to deduct sold items from store inventory
 async function deductItemsFromStore(storeId, items) {
@@ -63,9 +99,9 @@ async function restoreItemsToStore(storeId, items) {
   return store;
 }
 
-router.post('/', async (req, res) => {
+router.post('/', uploadSaleImages, async (req, res) => {
   try {
-    const body = req.body;
+    const body = mapImagesToItems(parseBody(req), req.files);
 
     // Use the logged-in user's assigned store
     const storeId = req.user?.store;
@@ -98,6 +134,7 @@ router.post('/', async (req, res) => {
       usd: i.usd ?? 0,
       birr: i.birr ?? 0,
       visa: i.visa ?? 0,
+      image: i.image,
     }));
 
     // Deduct from store inventory
@@ -117,6 +154,10 @@ router.post('/', async (req, res) => {
     await sale.save();
     res.status(201).json(sale);
   } catch (err) {
+    // Clean up uploaded images on error
+    if (req.files) {
+      Object.values(req.files).flat().forEach((file) => deleteImage(file.path));
+    }
     res.status(400).json({ message: err.message });
   }
 });
@@ -166,10 +207,10 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', uploadSaleImages, async (req, res) => {
   try {
     const isAdmin = req.user?.role === 'admin';
-    const body = { ...req.body };
+    const body = mapImagesToItems(parseBody(req), req.files);
 
     // Prevent changing protected fields from the request body
     delete body.store;
@@ -203,6 +244,7 @@ router.patch('/:id', async (req, res) => {
         usd: i.usd ?? 0,
         birr: i.birr ?? 0,
         visa: i.visa ?? 0,
+        image: i.image,
       }));
 
       // Deduct new quantities
@@ -231,11 +273,28 @@ router.patch('/:id', async (req, res) => {
     ).populate('store').populate({ path: 'items.item_id', model: 'Products' });
 
     if (!updatedSale) {
+      // Clean up uploaded images if update failed
+      if (req.files) {
+        Object.values(req.files).flat().forEach((file) => deleteImage(file.path));
+      }
       return res.status(404).json({ message: 'Sale record not found' });
+    }
+
+    // Delete old images that were replaced or cleared
+    if (existingSale && body.items) {
+      existingSale.items.forEach((oldItem, index) => {
+        const newItem = body.items[index];
+        if (oldItem.image && oldItem.image !== newItem?.image) {
+          deleteImage(oldItem.image);
+        }
+      });
     }
 
     res.json(updatedSale);
   } catch (err) {
+    if (req.files) {
+      Object.values(req.files).flat().forEach((file) => deleteImage(file.path));
+    }
     if (err.kind === 'ObjectId') {
       return res.status(400).json({ message: 'Invalid Sale ID format' });
     }
@@ -259,6 +318,13 @@ router.delete('/:id', async (req, res) => {
 
     // Restore quantities to store inventory
     await restoreItemsToStore(deletedSale.store, deletedSale.items);
+
+    // Clean up sale item images
+    if (deletedSale.items) {
+      deletedSale.items.forEach((item) => {
+        if (item.image) deleteImage(item.image);
+      });
+    }
 
     res.json({ message: 'Sale record deleted successfully', deletedSale });
   } catch (err) {

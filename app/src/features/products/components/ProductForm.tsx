@@ -16,11 +16,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useAuthSession } from "@/hooks/use-auth-session"
-import { ImagePlus, X } from "lucide-react"
 import { useCategories } from "@/features/categories/hooks"
 import { useSubCategoriesByCategory } from "@/features/sub-categories/hooks"
 import { useCreateProduct, useUpdateProduct } from "../hooks"
-import { getProductImageUrl } from "../utils"
 import type { Product, ProductPayload } from "../types"
 
 interface ProductFormProps {
@@ -39,7 +37,6 @@ type ProductFormState = {
   currency: string
   previousPrice: string
   tags: string
-  image: string
 }
 
 const initialState: ProductFormState = {
@@ -51,7 +48,6 @@ const initialState: ProductFormState = {
   currency: "USD",
   previousPrice: "",
   tags: "",
-  image: "",
 }
 
 function getId(value: string | { _id: string } | undefined | null): string {
@@ -78,7 +74,6 @@ function getInitialState(editing?: Product | null): ProductFormState {
         ? String(editing.previous_prices)
         : "",
     tags: editing.tags?.join(", ") ?? "",
-    image: editing.image ?? "",
   }
 }
 
@@ -98,7 +93,6 @@ function toPayload(form: ProductFormState, isAdmin: boolean): ProductPayload {
     category: form.category.trim() || undefined,
     subCategory: form.subCategory.trim() || undefined,
     tags: tags.length ? tags : undefined,
-    image: form.image.trim() || undefined,
   }
 
   if (isAdmin) {
@@ -125,8 +119,6 @@ export function ProductForm({
   const [form, setForm] = useState<ProductFormState>(() =>
     getInitialState(editing)
   )
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const { data: categories } = useCategories()
   const { data: subCategories } = useSubCategoriesByCategory(form.category)
@@ -138,20 +130,9 @@ export function ProductForm({
   useEffect(() => {
     if (open) {
       setForm(getInitialState(editing))
-      setImageFile(null)
-      setPreviewUrl(null)
       setError(null)
     }
   }, [open, editing])
-
-  useEffect(() => {
-    if (imageFile) {
-      const url = URL.createObjectURL(imageFile)
-      setPreviewUrl(url)
-      return () => URL.revokeObjectURL(url)
-    }
-    setPreviewUrl(null)
-  }, [imageFile])
 
   function setField<Key extends keyof ProductFormState>(
     key: Key,
@@ -172,19 +153,10 @@ export function ProductForm({
     if (!form.name.trim()) return
 
     const payload = toPayload(form, isAdmin)
-    const fd = new FormData()
-
-    if (imageFile) {
-      fd.append("image", imageFile)
-    } else if (editing && !form.image) {
-      payload.image = ""
-    }
-
-    fd.append("data", JSON.stringify(payload))
 
     if (editing) {
       update.mutate(
-        { id: editing._id, data: fd },
+        { id: editing._id, payload },
         {
           onSuccess: () => onSuccess?.(),
           onError: (err) => setError(err.message),
@@ -193,14 +165,13 @@ export function ProductForm({
       return
     }
 
-    create.mutate(fd, {
+    create.mutate(payload, {
       onSuccess: () => onSuccess?.(),
       onError: (err) => setError(err.message),
     })
   }
 
   const isPending = create.isPending || update.isPending
-  const imageSrc = previewUrl || getProductImageUrl(form.image)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -267,51 +238,6 @@ export function ProductForm({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="product-image">Product Image</Label>
-            <div className="flex items-center gap-3">
-              {imageSrc ? (
-                <div className="relative">
-                  <img
-                    src={imageSrc}
-                    alt="Preview"
-                    className="h-20 w-20 rounded-md object-cover border"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setImageFile(null)
-                      setField("image", "")
-                    }}
-                    className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ) : null}
-              <label className="flex cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm hover:bg-accent">
-                <ImagePlus className="h-4 w-4" />
-                {imageSrc ? "Change Image" : "Upload Image"}
-                <input
-                  id="product-image"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (!file) return
-                    if (file.size > 2 * 1024 * 1024) {
-                      setError("Image must be smaller than 2MB")
-                      return
-                    }
-                    setImageFile(file)
-                    setField("image", "")
-                  }}
-                />
-              </label>
-            </div>
           </div>
 
           {isAdmin && (

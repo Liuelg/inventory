@@ -7,6 +7,7 @@ export type SaleItem = {
   usd: number
   birr: number
   visa: number
+  image?: string
   _id?: string
 }
 

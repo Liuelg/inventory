@@ -15,6 +15,7 @@ const SaleItemSchema = Schema({
   usd: { type: Number, default: 0, min: 0 },
   birr: { type: Number, default: 0, min: 0 },
   visa: { type: Number, default: 0, min: 0 },
+  image: { type: String },
 })
 
 const saleSchema = Schema({

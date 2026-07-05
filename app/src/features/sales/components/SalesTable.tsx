@@ -28,11 +28,12 @@ function getTotalItems(sale: Sale) {
 
 function getProductImages(items: SaleItem[]) {
   return items
-    .map((item) =>
-      typeof item.item_id === "object" && item.item_id !== null
-        ? item.item_id.image
-        : undefined
-    )
+    .map((item) => {
+      if (item.image) return item.image
+      if (typeof item.item_id === "object" && item.item_id !== null)
+        return item.item_id.image
+      return undefined
+    })
     .filter(Boolean) as string[]
 }
 

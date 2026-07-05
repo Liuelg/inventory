@@ -2,7 +2,6 @@ import { Router } from "express";
 import fs from "fs";
 import path from "path";
 import Product from "../models/Products.js";
-import { uploadProductImage } from "../middleware/upload.js";
 
 const router = Router();
 
@@ -14,34 +13,17 @@ function deleteImage(imagePath) {
   });
 }
 
-function parseBody(req) {
-  if (req.body.data) {
-    try {
-      return JSON.parse(req.body.data);
-    } catch {
-      return { ...req.body };
-    }
-  }
-  return { ...req.body };
-}
-
-router.post("/", uploadProductImage, async (req, res) => {
+router.post("/", async (req, res) => {
   try {
-    const body = parseBody(req);
+    const body = req.body;
     if (req.user?.role !== "admin") {
       delete body.price;
       delete body.previous_prices;
-    }
-    if (req.file) {
-      body.image = `/uploads/products/${req.file.filename}`;
     }
     const newProduct = new Product(body);
     const savedProduct = await newProduct.save();
     return res.status(201).json(savedProduct);
   } catch (err) {
-    if (req.file) {
-      deleteImage(req.file.path);
-    }
     res.status(400).json({ message: err.message });
   }
 });
@@ -74,16 +56,12 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-router.patch("/:id", uploadProductImage, async (req, res) => {
+router.patch("/:id", async (req, res) => {
   try {
-    const body = parseBody(req);
+    const body = req.body;
     if (req.user?.role !== "admin") {
       delete body.price;
       delete body.previous_prices;
-    }
-
-    if (req.file) {
-      body.image = `/uploads/products/${req.file.filename}`;
     }
 
     const oldProduct = await Product.findByIdAndUpdate(
@@ -93,18 +71,16 @@ router.patch("/:id", uploadProductImage, async (req, res) => {
     );
 
     if (!oldProduct) {
-      if (req.file) deleteImage(req.file.path);
       return res.status(404).json({ message: "Product not found" });
     }
 
-    if ((req.file || body.image === "") && oldProduct.image) {
+    if (body.image === "" && oldProduct.image) {
       deleteImage(oldProduct.image);
     }
 
     const responseProduct = { ...oldProduct.toObject(), ...body };
     res.json(responseProduct);
   } catch (err) {
-    if (req.file) deleteImage(req.file.path);
     if (err.kind === "ObjectId") {
       return res.status(400).json({ message: "Invalid Product ID format" });
     }

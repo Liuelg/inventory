@@ -13,7 +13,10 @@ export function useCreateSale() {
   const qc = useQueryClient()
 
   return useMutation({
-    mutationFn: (payload: SalePayload) => saleApi.create(payload),
+    mutationFn: (payload: SalePayload | FormData) => {
+      if (payload instanceof FormData) return saleApi.createWithImages(payload)
+      return saleApi.create(payload)
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sales"] })
       qc.invalidateQueries({ queryKey: ["stores"] })
@@ -31,8 +34,11 @@ export function useUpdateSale() {
       payload,
     }: {
       id: string
-      payload: Partial<SalePayload>
-    }) => saleApi.update(id, payload),
+      payload: Partial<SalePayload> | FormData
+    }) => {
+      if (payload instanceof FormData) return saleApi.updateWithImages(id, payload)
+      return saleApi.update(id, payload)
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sales"] })
       qc.invalidateQueries({ queryKey: ["stores"] })
