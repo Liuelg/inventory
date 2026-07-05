@@ -535,27 +535,174 @@ export function SalesForm({
 
           {form.items.map((item, index) => {
             const preview = getItemPreview(index, item)
+
+            const photoTrigger = preview ? (
+              <div className="relative h-9 w-9 shrink-0 rounded-md border overflow-hidden">
+                <img
+                  src={preview}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => clearImage(index)}
+                  className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </div>
+            ) : (
+              <label className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md border border-dashed border-muted-foreground/40 hover:border-muted-foreground hover:bg-accent transition-colors">
+                <ImagePlus className="h-4 w-4 text-muted-foreground/60" />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null
+                    if (file && file.size > 2 * 1024 * 1024) {
+                      setError("Each image must be smaller than 2MB")
+                      return
+                    }
+                    handleImageChange(index, file)
+                  }}
+                />
+              </label>
+            )
+
+            const qtyInput = (
+              <div className="grid gap-0.5">
+                <Label className="text-[10px] leading-none">
+                  Qty
+                  {item.item_id && (
+                    <span className="text-muted-foreground ml-0.5">
+                      /{storeItemsMap.get(item.item_id) ?? 0}
+                    </span>
+                  )}
+                </Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max={storeItemsMap.get(item.item_id) ?? undefined}
+                  value={item.quantity}
+                  onChange={(e) =>
+                    setItemField(index, "quantity", e.target.value)
+                  }
+                  className="h-8 px-1.5 text-xs"
+                />
+              </div>
+            )
+
+            const eurInput = (
+              <div className="grid gap-0.5">
+                <Label className="text-[10px] leading-none">EUR</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                  value={item.eur}
+                  onChange={(e) =>
+                    setItemField(index, "eur", e.target.value)
+                  }
+                  className="h-8 px-1.5 text-xs"
+                />
+              </div>
+            )
+
+            const usdInput = (
+              <div className="grid gap-0.5">
+                <Label className="text-[10px] leading-none">USD</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                  value={item.usd}
+                  onChange={(e) =>
+                    setItemField(index, "usd", e.target.value)
+                  }
+                  className="h-8 px-1.5 text-xs"
+                />
+              </div>
+            )
+
+            const birrInput = (
+              <div className="grid gap-0.5">
+                <Label className="text-[10px] leading-none">BIRR</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                  value={item.birr}
+                  onChange={(e) =>
+                    setItemField(index, "birr", e.target.value)
+                  }
+                  className="h-8 px-1.5 text-xs"
+                />
+              </div>
+            )
+
+            const visaInput = (
+              <div className="grid gap-0.5">
+                <Label className="text-[10px] leading-none">VISA</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                  value={item.visa}
+                  onChange={(e) =>
+                    setItemField(index, "visa", e.target.value)
+                  }
+                  className="h-8 px-1.5 text-xs"
+                />
+              </div>
+            )
+
             return (
-              <div
-                key={index}
-                className="flex flex-col gap-3 rounded-lg border p-3 sm:grid sm:grid-cols-[48px_1fr_60px_72px_72px_72px_72px_32px] sm:gap-3 sm:items-center sm:border-0 sm:p-0"
-              >
-                <div className="flex items-center gap-3 sm:justify-center">
-                  <div className="relative h-10 w-10 shrink-0 rounded-md border bg-muted overflow-hidden">
-                    {preview ? (
-                      <img
-                        src={preview}
-                        alt=""
-                        className="h-full w-full object-cover"
+              <div key={index}>
+                {/* Mobile layout */}
+                <div className="sm:hidden flex flex-col gap-2 rounded-lg border p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 min-w-0">
+                      <Label className="text-xs">Product</Label>
+                      <ProductSearchSelect
+                        products={availableProducts}
+                        storeItemsMap={storeItemsMap}
+                        value={item.item_id}
+                        onChange={(v) => handleProductChange(index, v)}
                       />
-                    ) : (
-                      <div className="h-full w-full flex items-center justify-center">
-                        <ImagePlus className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    )}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => removeItem(index)}
+                      disabled={form.items.length <= 1}
+                      className="h-8 w-8 shrink-0"
+                    >
+                      <span className="text-destructive">×</span>
+                    </Button>
                   </div>
-                  <div className="flex-1 sm:hidden">
-                    <Label className="text-xs">Product</Label>
+                  <div className="flex items-end gap-1.5">
+                    <div className="shrink-0">{photoTrigger}</div>
+                    <div className="flex-1 min-w-0">{qtyInput}</div>
+                    <div className="flex-1 min-w-0">{eurInput}</div>
+                    <div className="flex-1 min-w-0">{usdInput}</div>
+                    <div className="flex-1 min-w-0">{birrInput}</div>
+                    <div className="flex-1 min-w-0">{visaInput}</div>
+                  </div>
+                </div>
+
+                {/* Desktop layout */}
+                <div className="hidden sm:grid sm:grid-cols-[40px_1fr_52px_64px_64px_64px_64px_28px] sm:gap-2 sm:items-center">
+                  <div className="flex items-center justify-center">
+                    {photoTrigger}
+                  </div>
+                  <div className="grid gap-0.5 min-w-0">
+                    <Label className="text-[10px] leading-none">Product</Label>
                     <ProductSearchSelect
                       products={availableProducts}
                       storeItemsMap={storeItemsMap}
@@ -563,142 +710,22 @@ export function SalesForm({
                       onChange={(v) => handleProductChange(index, v)}
                     />
                   </div>
+                  {qtyInput}
+                  {eurInput}
+                  {usdInput}
+                  {birrInput}
+                  {visaInput}
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon-sm"
                     onClick={() => removeItem(index)}
                     disabled={form.items.length <= 1}
-                    className="h-8 w-8 sm:hidden"
+                    className="h-8 w-8"
                   >
                     <span className="text-destructive">×</span>
                   </Button>
                 </div>
-                <div className="hidden sm:grid gap-1 min-w-0">
-                  <Label className="text-[10px] leading-none">Product</Label>
-                  <ProductSearchSelect
-                    products={availableProducts}
-                    storeItemsMap={storeItemsMap}
-                    value={item.item_id}
-                    onChange={(v) => handleProductChange(index, v)}
-                  />
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 sm:gap-1">
-                  <div className="grid gap-1">
-                    <Label className="text-xs sm:text-[10px] leading-none">
-                      Qty
-                      {item.item_id && (
-                        <span className="text-muted-foreground ml-0.5">
-                          /{storeItemsMap.get(item.item_id) ?? 0}
-                        </span>
-                      )}
-                    </Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      max={storeItemsMap.get(item.item_id) ?? undefined}
-                      value={item.quantity}
-                      onChange={(e) =>
-                        setItemField(index, "quantity", e.target.value)
-                      }
-                      className="h-9 sm:h-8 px-2 sm:px-1.5 text-sm sm:text-xs"
-                    />
-                  </div>
-                  <div className="grid gap-1">
-                    <Label className="text-xs sm:text-[10px] leading-none">EUR</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="0"
-                      value={item.eur}
-                      onChange={(e) =>
-                        setItemField(index, "eur", e.target.value)
-                      }
-                      className="h-9 sm:h-8 px-2 sm:px-1.5 text-sm sm:text-xs"
-                    />
-                  </div>
-                  <div className="grid gap-1">
-                    <Label className="text-xs sm:text-[10px] leading-none">USD</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="0"
-                      value={item.usd}
-                      onChange={(e) =>
-                        setItemField(index, "usd", e.target.value)
-                      }
-                      className="h-9 sm:h-8 px-2 sm:px-1.5 text-sm sm:text-xs"
-                    />
-                  </div>
-                  <div className="grid gap-1">
-                    <Label className="text-xs sm:text-[10px] leading-none">BIRR</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="0"
-                      value={item.birr}
-                      onChange={(e) =>
-                        setItemField(index, "birr", e.target.value)
-                      }
-                      className="h-9 sm:h-8 px-2 sm:px-1.5 text-sm sm:text-xs"
-                    />
-                  </div>
-                  <div className="grid gap-1">
-                    <Label className="text-xs sm:text-[10px] leading-none">VISA</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="0"
-                      value={item.visa}
-                      onChange={(e) =>
-                        setItemField(index, "visa", e.target.value)
-                      }
-                      className="h-9 sm:h-8 px-2 sm:px-1.5 text-sm sm:text-xs"
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 sm:justify-center">
-                  <label className="flex cursor-pointer items-center gap-1 rounded-md border border-input bg-background px-2 py-1.5 text-xs hover:bg-accent">
-                    <ImagePlus className="h-3 w-3" />
-                    <span className="hidden sm:inline">Photo</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0] || null
-                        if (file && file.size > 2 * 1024 * 1024) {
-                          setError("Each image must be smaller than 2MB")
-                          return
-                        }
-                        handleImageChange(index, file)
-                      }}
-                    />
-                  </label>
-                  {preview ? (
-                    <button
-                      type="button"
-                      onClick={() => clearImage(index)}
-                      className="flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  ) : null}
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => removeItem(index)}
-                  disabled={form.items.length <= 1}
-                  className="hidden sm:flex h-8 w-8"
-                >
-                  <span className="text-destructive">×</span>
-                </Button>
               </div>
             )
           })}
