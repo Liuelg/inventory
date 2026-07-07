@@ -338,9 +338,6 @@ export function SalesTable({ onEdit, displayCurrency, rates }: SalesTableProps) 
                         <TableHead>Product</TableHead>
                         <TableHead className="text-right">Qty</TableHead>
                         <TableHead className="text-right">Payment</TableHead>
-                        <TableHead className="text-right">
-                          Value ({getCurrencySymbol(displayCurrency)})
-                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
