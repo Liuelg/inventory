@@ -34,6 +34,7 @@ type SaleItemForm = {
   visa: string
   image: string
   imageFile: File | null
+  previewUrl?: string
 }
 
 type SaleFormState = {
@@ -272,15 +273,22 @@ export function SalesForm({
   const { data: userStore } = useStore(session?.store || "")
   const create = useCreateSale()
   const update = useUpdateSale()
-  const previewUrls = useRef<Map<number, string>>(new Map())
+  const formRef = useRef(form)
 
-  // Clean up object URLs on unmount / close
   useEffect(() => {
-    if (!open) {
-      previewUrls.current.forEach((url) => URL.revokeObjectURL(url))
-      previewUrls.current.clear()
+    formRef.current = form
+  })
+
+  // Clean up object URLs on unmount
+  useEffect(() => {
+    return () => {
+      formRef.current.items.forEach((item) => {
+        if (item.previewUrl) {
+          URL.revokeObjectURL(item.previewUrl)
+        }
+      })
     }
-  }, [open])
+  }, [])
 
   // Build map of available quantities from store inventory
   const storeItemsMap = useMemo(() => {
@@ -350,15 +358,15 @@ export function SalesForm({
   function handleImageChange(index: number, file: File | null) {
     setForm((prev) => {
       const items = [...prev.items]
-      const prevFile = items[index].imageFile
-      if (prevFile && previewUrls.current.has(index)) {
-        URL.revokeObjectURL(previewUrls.current.get(index)!)
-        previewUrls.current.delete(index)
+      const prevItem = items[index]
+      if (prevItem.previewUrl) {
+        URL.revokeObjectURL(prevItem.previewUrl)
       }
       items[index] = {
-        ...items[index],
+        ...prevItem,
         imageFile: file,
-        image: file ? "" : items[index].image,
+        image: file ? "" : prevItem.image,
+        previewUrl: file ? URL.createObjectURL(file) : undefined,
       }
       return { ...prev, items }
     })
@@ -367,31 +375,18 @@ export function SalesForm({
   function clearImage(index: number) {
     setForm((prev) => {
       const items = [...prev.items]
-      const prevFile = items[index].imageFile
-      if (prevFile && previewUrls.current.has(index)) {
-        URL.revokeObjectURL(previewUrls.current.get(index)!)
-        previewUrls.current.delete(index)
+      const prevItem = items[index]
+      if (prevItem.previewUrl) {
+        URL.revokeObjectURL(prevItem.previewUrl)
       }
-      items[index] = { ...items[index], imageFile: null, image: "" }
+      items[index] = {
+        ...prevItem,
+        imageFile: null,
+        image: "",
+        previewUrl: undefined,
+      }
       return { ...prev, items }
     })
-  }
-
-  function getItemPreview(index: number, item: SaleItemForm): string | undefined {
-    if (item.imageFile) {
-      if (!previewUrls.current.has(index)) {
-        previewUrls.current.set(index, URL.createObjectURL(item.imageFile))
-      }
-      return previewUrls.current.get(index)
-    }
-    if (item.image) {
-      return getProductImageUrl(item.image)
-    }
-    if (previewUrls.current.has(index)) {
-      URL.revokeObjectURL(previewUrls.current.get(index)!)
-      previewUrls.current.delete(index)
-    }
-    return undefined
   }
 
   function addItem() {
@@ -404,12 +399,11 @@ export function SalesForm({
   function removeItem(index: number) {
     setForm((prev) => {
       if (prev.items.length <= 1) return prev
-      const items = prev.items.filter((_, i) => i !== index)
-      // Clean up preview URL for removed item
-      if (previewUrls.current.has(index)) {
-        URL.revokeObjectURL(previewUrls.current.get(index)!)
-        previewUrls.current.delete(index)
+      const item = prev.items[index]
+      if (item.previewUrl) {
+        URL.revokeObjectURL(item.previewUrl)
       }
+      const items = prev.items.filter((_, i) => i !== index)
       return { ...prev, items }
     })
   }
@@ -533,7 +527,9 @@ export function SalesForm({
           <Label>Items</Label>
 
           {form.items.map((item, index) => {
-            const preview = getItemPreview(index, item)
+            const preview =
+              item.previewUrl ||
+              (item.image ? getProductImageUrl(item.image) : undefined)
 
             const photoTrigger = preview ? (
               <div className="relative h-9 w-9 shrink-0 rounded-md border overflow-hidden">

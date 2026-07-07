@@ -122,19 +122,6 @@ function getConvertedTotal(
   return total
 }
 
-function getItemConvertedValue(
-  item: SaleItem,
-  targetCurrency: CurrencyCode,
-  latestRates: CurrencyRates
-): number {
-  let total = 0
-  total += convertCurrency(item.eur || 0, "eur", targetCurrency, latestRates)
-  total += convertCurrency(item.usd || 0, "usd", targetCurrency, latestRates)
-  total += convertCurrency(item.birr || 0, "birr", targetCurrency, latestRates)
-  total += convertCurrency(item.visa || 0, "visa", targetCurrency, latestRates)
-  return total
-}
-
 function getItemPriceBreakdown(item: SaleItem): string {
   const parts: string[] = []
   if (item.eur) parts.push(`€${item.eur}`)

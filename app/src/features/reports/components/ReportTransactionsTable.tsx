@@ -89,13 +89,6 @@ export function ReportTransactionsTable({ data, currency }: Props) {
                     <TableCell className="text-right text-xs text-muted-foreground">
                       {priceParts.join(" | ") || "—"}
                     </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {symbol}
-                      {item.value.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </TableCell>
                   </TableRow>
                 )
               })}
