@@ -213,6 +213,7 @@ router.get("/", async (req, res, next) => {
     // Aggregate summary
     let totalItems = 0
     let totalValue = 0
+    const totalValueByCurrency = type === 'sales' ? { eur: 0, usd: 0, birr: 0, visa: 0 } : null
 
     // Breakdown by product
     const productMap = new Map()
@@ -226,13 +227,33 @@ router.get("/", async (req, res, next) => {
 
       let recordQuantity = 0
       let recordValue = 0
+      const recordValueByCurrency = type === 'sales' ? { eur: 0, usd: 0, birr: 0, visa: 0 } : null
 
       for (const item of record.items || []) {
         const qty = item.quantity || 0
-        const price = type === 'sales'
-          ? ((item.eur || 0) + (item.usd || 0) + (item.birr || 0) + (item.visa || 0))
-          : (item.price || 0)
-        const itemValue = qty * price
+        let itemValue = 0
+
+        if (type === 'sales') {
+          const itemEur = (item.eur || 0) * qty
+          const itemUsd = (item.usd || 0) * qty
+          const itemBirr = (item.birr || 0) * qty
+          const itemVisa = (item.visa || 0) * qty
+
+          itemValue = itemEur + itemUsd + itemBirr + itemVisa
+
+          totalValueByCurrency.eur += itemEur
+          totalValueByCurrency.usd += itemUsd
+          totalValueByCurrency.birr += itemBirr
+          totalValueByCurrency.visa += itemVisa
+
+          recordValueByCurrency.eur += itemEur
+          recordValueByCurrency.usd += itemUsd
+          recordValueByCurrency.birr += itemBirr
+          recordValueByCurrency.visa += itemVisa
+        } else {
+          const price = item.price || 0
+          itemValue = qty * price
+        }
 
         totalItems += qty
         totalValue += itemValue
@@ -247,9 +268,16 @@ router.get("/", async (req, res, next) => {
             product: { _id: productId, name: productName },
             quantity: 0,
             value: 0,
+            valueByCurrency: type === 'sales' ? { eur: 0, usd: 0, birr: 0, visa: 0 } : undefined,
           }
           existing.quantity += qty
           existing.value += itemValue
+          if (type === 'sales') {
+            existing.valueByCurrency.eur += (item.eur || 0) * qty
+            existing.valueByCurrency.usd += (item.usd || 0) * qty
+            existing.valueByCurrency.birr += (item.birr || 0) * qty
+            existing.valueByCurrency.visa += (item.visa || 0) * qty
+          }
           productMap.set(productId, existing)
         }
       }
@@ -260,10 +288,17 @@ router.get("/", async (req, res, next) => {
           quantity: 0,
           value: 0,
           records: 0,
+          valueByCurrency: type === 'sales' ? { eur: 0, usd: 0, birr: 0, visa: 0 } : undefined,
         }
         existing.quantity += recordQuantity
         existing.value += recordValue
         existing.records += 1
+        if (type === 'sales' && recordValueByCurrency) {
+          existing.valueByCurrency.eur += recordValueByCurrency.eur
+          existing.valueByCurrency.usd += recordValueByCurrency.usd
+          existing.valueByCurrency.birr += recordValueByCurrency.birr
+          existing.valueByCurrency.visa += recordValueByCurrency.visa
+        }
         storeMap.set(storeId, existing)
       }
     }
@@ -283,6 +318,7 @@ router.get("/", async (req, res, next) => {
           totalRecords: records.length,
           totalItems,
           totalValue,
+          ...(totalValueByCurrency && { totalValueByCurrency }),
         },
         breakdown,
         byStore,
