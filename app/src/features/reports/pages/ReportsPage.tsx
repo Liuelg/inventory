@@ -6,6 +6,7 @@ import { ReportFilters } from "../components/ReportFilters"
 import { ReportSummaryCards } from "../components/ReportSummaryCards"
 import { ReportBreakdownTable } from "../components/ReportBreakdownTable"
 import { ReportByStoreTable } from "../components/ReportByStoreTable"
+import { ReportTransactionsTable } from "../components/ReportTransactionsTable"
 import { useReport } from "../hooks"
 import { generateReportPDF } from "../utils"
 import type { ReportParams } from "../types"
@@ -82,22 +83,45 @@ export function ReportsPage() {
         </div>
       ) : report ? (
         <div className="flex flex-col gap-4">
-          <ReportSummaryCards summary={report.summary} />
+          <ReportSummaryCards
+            summary={report.summary}
+            currency={report.currency}
+          />
 
           {report.type === "remaining" ? (
-            <ReportBreakdownTable data={report.breakdown} />
+            <ReportBreakdownTable
+              data={report.breakdown}
+              currency={report.currency}
+            />
           ) : (
             <Tabs defaultValue="product">
               <TabsList>
                 <TabsTrigger value="product">By Product</TabsTrigger>
                 <TabsTrigger value="store">By Store</TabsTrigger>
+                {report.type === "sales" && (
+                  <TabsTrigger value="transaction">By Transaction</TabsTrigger>
+                )}
               </TabsList>
               <TabsContent value="product" className="pt-2">
-                <ReportBreakdownTable data={report.breakdown} />
+                <ReportBreakdownTable
+                  data={report.breakdown}
+                  currency={report.currency}
+                />
               </TabsContent>
               <TabsContent value="store" className="pt-2">
-                <ReportByStoreTable data={report.byStore} />
+                <ReportByStoreTable
+                  data={report.byStore}
+                  currency={report.currency}
+                />
               </TabsContent>
+              {report.type === "sales" && (
+                <TabsContent value="transaction" className="pt-2">
+                  <ReportTransactionsTable
+                    data={report.transactions}
+                    currency={report.currency}
+                  />
+                </TabsContent>
+              )}
             </Tabs>
           )}
         </div>

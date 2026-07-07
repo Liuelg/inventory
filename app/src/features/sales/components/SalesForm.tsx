@@ -118,8 +118,7 @@ function toPayload(form: SaleFormState): SalePayload {
     }))
 
   const totalAmount = items.reduce(
-    (sum, i) =>
-      sum + i.quantity * (i.eur + i.usd + i.birr + i.visa),
+    (sum, i) => sum + (i.eur + i.usd + i.birr + i.visa),
     0
   )
 

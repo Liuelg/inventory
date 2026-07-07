@@ -13,6 +13,7 @@ import {
 import { useStores } from "@/features/stores/hooks"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import type { ReportType, ReportPeriod, ReportParams } from "../types"
+import type { CurrencyCode } from "@/features/currency/types"
 import { BarChart3 } from "lucide-react"
 
 const REPORT_TYPES: { value: ReportType; label: string }[] = [
@@ -49,6 +50,7 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
   const [period, setPeriod] = useState<ReportPeriod>("daily")
   const [date, setDate] = useState(formatDateInput(new Date()))
   const [store, setStore] = useState<string>(userStore || "all")
+  const [currency, setCurrency] = useState<CurrencyCode>("usd")
 
   const { data: storesData } = useStores()
 
@@ -62,6 +64,7 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
       type,
       period,
       date,
+      currency,
     }
     const effectiveStore = isAdmin ? store : userStore
     if (effectiveStore && effectiveStore !== "all") {
@@ -139,6 +142,24 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
                   {s.name}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-1 flex-col gap-2 px-0 sm:px-4 py-0 sm:py-2">
+          <Label htmlFor="report-currency">Currency</Label>
+          <Select
+            value={currency}
+            onValueChange={(v) => setCurrency(v as CurrencyCode)}
+          >
+            <SelectTrigger id="report-currency">
+              <SelectValue placeholder="Select currency" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="usd">USD ($)</SelectItem>
+              <SelectItem value="eur">EUR (€)</SelectItem>
+              <SelectItem value="birr">Birr (Br)</SelectItem>
+              <SelectItem value="visa">Visa ($)</SelectItem>
             </SelectContent>
           </Select>
         </div>

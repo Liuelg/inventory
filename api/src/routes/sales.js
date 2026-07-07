@@ -29,7 +29,7 @@ function computeConvertedTotal(items, rates) {
     const usdVal = (i.usd || 0) / safeRates.usd;
     const birrVal = (i.birr || 0) / safeRates.birr;
     const visaVal = (i.visa || 0) / safeRates.visa;
-    return sum + (i.quantity * (eurVal + usdVal + birrVal + visaVal));
+    return sum + (eurVal + usdVal + birrVal + visaVal);
   }, 0);
 }
 

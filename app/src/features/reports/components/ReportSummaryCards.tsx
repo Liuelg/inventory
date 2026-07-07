@@ -1,12 +1,22 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { ReportSummary } from "../types"
+import type { CurrencyCode } from "@/features/currency/types"
 import { FileText, Package, Banknote } from "lucide-react"
+
+const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {
+  eur: "€",
+  usd: "$",
+  birr: "Br",
+  visa: "Visa $",
+}
 
 type Props = {
   summary: ReportSummary
+  currency: CurrencyCode
 }
 
-export function ReportSummaryCards({ summary }: Props) {
+export function ReportSummaryCards({ summary, currency }: Props) {
+  const symbol = CURRENCY_SYMBOLS[currency]
   return (
     <div className="grid gap-4 md:grid-cols-3">
       <Card>
@@ -36,7 +46,7 @@ export function ReportSummaryCards({ summary }: Props) {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            ${summary.totalValue.toLocaleString(undefined, {
+            {symbol}{summary.totalValue.toLocaleString(undefined, {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}

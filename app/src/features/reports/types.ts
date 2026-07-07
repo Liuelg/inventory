@@ -1,3 +1,5 @@
+import type { CurrencyCode } from "@/features/currency/types"
+
 export type ReportType = "sales" | "goodIns" | "stockouts" | "remaining"
 export type ReportPeriod = "daily" | "weekly" | "monthly"
 
@@ -20,6 +22,27 @@ export type ReportByStoreItem = {
   records: number
 }
 
+export type ReportTransactionItem = {
+  product: { _id: string; name: string }
+  quantity: number
+  value: number
+  eur: number
+  usd: number
+  birr: number
+  visa: number
+}
+
+export type ReportTransaction = {
+  _id: string
+  invoiceNumber: string
+  customerName?: string
+  salesName?: string
+  storeName: string
+  date: string
+  totalAmount: number
+  items: ReportTransactionItem[]
+}
+
 export type ReportData = {
   type: ReportType
   period: ReportPeriod
@@ -29,6 +52,8 @@ export type ReportData = {
   summary: ReportSummary
   breakdown: ReportBreakdownItem[]
   byStore: ReportByStoreItem[]
+  transactions: ReportTransaction[]
+  currency: CurrencyCode
 }
 
 export type ReportParams = {
@@ -36,4 +61,5 @@ export type ReportParams = {
   period: ReportPeriod
   date: string
   store?: string
+  currency?: CurrencyCode
 }

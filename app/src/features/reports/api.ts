@@ -8,6 +8,7 @@ export const reportApi = {
     query.set("period", params.period)
     query.set("date", params.date)
     if (params.store) query.set("store", params.store)
+    if (params.currency) query.set("currency", params.currency)
     return fetcher<{ success: boolean; data: ReportData }>(
       `/api/reports?${query.toString()}`
     )

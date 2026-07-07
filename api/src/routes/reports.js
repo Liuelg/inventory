@@ -59,18 +59,28 @@ function computeItemValueUSD(item, rates) {
     birr: rates?.birr > 0 ? rates.birr : 1,
     visa: rates?.visa > 0 ? rates.visa : 1,
   }
-  const qty = item.quantity || 0
   const priceUSD =
     (item.eur || 0) / safeRates.eur +
     (item.usd || 0) / safeRates.usd +
     (item.birr || 0) / safeRates.birr +
     (item.visa || 0) / safeRates.visa
-  return qty * priceUSD
+  return priceUSD
+}
+
+function convertUSDToCurrency(amountUSD, targetCurrency, rates) {
+  const safeRates = {
+    eur: rates?.eur > 0 ? rates.eur : 1,
+    usd: rates?.usd > 0 ? rates.usd : 1,
+    birr: rates?.birr > 0 ? rates.birr : 1,
+    visa: rates?.visa > 0 ? rates.visa : 1,
+  }
+  return amountUSD * (safeRates[targetCurrency] || 1)
 }
 
 router.get("/", async (req, res, next) => {
   try {
-    const { type, period, date, store } = req.query
+    const { type, period, date, store, currency } = req.query
+    const targetCurrency = currency || 'usd'
     const isAdmin = req.user?.role === 'admin'
     const userStore = req.user?.store?.toString?.()
 
@@ -195,6 +205,7 @@ router.get("/", async (req, res, next) => {
           start: now.toISOString(),
           end: now.toISOString(),
           storeFilter: effectiveStore || null,
+          currency: targetCurrency,
           summary: {
             totalRecords: recordCount,
             totalItems,
@@ -202,6 +213,7 @@ router.get("/", async (req, res, next) => {
           },
           breakdown,
           byStore: [],
+          transactions: [],
         },
       })
     }
@@ -227,9 +239,12 @@ router.get("/", async (req, res, next) => {
       .populate("items.item_id", "name category")
       .sort({ [dateField]: -1 })
 
+    const isSales = type === 'sales'
+    const conversionRates = await getLatestRates()
+
     // Aggregate summary
     let totalItems = 0
-    let totalValue = 0
+    let totalValueUSD = 0
 
     // Breakdown by product
     const productMap = new Map()
@@ -237,29 +252,31 @@ router.get("/", async (req, res, next) => {
     // Breakdown by store
     const storeMap = new Map()
 
+    // Individual transactions (for sales detail view)
+    const transactions = []
+
     for (const record of records) {
       const storeId = record.store?._id?.toString?.() || record.store?.toString?.()
       const storeName = record.store?.name || "Unknown Store"
 
       let recordQuantity = 0
-      let recordValue = 0
+      let recordValueUSD = 0
 
-      // For sales, use the stored totalAmount (converted at time of sale).
-      // For per-item breakdowns, use the sale's stored rates if available.
-      const isSales = type === 'sales'
       const recordRates = isSales
-        ? (record.rates || await getLatestRates())
+        ? (record.rates || conversionRates)
         : null
 
       if (isSales) {
-        recordValue = record.totalAmount || 0
-        totalValue += recordValue
+        recordValueUSD = record.totalAmount || 0
+        totalValueUSD += recordValueUSD
       }
+
+      const transactionItems = []
 
       for (const item of record.items || []) {
         const qty = item.quantity || 0
 
-        const itemValue = isSales
+        const itemValueUSD = isSales
           ? computeItemValueUSD(item, recordRates)
           : qty * (item.price || 0)
 
@@ -267,8 +284,8 @@ router.get("/", async (req, res, next) => {
         recordQuantity += qty
 
         if (!isSales) {
-          totalValue += itemValue
-          recordValue += itemValue
+          totalValueUSD += itemValueUSD
+          recordValueUSD += itemValueUSD
         }
 
         const productId = item.item_id?._id?.toString?.() || item.item_id?.toString?.()
@@ -281,9 +298,34 @@ router.get("/", async (req, res, next) => {
             value: 0,
           }
           existing.quantity += qty
-          existing.value += itemValue
+          existing.value += itemValueUSD
           productMap.set(productId, existing)
         }
+
+        if (isSales) {
+          transactionItems.push({
+            product: { _id: productId || "—", name: productName },
+            quantity: qty,
+            value: itemValueUSD,
+            eur: item.eur || 0,
+            usd: item.usd || 0,
+            birr: item.birr || 0,
+            visa: item.visa || 0,
+          })
+        }
+      }
+
+      if (isSales) {
+        transactions.push({
+          _id: record._id.toString(),
+          invoiceNumber: record.invoiceNumber || "—",
+          customerName: record.customerName || undefined,
+          salesName: record.salesName || undefined,
+          storeName: storeName,
+          date: record[dateField]?.toISOString?.() || record[dateField],
+          totalAmount: recordValueUSD,
+          items: transactionItems,
+        })
       }
 
       if (storeId) {
@@ -294,14 +336,33 @@ router.get("/", async (req, res, next) => {
           records: 0,
         }
         existing.quantity += recordQuantity
-        existing.value += recordValue
+        existing.value += recordValueUSD
         existing.records += 1
         storeMap.set(storeId, existing)
       }
     }
 
-    const breakdown = Array.from(productMap.values()).sort((a, b) => b.quantity - a.quantity)
-    const byStore = Array.from(storeMap.values()).sort((a, b) => b.quantity - a.quantity)
+    // Convert all USD values to target currency
+    const totalValue = convertUSDToCurrency(totalValueUSD, targetCurrency, conversionRates)
+
+    const breakdown = Array.from(productMap.values()).map((item) => ({
+      ...item,
+      value: convertUSDToCurrency(item.value, targetCurrency, conversionRates),
+    })).sort((a, b) => b.quantity - a.quantity)
+
+    const byStore = Array.from(storeMap.values()).map((item) => ({
+      ...item,
+      value: convertUSDToCurrency(item.value, targetCurrency, conversionRates),
+    })).sort((a, b) => b.quantity - a.quantity)
+
+    const transactionsConverted = transactions.map((t) => ({
+      ...t,
+      totalAmount: convertUSDToCurrency(t.totalAmount, targetCurrency, conversionRates),
+      items: t.items.map((i) => ({
+        ...i,
+        value: convertUSDToCurrency(i.value, targetCurrency, conversionRates),
+      })),
+    }))
 
     res.json({
       success: true,
@@ -311,6 +372,7 @@ router.get("/", async (req, res, next) => {
         start: start.toISOString(),
         end: end.toISOString(),
         storeFilter: store || null,
+        currency: targetCurrency,
         summary: {
           totalRecords: records.length,
           totalItems,
@@ -318,6 +380,7 @@ router.get("/", async (req, res, next) => {
         },
         breakdown,
         byStore,
+        transactions: transactionsConverted,
       },
     })
   } catch (err) {

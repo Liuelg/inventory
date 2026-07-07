@@ -11,7 +11,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Pencil, Trash2 } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Pencil, Trash2, Eye } from "lucide-react"
 import { useDeleteSale, useSales } from "../hooks"
 import { ProductImageCell } from "@/components/ProductImageCell"
 import { getCurrencySymbol } from "./CurrencySelector"
@@ -45,10 +60,10 @@ function getProductImage(item: SaleItem): string | undefined {
 function getSaleCurrencies(sale: Sale): { label: string; total: number }[] {
   const sums = { eur: 0, usd: 0, birr: 0, visa: 0 }
   for (const item of sale.items) {
-    sums.eur += (item.eur || 0) * item.quantity
-    sums.usd += (item.usd || 0) * item.quantity
-    sums.birr += (item.birr || 0) * item.quantity
-    sums.visa += (item.visa || 0) * item.quantity
+    sums.eur += item.eur || 0
+    sums.usd += item.usd || 0
+    sums.birr += item.birr || 0
+    sums.visa += item.visa || 0
   }
   const map = [
     { label: "EUR", total: sums.eur },
@@ -99,32 +114,34 @@ function getConvertedTotal(
   // convert each item's currencies using the latest live rates.
   let total = 0
   for (const item of sale.items) {
-    total += convertCurrency(
-      (item.eur || 0) * item.quantity,
-      "eur",
-      targetCurrency,
-      latestRates
-    )
-    total += convertCurrency(
-      (item.usd || 0) * item.quantity,
-      "usd",
-      targetCurrency,
-      latestRates
-    )
-    total += convertCurrency(
-      (item.birr || 0) * item.quantity,
-      "birr",
-      targetCurrency,
-      latestRates
-    )
-    total += convertCurrency(
-      (item.visa || 0) * item.quantity,
-      "visa",
-      targetCurrency,
-      latestRates
-    )
+    total += convertCurrency(item.eur || 0, "eur", targetCurrency, latestRates)
+    total += convertCurrency(item.usd || 0, "usd", targetCurrency, latestRates)
+    total += convertCurrency(item.birr || 0, "birr", targetCurrency, latestRates)
+    total += convertCurrency(item.visa || 0, "visa", targetCurrency, latestRates)
   }
   return total
+}
+
+function getItemConvertedValue(
+  item: SaleItem,
+  targetCurrency: CurrencyCode,
+  latestRates: CurrencyRates
+): number {
+  let total = 0
+  total += convertCurrency(item.eur || 0, "eur", targetCurrency, latestRates)
+  total += convertCurrency(item.usd || 0, "usd", targetCurrency, latestRates)
+  total += convertCurrency(item.birr || 0, "birr", targetCurrency, latestRates)
+  total += convertCurrency(item.visa || 0, "visa", targetCurrency, latestRates)
+  return total
+}
+
+function getItemPriceBreakdown(item: SaleItem): string {
+  const parts: string[] = []
+  if (item.eur) parts.push(`€${item.eur}`)
+  if (item.usd) parts.push(`$${item.usd}`)
+  if (item.birr) parts.push(`Br${item.birr}`)
+  if (item.visa) parts.push(`Visa $${item.visa}`)
+  return parts.join(" | ") || "—"
 }
 
 interface SalesTableProps {
@@ -137,6 +154,7 @@ export function SalesTable({ onEdit, displayCurrency, rates }: SalesTableProps) 
   const { data: sales, isLoading } = useSales()
   const remove = useDeleteSale()
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [detailSale, setDetailSale] = useState<Sale | null>(null)
 
   const columns: ColumnDef<Sale>[] = [
     {
@@ -223,9 +241,17 @@ export function SalesTable({ onEdit, displayCurrency, rates }: SalesTableProps) 
     },
     {
       header: "Actions",
-      className: "w-[120px] text-right",
+      className: "w-[140px] text-right",
       cell: (sale) => (
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setDetailSale(sale)}
+            title="View details"
+          >
+            <Eye />
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => onEdit(sale)}>
             <Pencil />
           </Button>
@@ -250,7 +276,113 @@ export function SalesTable({ onEdit, displayCurrency, rates }: SalesTableProps) 
         keyExtractor={(sale) => sale._id}
         loading={isLoading}
         emptyMessage="No sales found."
+        onRowClick={(sale) => setDetailSale(sale)}
       />
+
+      {/* Sale Detail Dialog */}
+      <Dialog open={!!detailSale} onOpenChange={() => setDetailSale(null)}>
+        <DialogContent className="max-h-[90vh] overflow-auto max-w-[700px]">
+          {detailSale && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Sale #{detailSale.invoiceNumber}</DialogTitle>
+                <DialogDescription>
+                  {detailSale.customerName
+                    ? `Customer: ${detailSale.customerName}`
+                    : "No customer name"}
+                  {" · "}
+                  {detailSale.date_time
+                    ? new Date(detailSale.date_time).toLocaleString()
+                    : "—"}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Store:</span>{" "}
+                  <span className="font-medium">
+                    {getStoreName(detailSale.store)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Sales Person:</span>{" "}
+                  <span className="font-medium">
+                    {detailSale.salesName || "—"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Total Items:</span>{" "}
+                  <span className="font-medium">
+                    {getTotalItems(detailSale)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Total:</span>{" "}
+                  <span className="font-medium">
+                    {getCurrencySymbol(displayCurrency)}
+                    {getConvertedTotal(
+                      detailSale,
+                      displayCurrency,
+                      rates
+                    ).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-2">
+                <h4 className="text-sm font-semibold mb-2">Items</h4>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Product</TableHead>
+                        <TableHead className="text-right">Qty</TableHead>
+                        <TableHead className="text-right">Unit Price</TableHead>
+                        <TableHead className="text-right">
+                          Value ({getCurrencySymbol(displayCurrency)})
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {detailSale.items.map((item, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {getProductImage(item) && (
+                                <ProductImageCell
+                                  image={getProductImage(item)}
+                                  altName={getProductName(item)}
+                                />
+                              )}
+                              <span className="font-medium text-sm">
+                                {getProductName(item)}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {item.quantity}
+                          </TableCell>
+                          <TableCell className="text-right text-xs text-muted-foreground">
+                            {getItemPriceBreakdown(item)}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {getCurrencySymbol(displayCurrency)}
+                            {getItemConvertedValue(
+                              item,
+                              displayCurrency,
+                              rates
+                            ).toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
