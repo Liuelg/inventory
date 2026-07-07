@@ -52,13 +52,6 @@ export function ReportTransactionsTable({ data, currency }: Props) {
                   ? new Date(transaction.date).toLocaleDateString()
                   : "—"}
               </span>
-              <span className="font-semibold text-foreground">
-                {symbol}
-                {transaction.totalAmount.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </span>
             </div>
           </div>
           <Table>
@@ -67,7 +60,6 @@ export function ReportTransactionsTable({ data, currency }: Props) {
                 <TableHead>Product</TableHead>
                 <TableHead className="text-right">Qty</TableHead>
                 <TableHead className="text-right">Unit Price</TableHead>
-                <TableHead className="text-right">Value</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
