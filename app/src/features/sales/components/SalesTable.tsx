@@ -72,15 +72,20 @@ function convertCurrency(
   return amountInBase * rates[to]
 }
 
+function hasRealRates(rates?: CurrencyRates): boolean {
+  if (!rates) return false
+  // Rates are "real" if at least one is not the default of 1
+  return rates.eur !== 1 || rates.usd !== 1 || rates.birr !== 1 || rates.visa !== 1
+}
+
 function getConvertedTotal(
   sale: Sale,
   targetCurrency: CurrencyCode,
   latestRates: CurrencyRates
 ): number {
-  // If the sale has stored rates, totalAmount is the USD-equivalent
-  // computed at sale time. Convert it to the target currency using
-  // the sale's own historical rates for consistency.
-  if (sale.rates) {
+  // If the sale has REAL stored rates (not all 1s), totalAmount is the
+  // USD-equivalent computed at sale time. Convert it using those rates.
+  if (sale.rates && hasRealRates(sale.rates)) {
     const safeRates = {
       eur: sale.rates.eur > 0 ? sale.rates.eur : 1,
       usd: sale.rates.usd > 0 ? sale.rates.usd : 1,
@@ -90,8 +95,8 @@ function getConvertedTotal(
     return sale.totalAmount * safeRates[targetCurrency]
   }
 
-  // Fallback for old sales without stored rates:
-  // convert each item's currencies using the latest rates.
+  // Fallback for old sales with fake stored rates (all 1s) or no rates:
+  // convert each item's currencies using the latest live rates.
   let total = 0
   for (const item of sale.items) {
     total += convertCurrency(
@@ -162,7 +167,7 @@ export function SalesTable({ onEdit, displayCurrency, rates }: SalesTableProps) 
           </div>
         )
       },
-      className: "w-[180px] whitespace-normal align-top",
+      className: "max-w-[180px] !whitespace-normal align-top break-words",
     },
     {
       header: "Customer",

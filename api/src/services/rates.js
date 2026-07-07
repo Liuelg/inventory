@@ -7,13 +7,28 @@ import { fetchLatestRates as fetchFromAPI } from "./exchange-rates.js"
  *
  * @returns {Promise<{eur:number, usd:number, birr:number, visa:number}>}
  */
+function areRatesReal(rates) {
+  if (!rates) return false
+  // If all rates are exactly 1 (the default/fallback), treat as missing
+  return rates.eur !== 1 || rates.usd !== 1 || rates.birr !== 1 || rates.visa !== 1
+}
+
 export async function getLatestRates() {
   const latest = await CurrencyRate.findOne().sort({ date: -1 }).lean()
-  if (latest?.rates) return latest.rates
 
-  // No rates in DB — fetch from external API and cache them
+  if (latest?.rates && areRatesReal(latest.rates)) {
+    console.log("[rates] Using cached rates:", latest.rates)
+    return latest.rates
+  }
+
+  console.log("[rates] No real rates in DB — fetching from external API...")
+
+  // No real rates in DB — fetch from external API and cache them
   try {
-    const rates = await fetchFromAPI(null)
+    const fallbackRates = latest?.rates || null
+    const rates = await fetchFromAPI(fallbackRates)
+
+    console.log("[rates] Fetched from API:", rates)
 
     const today = new Date()
     today.setHours(0, 0, 0, 0)
