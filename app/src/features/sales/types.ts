@@ -1,4 +1,5 @@
 import type { Product } from "@/features/products/types"
+import type { CurrencyRates } from "@/features/currency/types"
 
 export type SaleItem = {
   item_id: string | Product
@@ -15,6 +16,7 @@ export type Sale = {
   _id: string
   items: SaleItem[]
   totalAmount: number
+  rates?: CurrencyRates
   customerName?: string
   salesName?: string
   store: string | { _id: string; name?: string }

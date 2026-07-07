@@ -1,13 +1,41 @@
 import { Router } from "express"
 import CurrencyRate from "../models/CurrencyRate.js"
-import { fetchLatestRates } from "../services/frankfurter.js"
+import { fetchLatestRates } from "../services/exchange-rates.js"
 
 const router = Router()
 
-// Get the latest currency rates
+// Get the latest currency rates.
+// Auto-fetches from Frankfurter if no rates exist or if today's rates are missing.
 router.get("/latest", async (_req, res, next) => {
   try {
     const latest = await CurrencyRate.findOne().sort({ date: -1 })
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const needsFetch =
+      !latest ||
+      new Date(latest.date).getTime() !== today.getTime() ||
+      (latest.rates.eur === 1 && latest.rates.usd === 1 && latest.rates.birr === 1 && latest.rates.visa === 1)
+
+    if (needsFetch) {
+      try {
+        const fallbackRates = latest?.rates || null
+        const rates = await fetchLatestRates(fallbackRates)
+
+        const doc = await CurrencyRate.findOneAndUpdate(
+          { date: today },
+          { base: "USD", rates, date: today },
+          { new: true, upsert: true }
+        )
+
+        return res.json({ success: true, data: doc })
+      } catch (fetchErr) {
+        // Frankfurter failed — fall back to whatever we have
+        console.error("[currency] Auto-fetch from Frankfurter failed:", fetchErr.message)
+      }
+    }
+
     if (!latest) {
       return res.json({
         success: true,
@@ -18,6 +46,7 @@ router.get("/latest", async (_req, res, next) => {
         },
       })
     }
+
     res.json({ success: true, data: latest })
   } catch (err) {
     next(err)

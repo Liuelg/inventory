@@ -28,15 +28,18 @@ function getTotalItems(sale: Sale) {
   return sale.items.reduce((sum, item) => sum + item.quantity, 0)
 }
 
-function getProductImages(items: SaleItem[]) {
-  return items
-    .map((item) => {
-      if (item.image) return item.image
-      if (typeof item.item_id === "object" && item.item_id !== null)
-        return item.item_id.image
-      return undefined
-    })
-    .filter(Boolean) as string[]
+function getProductName(item: SaleItem): string {
+  if (typeof item.item_id === "object" && item.item_id !== null) {
+    return item.item_id.name || "Unknown"
+  }
+  return "Unknown"
+}
+
+function getProductImage(item: SaleItem): string | undefined {
+  if (item.image) return item.image
+  if (typeof item.item_id === "object" && item.item_id !== null)
+    return item.item_id.image
+  return undefined
 }
 
 function getSaleCurrencies(sale: Sale): { label: string; total: number }[] {
@@ -72,33 +75,48 @@ function convertCurrency(
 function getConvertedTotal(
   sale: Sale,
   targetCurrency: CurrencyCode,
-  rates: CurrencyRates
+  latestRates: CurrencyRates
 ): number {
+  // If the sale has stored rates, totalAmount is the USD-equivalent
+  // computed at sale time. Convert it to the target currency using
+  // the sale's own historical rates for consistency.
+  if (sale.rates) {
+    const safeRates = {
+      eur: sale.rates.eur > 0 ? sale.rates.eur : 1,
+      usd: sale.rates.usd > 0 ? sale.rates.usd : 1,
+      birr: sale.rates.birr > 0 ? sale.rates.birr : 1,
+      visa: sale.rates.visa > 0 ? sale.rates.visa : 1,
+    }
+    return sale.totalAmount * safeRates[targetCurrency]
+  }
+
+  // Fallback for old sales without stored rates:
+  // convert each item's currencies using the latest rates.
   let total = 0
   for (const item of sale.items) {
     total += convertCurrency(
       (item.eur || 0) * item.quantity,
       "eur",
       targetCurrency,
-      rates
+      latestRates
     )
     total += convertCurrency(
       (item.usd || 0) * item.quantity,
       "usd",
       targetCurrency,
-      rates
+      latestRates
     )
     total += convertCurrency(
       (item.birr || 0) * item.quantity,
       "birr",
       targetCurrency,
-      rates
+      latestRates
     )
     total += convertCurrency(
       (item.visa || 0) * item.quantity,
       "visa",
       targetCurrency,
-      rates
+      latestRates
     )
   }
   return total
@@ -126,29 +144,31 @@ export function SalesTable({ onEdit, displayCurrency, rates }: SalesTableProps) 
     {
       header: "Products",
       cell: (sale) => {
-        const images = getProductImages(sale.items)
-        const extra = images.length - 3
+        const names = sale.items.map(getProductName)
+        const images = sale.items.map(getProductImage).filter(Boolean) as string[]
+        const extraCount = sale.items.length - 1
         return (
-          <div className="flex items-center gap-1">
-            {images.slice(0, 3).map((img, i) => (
+          <div className="flex items-center gap-2 min-w-0">
+            {images.length > 0 && (
               <ProductImageCell
-                key={i}
-                image={img}
-                altName="Product image"
+                image={images[0]}
+                altName={names[0] || "Product image"}
               />
-            ))}
-            {extra > 0 ? (
-              <span className="h-8 w-8 rounded-md border bg-muted flex items-center justify-center text-xs text-muted-foreground">
-                +{extra}
+            )}
+            <div className="flex flex-col min-w-0">
+              <span className="truncate text-sm">
+                {names[0] || "—"}
               </span>
-            ) : null}
-            {images.length === 0 ? (
-              <span className="text-xs text-muted-foreground">—</span>
-            ) : null}
+              {extraCount > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  +{extraCount} more
+                </span>
+              )}
+            </div>
           </div>
         )
       },
-      className: "w-[140px]",
+      className: "w-[200px]",
     },
     {
       header: "Customer",
