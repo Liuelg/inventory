@@ -9,20 +9,13 @@ import {
 import type { ReportTransaction } from "../types"
 import type { CurrencyCode } from "@/features/currency/types"
 
-const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {
-  eur: "€",
-  usd: "$",
-  birr: "Br",
-  visa: "Visa $",
-}
 
 type Props = {
   data: ReportTransaction[]
   currency: CurrencyCode
 }
 
-export function ReportTransactionsTable({ data, currency }: Props) {
-  const symbol = CURRENCY_SYMBOLS[currency]
+export function ReportTransactionsTable({ data }: Props) {
 
   if (data.length === 0) {
     return (
