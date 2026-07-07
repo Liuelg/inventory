@@ -14,7 +14,9 @@ import {
 import { Pencil, Trash2 } from "lucide-react"
 import { useDeleteSale, useSales } from "../hooks"
 import { ProductImageCell } from "@/components/ProductImageCell"
+import { getCurrencySymbol } from "./CurrencySelector"
 import type { Sale, SaleItem } from "../types"
+import type { CurrencyCode, CurrencyRates } from "@/features/currency/types"
 
 function getStoreName(store: Sale["store"]) {
   if (!store) return "-"
@@ -54,11 +56,61 @@ function getSaleCurrencies(sale: Sale): { label: string; total: number }[] {
   return map.filter((c) => c.total > 0)
 }
 
-interface SalesTableProps {
-  onEdit: (sale: Sale) => void
+function convertCurrency(
+  amount: number,
+  from: CurrencyCode,
+  to: CurrencyCode,
+  rates: CurrencyRates
+): number {
+  if (from === to) return amount
+  if (!rates || !rates[from] || !rates[to]) return amount
+  // Convert to base (USD) then to target
+  const amountInBase = amount / rates[from]
+  return amountInBase * rates[to]
 }
 
-export function SalesTable({ onEdit }: SalesTableProps) {
+function getConvertedTotal(
+  sale: Sale,
+  targetCurrency: CurrencyCode,
+  rates: CurrencyRates
+): number {
+  let total = 0
+  for (const item of sale.items) {
+    total += convertCurrency(
+      (item.eur || 0) * item.quantity,
+      "eur",
+      targetCurrency,
+      rates
+    )
+    total += convertCurrency(
+      (item.usd || 0) * item.quantity,
+      "usd",
+      targetCurrency,
+      rates
+    )
+    total += convertCurrency(
+      (item.birr || 0) * item.quantity,
+      "birr",
+      targetCurrency,
+      rates
+    )
+    total += convertCurrency(
+      (item.visa || 0) * item.quantity,
+      "visa",
+      targetCurrency,
+      rates
+    )
+  }
+  return total
+}
+
+interface SalesTableProps {
+  onEdit: (sale: Sale) => void
+  displayCurrency: CurrencyCode
+  rates: CurrencyRates
+}
+
+export function SalesTable({ onEdit, displayCurrency, rates }: SalesTableProps) {
   const { data: sales, isLoading } = useSales()
   const remove = useDeleteSale()
   const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -119,10 +171,11 @@ export function SalesTable({ onEdit }: SalesTableProps) {
       header: "Total",
       cell: (sale) => {
         const currencies = getSaleCurrencies(sale)
+        const converted = getConvertedTotal(sale, displayCurrency, rates)
         return (
           <div className="text-right">
             <div className="font-medium">
-              {sale.totalAmount.toFixed(2)}
+              {getCurrencySymbol(displayCurrency)}{converted.toFixed(2)}
             </div>
             {currencies.length > 0 && (
               <div className="flex justify-end gap-1 mt-0.5">
@@ -139,7 +192,7 @@ export function SalesTable({ onEdit }: SalesTableProps) {
           </div>
         )
       },
-      className: "w-[120px] text-right whitespace-nowrap",
+      className: "w-[140px] text-right whitespace-nowrap",
     },
     {
       header: "Date",
