@@ -316,17 +316,6 @@ export function SalesTable({ onEdit, displayCurrency, rates }: SalesTableProps) 
                     {getTotalItems(detailSale)}
                   </span>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">Total:</span>{" "}
-                  <span className="font-medium">
-                    {getCurrencySymbol(displayCurrency)}
-                    {getConvertedTotal(
-                      detailSale,
-                      displayCurrency,
-                      rates
-                    ).toFixed(2)}
-                  </span>
-                </div>
               </div>
 
               <div className="mt-2">
@@ -361,14 +350,6 @@ export function SalesTable({ onEdit, displayCurrency, rates }: SalesTableProps) 
                           </TableCell>
                           <TableCell className="text-right text-xs text-muted-foreground">
                             {getItemPriceBreakdown(item)}
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {getCurrencySymbol(displayCurrency)}
-                            {getItemConvertedValue(
-                              item,
-                              displayCurrency,
-                              rates
-                            ).toFixed(2)}
                           </TableCell>
                         </TableRow>
                       ))}
