@@ -235,6 +235,7 @@ router.patch('/:id', uploadSaleImages, async (req, res) => {
     delete body.store;
     delete body.processedBy;
     delete body.salesName;
+    delete body.date_time;
 
     // Non-admins can only edit their own store's sales
     let existingSale = null;

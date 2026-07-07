@@ -10,35 +10,39 @@ import { getLatestRates } from "../services/rates.js"
 const router = Router()
 
 function parseLocalDate(dateStr) {
-  // Parse YYYY-MM-DD as local midnight to avoid timezone shifts
+  // Parse YYYY-MM-DD as UTC midnight so date queries are consistent
+  // regardless of the server's local timezone
   const [year, month, day] = dateStr.split('-').map(Number)
-  return new Date(year, month - 1, day)
+  return new Date(Date.UTC(year, month - 1, day))
 }
 
 function getDateRange(period, anchorDate) {
   const date = anchorDate ? parseLocalDate(anchorDate) : new Date()
+  const y = date.getUTCFullYear()
+  const m = date.getUTCMonth()
+  const d = date.getUTCDate()
 
   if (period === "daily") {
-    const start = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-    const end = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1)
+    const start = new Date(Date.UTC(y, m, d))
+    const end = new Date(Date.UTC(y, m, d + 1))
     return { start, end }
   }
 
   if (period === "weekly") {
-    const end = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1)
-    const start = new Date(date.getFullYear(), date.getMonth(), date.getDate() - 6)
+    const end = new Date(Date.UTC(y, m, d + 1))
+    const start = new Date(Date.UTC(y, m, d - 6))
     return { start, end }
   }
 
   if (period === "monthly") {
-    const start = new Date(date.getFullYear(), date.getMonth(), 1)
-    const end = new Date(date.getFullYear(), date.getMonth() + 1, 1)
+    const start = new Date(Date.UTC(y, m, 1))
+    const end = new Date(Date.UTC(y, m + 1, 1))
     return { start, end }
   }
 
   // default to daily
-  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  const end = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1)
+  const start = new Date(Date.UTC(y, m, d))
+  const end = new Date(Date.UTC(y, m, d + 1))
   return { start, end }
 }
 
@@ -242,6 +246,7 @@ router.get("/", async (req, res, next) => {
 
     const records = await Model.find(query)
       .populate("store", "name address")
+      .populate("processedBy", "name")
       .populate("items.item_id", "name category")
       .sort({ [dateField]: -1 })
 
@@ -326,7 +331,7 @@ router.get("/", async (req, res, next) => {
           _id: record._id.toString(),
           invoiceNumber: record.invoiceNumber || "—",
           customerName: record.customerName || undefined,
-          salesName: record.salesName || undefined,
+          salesName: record.processedBy?.name || record.salesName || undefined,
           storeName: storeName,
           date: record[dateField]?.toISOString?.() || record[dateField],
           totalAmount: recordValueUSD,

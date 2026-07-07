@@ -105,7 +105,7 @@ function getInitialState(editing?: Sale | null): SaleFormState {
   }
 }
 
-function toPayload(form: SaleFormState): SalePayload {
+function toPayload(form: SaleFormState, editing?: Sale | null): SalePayload {
   const items = form.items
     .filter((i) => i.item_id && Number(i.quantity) > 0)
     .map((i) => ({
@@ -123,12 +123,18 @@ function toPayload(form: SaleFormState): SalePayload {
     0
   )
 
-  return {
+  const payload: SalePayload = {
     customerName: form.customerName.trim() || undefined,
     items,
     totalAmount,
-    date_time: new Date().toISOString(),
   }
+
+  // Only set date_time on new sales; preserve existing date on edits
+  if (!editing) {
+    payload.date_time = new Date().toISOString()
+  }
+
+  return payload
 }
 
 function ProductSearchSelect({
@@ -460,7 +466,7 @@ export function SalesForm({
       return
     }
 
-    const payload = toPayload(form)
+    const payload = toPayload(form, editing)
     const fd = new FormData()
     fd.append("data", JSON.stringify(payload))
 

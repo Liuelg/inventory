@@ -35,6 +35,9 @@ export function ReportTransactionsTable({ data }: Props) {
                 {transaction.invoiceNumber}
               </span>
               <span className="text-muted-foreground">
+                {transaction.salesName || "—"}
+              </span>
+              <span className="text-muted-foreground">
                 {transaction.customerName || "—"}
               </span>
             </div>
