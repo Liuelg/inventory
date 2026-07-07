@@ -146,9 +146,8 @@ export function SalesTable({ onEdit, displayCurrency, rates }: SalesTableProps) 
       cell: (sale) => {
         const names = sale.items.map(getProductName)
         const images = sale.items.map(getProductImage).filter(Boolean) as string[]
-        const extraCount = sale.items.length - 1
         return (
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-start gap-2 min-w-0">
             {images.length > 0 && (
               <ProductImageCell
                 image={images[0]}
@@ -156,19 +155,14 @@ export function SalesTable({ onEdit, displayCurrency, rates }: SalesTableProps) 
               />
             )}
             <div className="flex flex-col min-w-0">
-              <span className="truncate text-sm">
-                {names[0] || "—"}
+              <span className="text-sm leading-tight">
+                {names.join(", ") || "—"}
               </span>
-              {extraCount > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  +{extraCount} more
-                </span>
-              )}
             </div>
           </div>
         )
       },
-      className: "w-[200px]",
+      className: "min-w-[200px] max-w-[300px]",
     },
     {
       header: "Customer",
