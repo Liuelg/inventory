@@ -9,20 +9,14 @@ import {
 import type { ReportBreakdownItem } from "../types"
 import type { CurrencyCode } from "@/features/currency/types"
 
-const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {
-  eur: "€",
-  usd: "$",
-  birr: "Br",
-  visa: "Visa $",
-}
+
 
 type Props = {
   data: ReportBreakdownItem[]
   currency: CurrencyCode
 }
 
-export function ReportBreakdownTable({ data, currency }: Props) {
-  const symbol = CURRENCY_SYMBOLS[currency]
+export function ReportBreakdownTable({ data }: Props) {
 
   if (data.length === 0) {
     return (
@@ -39,7 +33,6 @@ export function ReportBreakdownTable({ data, currency }: Props) {
           <TableRow>
             <TableHead>Product</TableHead>
             <TableHead className="text-right">Quantity</TableHead>
-            <TableHead className="text-right">Value</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -47,12 +40,6 @@ export function ReportBreakdownTable({ data, currency }: Props) {
             <TableRow key={item.product._id}>
               <TableCell className="font-medium">{item.product.name}</TableCell>
               <TableCell className="text-right">{item.quantity}</TableCell>
-              <TableCell className="text-right">
-                {symbol}{item.value.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </TableCell>
             </TableRow>
           ))}
         </TableBody>

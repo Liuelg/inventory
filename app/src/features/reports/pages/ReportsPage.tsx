@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { ReportFilters } from "../components/ReportFilters"
 import { ReportSummaryCards } from "../components/ReportSummaryCards"
 import { ReportBreakdownTable } from "../components/ReportBreakdownTable"
-import { ReportByStoreTable } from "../components/ReportByStoreTable"
 import { ReportTransactionsTable } from "../components/ReportTransactionsTable"
 import { useReport } from "../hooks"
 import { generateReportPDF } from "../utils"
@@ -97,7 +96,6 @@ export function ReportsPage() {
             <Tabs defaultValue="product">
               <TabsList>
                 <TabsTrigger value="product">By Product</TabsTrigger>
-                <TabsTrigger value="store">By Store</TabsTrigger>
                 {report.type === "sales" && (
                   <TabsTrigger value="transaction">By Transaction</TabsTrigger>
                 )}
@@ -108,12 +106,7 @@ export function ReportsPage() {
                   currency={report.currency}
                 />
               </TabsContent>
-              <TabsContent value="store" className="pt-2">
-                <ReportByStoreTable
-                  data={report.byStore}
-                  currency={report.currency}
-                />
-              </TabsContent>
+              
               {report.type === "sales" && (
                 <TabsContent value="transaction" className="pt-2">
                   <ReportTransactionsTable
