@@ -5,6 +5,7 @@ import GoodIn from "../models/Goodin.js"
 import Stockout from "../models/Stockout.js"
 import Stock from "../models/Stock.js"
 import Store from "../models/Stores.js"
+import CurrencyRate from "../models/CurrencyRate.js"
 
 const router = Router()
 
@@ -49,6 +50,28 @@ function getDateField(type) {
 
 function isValidObjectId(id) {
   return mongoose.Types.ObjectId.isValid(id)
+}
+
+async function getLatestRates() {
+  const latest = await CurrencyRate.findOne().sort({ date: -1 }).lean()
+  if (latest?.rates) return latest.rates
+  return { eur: 1, usd: 1, birr: 1, visa: 1 }
+}
+
+function computeItemValueUSD(item, rates) {
+  const safeRates = {
+    eur: rates?.eur > 0 ? rates.eur : 1,
+    usd: rates?.usd > 0 ? rates.usd : 1,
+    birr: rates?.birr > 0 ? rates.birr : 1,
+    visa: rates?.visa > 0 ? rates.visa : 1,
+  }
+  const qty = item.quantity || 0
+  const priceUSD =
+    (item.eur || 0) / safeRates.eur +
+    (item.usd || 0) / safeRates.usd +
+    (item.birr || 0) / safeRates.birr +
+    (item.visa || 0) / safeRates.visa
+  return qty * priceUSD
 }
 
 router.get("/", async (req, res, next) => {
@@ -227,17 +250,32 @@ router.get("/", async (req, res, next) => {
       let recordQuantity = 0
       let recordValue = 0
 
+      // For sales, use the stored totalAmount (converted at time of sale).
+      // For per-item breakdowns, use the sale's stored rates if available.
+      const isSales = type === 'sales'
+      const recordRates = isSales
+        ? (record.rates || await getLatestRates())
+        : null
+
+      if (isSales) {
+        recordValue = record.totalAmount || 0
+        totalValue += recordValue
+      }
+
       for (const item of record.items || []) {
         const qty = item.quantity || 0
-        const price = type === 'sales'
-          ? ((item.eur || 0) + (item.usd || 0) + (item.birr || 0) + (item.visa || 0))
-          : (item.price || 0)
-        const itemValue = qty * price
+
+        const itemValue = isSales
+          ? computeItemValueUSD(item, recordRates)
+          : qty * (item.price || 0)
 
         totalItems += qty
-        totalValue += itemValue
         recordQuantity += qty
-        recordValue += itemValue
+
+        if (!isSales) {
+          totalValue += itemValue
+          recordValue += itemValue
+        }
 
         const productId = item.item_id?._id?.toString?.() || item.item_id?.toString?.()
         const productName = item.item_id?.name || "Unknown Product"

@@ -4,6 +4,7 @@ import path from 'path';
 import Sale from '../models/Sale.js';
 import Store from '../models/Stores.js';
 import InvoiceCounter from '../models/InvoiceCounter.js';
+import CurrencyRate from '../models/CurrencyRate.js';
 import { uploadSaleImages } from '../middleware/upload.js';
 
 const router = Router();
@@ -14,6 +15,28 @@ function deleteImage(imagePath) {
   fs.promises.unlink(fullPath).catch((err) => {
     if (err.code !== 'ENOENT') console.error('Failed to delete image:', err);
   });
+}
+
+async function getLatestRates() {
+  const latest = await CurrencyRate.findOne().sort({ date: -1 }).lean();
+  if (latest?.rates) return latest.rates;
+  return { eur: 1, usd: 1, birr: 1, visa: 1 };
+}
+
+function computeConvertedTotal(items, rates) {
+  const safeRates = {
+    eur: rates?.eur > 0 ? rates.eur : 1,
+    usd: rates?.usd > 0 ? rates.usd : 1,
+    birr: rates?.birr > 0 ? rates.birr : 1,
+    visa: rates?.visa > 0 ? rates.visa : 1,
+  };
+  return items.reduce((sum, i) => {
+    const eurVal = (i.eur || 0) / safeRates.eur;
+    const usdVal = (i.usd || 0) / safeRates.usd;
+    const birrVal = (i.birr || 0) / safeRates.birr;
+    const visaVal = (i.visa || 0) / safeRates.visa;
+    return sum + (i.quantity * (eurVal + usdVal + birrVal + visaVal));
+  }, 0);
 }
 
 function parseBody(req) {
@@ -140,7 +163,8 @@ router.post('/', uploadSaleImages, async (req, res) => {
     // Deduct from store inventory
     await deductItemsFromStore(storeId, items);
 
-    const totalAmount = items.reduce((sum, i) => sum + (i.quantity * ((i.eur || 0) + (i.usd || 0) + (i.birr || 0) + (i.visa || 0))), 0);
+    const rates = await getLatestRates();
+    const totalAmount = computeConvertedTotal(items, rates);
 
     const sale = new Sale({
       ...body,
@@ -148,6 +172,7 @@ router.post('/', uploadSaleImages, async (req, res) => {
       invoiceNumber,
       items,
       totalAmount,
+      rates,
       processedBy: req.user?.sub,
       salesName: req.user?.name || undefined,
     });
@@ -260,7 +285,9 @@ router.patch('/:id', uploadSaleImages, async (req, res) => {
       }
 
       body.items = items;
-      body.totalAmount = items.reduce((sum, i) => sum + (i.quantity * ((i.eur || 0) + (i.usd || 0) + (i.birr || 0) + (i.visa || 0))), 0);
+      const rates = await getLatestRates();
+      body.totalAmount = computeConvertedTotal(items, rates);
+      body.rates = rates;
     }
 
     const updatedSale = await Sale.findByIdAndUpdate(

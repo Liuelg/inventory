@@ -20,4 +20,12 @@ export const currencyApi = {
         body: JSON.stringify(payload),
       }
     ),
+
+  sync: () =>
+    fetcher<{ success: boolean; data: CurrencyRateRecord; message: string }>(
+      "/api/currency-rates/sync",
+      {
+        method: "POST",
+      }
+    ),
 }

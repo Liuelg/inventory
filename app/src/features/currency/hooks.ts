@@ -25,3 +25,13 @@ export function useUpdateCurrencyRates() {
     },
   })
 }
+
+export function useSyncCurrencyRates() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => currencyApi.sync(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["currency-rates"] })
+    },
+  })
+}

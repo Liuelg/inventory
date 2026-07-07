@@ -2,6 +2,7 @@ import { Router } from "express"
 import Sale from "../models/Sale.js"
 import Store from "../models/Stores.js"
 import Category from "../models/Category.js"
+import CurrencyRate from "../models/CurrencyRate.js"
 
 const router = Router()
 
@@ -10,6 +11,27 @@ function getTodayRange() {
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
   return { start, end }
+}
+
+async function getLatestRates() {
+  const latest = await CurrencyRate.findOne().sort({ date: -1 }).lean()
+  if (latest?.rates) return latest.rates
+  return { eur: 1, usd: 1, birr: 1, visa: 1 }
+}
+
+function computeItemPriceUSD(item, rates) {
+  const safeRates = {
+    eur: rates?.eur > 0 ? rates.eur : 1,
+    usd: rates?.usd > 0 ? rates.usd : 1,
+    birr: rates?.birr > 0 ? rates.birr : 1,
+    visa: rates?.visa > 0 ? rates.visa : 1,
+  }
+  return (
+    (item.eur || 0) / safeRates.eur +
+    (item.usd || 0) / safeRates.usd +
+    (item.birr || 0) / safeRates.birr +
+    (item.visa || 0) / safeRates.visa
+  )
 }
 
 router.get("/daily-sales", async (req, res, next) => {
@@ -21,7 +43,8 @@ router.get("/daily-sales", async (req, res, next) => {
       date_time: { $gte: start, $lt: end },
     }).populate("store", "name address")
 
-    // Aggregate sales by store
+    // Aggregate sales by store using the stored totalAmount
+    // (converted at the time of sale, so historical values are preserved)
     const salesMap = new Map()
     for (const sale of sales) {
       const storeId = sale.store?._id?.toString?.() || sale.store?.toString?.()
@@ -169,20 +192,25 @@ router.get("/store/:storeId", async (req, res, next) => {
           address: store.address,
         },
         todaySales,
-        sales: sales.map((s) => ({
-          _id: s._id.toString(),
-          invoiceNumber: s.invoiceNumber,
-          customerName: s.customerName,
-          salesName: s.salesName,
-          totalAmount: s.totalAmount,
-          items: s.items.map((i) => ({
-            name: i.item_id?.name || "—",
-            quantity: i.quantity,
-            price: (i.eur || 0) + (i.usd || 0) + (i.birr || 0) + (i.visa || 0),
-          })),
-          processedBy: s.processedBy?.name || "—",
-          date_time: s.date_time,
-        })),
+        sales: sales.map((s) => {
+          // Use the sale's stored rates for per-item conversion
+          // so the displayed item prices match the sale's historical totalAmount
+          const saleRates = s.rates || { eur: 1, usd: 1, birr: 1, visa: 1 }
+          return {
+            _id: s._id.toString(),
+            invoiceNumber: s.invoiceNumber,
+            customerName: s.customerName,
+            salesName: s.salesName,
+            totalAmount: s.totalAmount,
+            items: s.items.map((i) => ({
+              name: i.item_id?.name || "—",
+              quantity: i.quantity,
+              price: computeItemPriceUSD(i, saleRates),
+            })),
+            processedBy: s.processedBy?.name || "—",
+            date_time: s.date_time,
+          }
+        }),
         remainingProducts,
       },
     })

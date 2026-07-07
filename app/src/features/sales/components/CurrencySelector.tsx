@@ -16,8 +16,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Settings } from "lucide-react"
-import { useCurrencyRates, useUpdateCurrencyRates } from "@/features/currency/hooks"
+import { Settings, RefreshCw } from "lucide-react"
+import { useCurrencyRates, useUpdateCurrencyRates, useSyncCurrencyRates } from "@/features/currency/hooks"
 import { useAuthSession } from "@/hooks/use-auth-session"
 import type { CurrencyCode, CurrencyRates } from "@/features/currency/types"
 
@@ -49,6 +49,7 @@ export function CurrencySelector({ value, onChange }: Props) {
   const isAdmin = session?.role === "admin"
   const { data: ratesData } = useCurrencyRates()
   const updateRates = useUpdateCurrencyRates()
+  const syncRates = useSyncCurrencyRates()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [formRates, setFormRates] = useState<CurrencyRates>({
     eur: 1,
@@ -110,7 +111,8 @@ export function CurrencySelector({ value, onChange }: Props) {
               <DialogTitle>Exchange Rates</DialogTitle>
               <DialogDescription>
                 Set how much 1 USD equals in each currency. These rates are used
-                to convert sale totals.
+                to convert sale totals. "Sync from Frankfurter" fetches EUR
+                automatically — Birr must be entered manually.
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-3 py-2">
@@ -136,16 +138,36 @@ export function CurrencySelector({ value, onChange }: Props) {
                 </div>
               ))}
             </div>
-            <div className="flex justify-end gap-2">
+            <div className="flex items-center justify-between gap-2">
               <Button
                 variant="outline"
-                onClick={() => setSettingsOpen(false)}
+                size="sm"
+                onClick={() => {
+                  syncRates.mutate(undefined, {
+                    onSuccess: (res) => {
+                      if (res.data?.rates) {
+                        setFormRates({ ...res.data.rates })
+                      }
+                    },
+                  })
+                }}
+                disabled={syncRates.isPending}
+                title="Fetch latest rates from Frankfurter API"
               >
-                Cancel
+                <RefreshCw className={`mr-1 h-3.5 w-3.5 ${syncRates.isPending ? "animate-spin" : ""}`} />
+                {syncRates.isPending ? "Syncing..." : "Sync from Frankfurter"}
               </Button>
-              <Button onClick={handleSave} disabled={updateRates.isPending}>
-                {updateRates.isPending ? "Saving..." : "Save Rates"}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setSettingsOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleSave} disabled={updateRates.isPending}>
+                  {updateRates.isPending ? "Saving..." : "Save Rates"}
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>

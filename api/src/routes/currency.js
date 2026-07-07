@@ -1,5 +1,6 @@
 import { Router } from "express"
 import CurrencyRate from "../models/CurrencyRate.js"
+import { fetchLatestRates } from "../services/frankfurter.js"
 
 const router = Router()
 
@@ -66,6 +67,44 @@ router.post("/", async (req, res, next) => {
     )
 
     res.json({ success: true, data: doc })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Sync latest rates from Frankfurter API (admin only)
+router.post("/sync", async (req, res, next) => {
+  try {
+    if (req.user?.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Admin access required" })
+    }
+
+    // Fetch existing rates as fallback in case Frankfurter is missing a currency
+    const latest = await CurrencyRate.findOne().sort({ date: -1 }).lean()
+    const fallbackRates = latest?.rates || null
+
+    const rates = await fetchLatestRates(fallbackRates)
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const update = {
+      base: "USD",
+      rates,
+      date: today,
+    }
+
+    const doc = await CurrencyRate.findOneAndUpdate(
+      { date: today },
+      update,
+      { new: true, upsert: true }
+    )
+
+    res.json({
+      success: true,
+      data: doc,
+      message: "Rates synced successfully from Frankfurter",
+    })
   } catch (err) {
     next(err)
   }

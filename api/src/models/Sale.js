@@ -21,6 +21,12 @@ const SaleItemSchema = Schema({
 const saleSchema = Schema({
   items: [SaleItemSchema],
   totalAmount: { type: Number, required: true },
+  rates: {
+    eur: { type: Number, default: 1 },
+    usd: { type: Number, default: 1 },
+    birr: { type: Number, default: 1 },
+    visa: { type: Number, default: 1 },
+  },
   customerName: { type: String},
   salesName: { type: String },
   store: {
