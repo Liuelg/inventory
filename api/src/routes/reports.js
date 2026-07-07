@@ -9,8 +9,14 @@ import { getLatestRates } from "../services/rates.js"
 
 const router = Router()
 
+function parseLocalDate(dateStr) {
+  // Parse YYYY-MM-DD as local midnight to avoid timezone shifts
+  const [year, month, day] = dateStr.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
 function getDateRange(period, anchorDate) {
-  const date = anchorDate ? new Date(anchorDate) : new Date()
+  const date = anchorDate ? parseLocalDate(anchorDate) : new Date()
 
   if (period === "daily") {
     const start = new Date(date.getFullYear(), date.getMonth(), date.getDate())
