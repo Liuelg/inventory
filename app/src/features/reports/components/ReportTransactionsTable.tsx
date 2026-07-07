@@ -52,7 +52,7 @@ export function ReportTransactionsTable({ data }: Props) {
               <TableRow>
                 <TableHead>Product</TableHead>
                 <TableHead className="text-right">Qty</TableHead>
-                <TableHead className="text-right">Unit Price</TableHead>
+                <TableHead className="text-right">Payment</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
