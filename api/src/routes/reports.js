@@ -5,7 +5,7 @@ import GoodIn from "../models/Goodin.js"
 import Stockout from "../models/Stockout.js"
 import Stock from "../models/Stock.js"
 import Store from "../models/Stores.js"
-import CurrencyRate from "../models/CurrencyRate.js"
+import { getLatestRates } from "../services/rates.js"
 
 const router = Router()
 
@@ -50,12 +50,6 @@ function getDateField(type) {
 
 function isValidObjectId(id) {
   return mongoose.Types.ObjectId.isValid(id)
-}
-
-async function getLatestRates() {
-  const latest = await CurrencyRate.findOne().sort({ date: -1 }).lean()
-  if (latest?.rates) return latest.rates
-  return { eur: 1, usd: 1, birr: 1, visa: 1 }
 }
 
 function computeItemValueUSD(item, rates) {

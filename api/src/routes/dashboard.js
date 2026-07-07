@@ -2,7 +2,7 @@ import { Router } from "express"
 import Sale from "../models/Sale.js"
 import Store from "../models/Stores.js"
 import Category from "../models/Category.js"
-import CurrencyRate from "../models/CurrencyRate.js"
+import { getLatestRates } from "../services/rates.js"
 
 const router = Router()
 
@@ -11,12 +11,6 @@ function getTodayRange() {
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
   return { start, end }
-}
-
-async function getLatestRates() {
-  const latest = await CurrencyRate.findOne().sort({ date: -1 }).lean()
-  if (latest?.rates) return latest.rates
-  return { eur: 1, usd: 1, birr: 1, visa: 1 }
 }
 
 function computeItemPriceUSD(item, rates) {

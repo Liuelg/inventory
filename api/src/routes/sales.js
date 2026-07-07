@@ -4,7 +4,7 @@ import path from 'path';
 import Sale from '../models/Sale.js';
 import Store from '../models/Stores.js';
 import InvoiceCounter from '../models/InvoiceCounter.js';
-import CurrencyRate from '../models/CurrencyRate.js';
+import { getLatestRates } from '../services/rates.js';
 import { uploadSaleImages } from '../middleware/upload.js';
 
 const router = Router();
@@ -15,12 +15,6 @@ function deleteImage(imagePath) {
   fs.promises.unlink(fullPath).catch((err) => {
     if (err.code !== 'ENOENT') console.error('Failed to delete image:', err);
   });
-}
-
-async function getLatestRates() {
-  const latest = await CurrencyRate.findOne().sort({ date: -1 }).lean();
-  if (latest?.rates) return latest.rates;
-  return { eur: 1, usd: 1, birr: 1, visa: 1 };
 }
 
 function computeConvertedTotal(items, rates) {

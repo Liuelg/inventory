@@ -147,22 +147,22 @@ export function SalesTable({ onEdit, displayCurrency, rates }: SalesTableProps) 
         const names = sale.items.map(getProductName)
         const images = sale.items.map(getProductImage).filter(Boolean) as string[]
         return (
-          <div className="flex items-start gap-2 min-w-0">
+          <div className="flex items-start gap-2 w-full">
             {images.length > 0 && (
               <ProductImageCell
                 image={images[0]}
                 altName={names[0] || "Product image"}
               />
             )}
-            <div className="flex flex-col min-w-0">
-              <span className="text-sm leading-tight">
+            <div className="flex flex-col w-full min-w-0">
+              <span className="text-sm leading-tight break-words whitespace-normal">
                 {names.join(", ") || "—"}
               </span>
             </div>
           </div>
         )
       },
-      className: "min-w-[200px] max-w-[300px]",
+      className: "w-[180px] whitespace-normal align-top",
     },
     {
       header: "Customer",
