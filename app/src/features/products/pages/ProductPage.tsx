@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react"
 import { ProductTable } from "../components/ProductTable"
 import { ProductForm } from "../components/ProductForm"
-import { ProductGroupForm } from "@/features/product-groups/components/ProductGroupForm"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Plus, Layers, Search } from "lucide-react"
+import { Plus , Search } from "lucide-react"
 import { useProducts } from "../hooks"
 import { useCategories } from "@/features/categories/hooks"
 import { useSubCategories } from "@/features/sub-categories/hooks"
@@ -34,7 +33,6 @@ function getSubCategoryId(product: Product): string {
 
 export function ProductPage() {
   const [formOpen, setFormOpen] = useState(false)
-  const [groupFormOpen, setGroupFormOpen] = useState(false)
   const [editing, setEditing] = useState<Product | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
@@ -95,10 +93,6 @@ export function ProductPage() {
           <p className="text-sm text-gray-500">Manage products and pricing.</p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-          <Button variant="outline" onClick={() => setGroupFormOpen(true)} className="w-full sm:w-auto">
-            <Layers className="mr-1 h-4 w-4" />
-            Create Group
-          </Button>
           <Button onClick={openAdd} className="w-full sm:w-auto">
             <Plus data-icon="inline-start" />
             Add Product
@@ -179,11 +173,6 @@ export function ProductPage() {
           }}
         />
       ) : null}
-      <ProductGroupForm
-        open={groupFormOpen}
-        onOpenChange={setGroupFormOpen}
-        onSuccess={() => setGroupFormOpen(false)}
-      />
     </div>
   )
 }

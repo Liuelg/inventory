@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/select.tsx"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
-import { useProductGroups } from "@/features/product-groups/hooks"
 import { getProductImageUrl } from "@/features/products/utils"
 import { useStores } from "@/features/stores/hooks"
 import { useCreateStockout, useUpdateStockout } from "../hooks"
@@ -36,7 +35,6 @@ type StockoutItemForm = {
   item_id: string
   quantity: string
   price: string
-  group?: string | null
 }
 
 type StockoutFormState = {
@@ -45,7 +43,7 @@ type StockoutFormState = {
   note: string
 }
 
-const emptyItem: StockoutItemForm = { item_id: "", quantity: "1", price: "", group: null }
+const emptyItem: StockoutItemForm = { item_id: "", quantity: "1", price: ""}
 
 const initialState: StockoutFormState = {
   storeId: "",
@@ -61,9 +59,7 @@ function getInitialState(editing?: Stockout | null): StockoutFormState {
       ? editing.items.map((i) => ({
         item_id: typeof i.item_id === "string" ? i.item_id : i.item_id._id,
         quantity: String(i.quantity),
-        price: String(i.price),
-        group: typeof i.group === "string" ? i.group : i.group?._id ?? null,
-      }))
+        price: String(i.price),      }))
       : [{ ...emptyItem }],
     note: editing.note ?? "",
   }
@@ -96,7 +92,7 @@ function toPayload(
       item_id: i.item_id,
       quantity: Number(i.quantity),
       price: getProductPrice(products, i.item_id) ?? Number(i.price) ?? 0,
-      group: i.group || null,
+      
     }))
 
   return {
@@ -120,7 +116,6 @@ export function StockoutForm({
   const [error, setError] = useState<string | null>(null)
   const { data: session } = useAuthSession()
   const { data: products } = useProducts()
-  const { data: productGroups } = useProductGroups()
   const { data: stores } = useStores()
   const create = useCreateStockout()
   const update = useUpdateStockout()
@@ -160,41 +155,7 @@ export function StockoutForm({
     }))
   }
 
-  function handleGroupSelect(groupId: string) {
-    if (!groupId) return
-    const group = productGroups?.find((g) => g._id === groupId)
-    if (!group) return
-
-    setForm((prev) => {
-      const newItems = [...prev.items.filter((i) => i.item_id)]
-
-      for (const groupItem of group.items) {
-        const productId = typeof groupItem.product === "string" ? groupItem.product : groupItem.product._id
-        const quantity = groupItem.quantity
-        const existing = newItems.find((i) => i.item_id === productId)
-        if (existing) {
-          existing.quantity = String(Number(existing.quantity) + quantity)
-          if (!existing.group) {
-            existing.group = groupId
-          }
-        } else {
-          const price = getProductPrice(products, productId)
-          newItems.push({
-            item_id: productId,
-            quantity: String(quantity),
-            price: price !== undefined ? String(price) : "",
-            group: groupId,
-          })
-        }
-      }
-
-      if (newItems.length === 0) {
-        newItems.push({ ...emptyItem })
-      }
-
-      return { ...prev, items: newItems }
-    })
-  }
+  
 
   function removeItem(index: number) {
     setForm((prev) => {
@@ -306,18 +267,7 @@ export function StockoutForm({
             <Label>Items</Label>
             {!editing && (
               <div className="w-full sm:w-[280px]">
-                <Select onValueChange={handleGroupSelect}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Add from product group..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {productGroups?.map((g) => (
-                      <SelectItem key={g._id} value={g._id}>
-                        {g.name} ({g.items?.length || 0} products)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                
               </div>
             )}
           </div>
