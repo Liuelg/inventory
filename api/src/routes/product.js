@@ -133,7 +133,7 @@ router.delete("/:id", async (req, res) => {
 /**
  * Merge duplicate products by name.
  * Keeps the oldest product as canonical, updates all references,
- * deletes duplicates. Quantities are NOT summed — they remain unchanged.
+ * deletes duplicates. Store and Stock quantities are summed.
  */
 router.post("/merge-duplicates", async (req, res) => {
   try {
@@ -175,6 +175,57 @@ router.post("/merge-duplicates", async (req, res) => {
             { $set: { "items.$[elem].item_id": canonical._id } },
             { arrayFilters: [{ "elem.item_id": dupId }] }
           );
+        }
+      }
+
+      // After item_id updates, deduplicate items within Store and Stock
+      // documents that now have the same item_id twice. Quantities are summed.
+      const affectedStores = await Store.find({ "items.item_id": canonical._id });
+      for (const store of affectedStores) {
+        const mergedItems = [];
+        const quantities = new Map();
+        for (const item of store.items) {
+          const id = item.item_id.toString();
+          if (quantities.has(id)) {
+            quantities.set(id, quantities.get(id) + (item.quantity || 0));
+          } else {
+            quantities.set(id, item.quantity || 0);
+            mergedItems.push(item);
+          }
+        }
+        for (const item of mergedItems) {
+          item.quantity = quantities.get(item.item_id.toString());
+        }
+        if (mergedItems.length !== store.items.length) {
+          store.items = mergedItems;
+          await store.save();
+        }
+      }
+
+      const affectedStocks = await Stock.find({ "items.item_id": canonical._id });
+      for (const stock of affectedStocks) {
+        const mergedItems = [];
+        const quantities = new Map();
+        const remainings = new Map();
+        for (const item of stock.items) {
+          const id = item.item_id.toString();
+          if (quantities.has(id)) {
+            quantities.set(id, quantities.get(id) + (item.quantity || 0));
+            remainings.set(id, remainings.get(id) + (item.remaining || 0));
+          } else {
+            quantities.set(id, item.quantity || 0);
+            remainings.set(id, item.remaining || 0);
+            mergedItems.push(item);
+          }
+        }
+        for (const item of mergedItems) {
+          const id = item.item_id.toString();
+          item.quantity = quantities.get(id);
+          item.remaining = remainings.get(id);
+        }
+        if (mergedItems.length !== stock.items.length) {
+          stock.items = mergedItems;
+          await stock.save();
         }
       }
 
