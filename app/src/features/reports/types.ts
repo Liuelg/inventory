@@ -62,4 +62,5 @@ export type ReportParams = {
   date: string
   store?: string
   currency?: CurrencyCode
+  timezoneOffset?: number
 }

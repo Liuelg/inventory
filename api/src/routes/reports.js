@@ -16,33 +16,34 @@ function parseLocalDate(dateStr) {
   return new Date(Date.UTC(year, month - 1, day))
 }
 
-function getDateRange(period, anchorDate) {
+function getDateRange(period, anchorDate, tzOffsetMinutes = 0) {
   const date = anchorDate ? parseLocalDate(anchorDate) : new Date()
+  const offsetMs = tzOffsetMinutes * 60000
   const y = date.getUTCFullYear()
   const m = date.getUTCMonth()
   const d = date.getUTCDate()
 
   if (period === "daily") {
-    const start = new Date(Date.UTC(y, m, d))
-    const end = new Date(Date.UTC(y, m, d + 1))
+    const start = new Date(Date.UTC(y, m, d) + offsetMs)
+    const end = new Date(Date.UTC(y, m, d + 1) + offsetMs)
     return { start, end }
   }
 
   if (period === "weekly") {
-    const end = new Date(Date.UTC(y, m, d + 1))
-    const start = new Date(Date.UTC(y, m, d - 6))
+    const end = new Date(Date.UTC(y, m, d + 1) + offsetMs)
+    const start = new Date(Date.UTC(y, m, d - 6) + offsetMs)
     return { start, end }
   }
 
   if (period === "monthly") {
-    const start = new Date(Date.UTC(y, m, 1))
-    const end = new Date(Date.UTC(y, m + 1, 1))
+    const start = new Date(Date.UTC(y, m, 1) + offsetMs)
+    const end = new Date(Date.UTC(y, m + 1, 1) + offsetMs)
     return { start, end }
   }
 
   // default to daily
-  const start = new Date(Date.UTC(y, m, d))
-  const end = new Date(Date.UTC(y, m, d + 1))
+  const start = new Date(Date.UTC(y, m, d) + offsetMs)
+  const end = new Date(Date.UTC(y, m, d + 1) + offsetMs)
   return { start, end }
 }
 
@@ -89,10 +90,11 @@ function convertUSDToCurrency(amountUSD, targetCurrency, rates) {
 
 router.get("/", async (req, res, next) => {
   try {
-    const { type, period, date, store, currency } = req.query
+    const { type, period, date, store, currency, timezoneOffset } = req.query
     const targetCurrency = currency || 'usd'
     const isAdmin = req.user?.role === 'admin'
     const userStore = req.user?.store?.toString?.()
+    const tzOffset = parseInt(timezoneOffset, 10) || 0
 
     if (!type || !["sales", "goodIns", "stockouts", "remaining"].includes(type)) {
       return res.status(400).json({ success: false, message: "Invalid or missing type. Use sales, goodIns, stockouts, or remaining." })
@@ -234,7 +236,7 @@ router.get("/", async (req, res, next) => {
 
     const Model = getModel(type)
     const dateField = getDateField(type)
-    const { start, end } = getDateRange(period, date)
+    const { start, end } = getDateRange(period, date, tzOffset)
 
     const query = {
       [dateField]: { $gte: start, $lt: end },

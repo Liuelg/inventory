@@ -62,6 +62,7 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
       type,
       period,
       date,
+      timezoneOffset: new Date().getTimezoneOffset(),
     }
     const effectiveStore = isAdmin ? store : userStore
     if (effectiveStore && effectiveStore !== "all") {
