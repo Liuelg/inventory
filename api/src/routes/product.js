@@ -2,6 +2,12 @@ import { Router } from "express";
 import fs from "fs";
 import path from "path";
 import Product from "../models/Products.js";
+import Stock from "../models/Stock.js";
+import Store from "../models/Stores.js";
+import Sale from "../models/Sale.js";
+import GoodIn from "../models/Goodin.js";
+import Stockout from "../models/Stockout.js";
+import Transfer from "../models/Transfer.js";
 
 const router = Router();
 
@@ -20,6 +26,18 @@ router.post("/", async (req, res) => {
       delete body.price;
       delete body.previous_prices;
     }
+
+    // Prevent duplicate products by name (case-insensitive)
+    const name = body.name?.trim();
+    if (name) {
+      const existing = await Product.findOne({
+        name: { $regex: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") }
+      });
+      if (existing) {
+        return res.status(409).json({ message: `A product named "${existing.name}" already exists.` });
+      }
+    }
+
     const newProduct = new Product(body);
     const savedProduct = await newProduct.save();
     return res.status(201).json(savedProduct);
@@ -108,6 +126,81 @@ router.delete("/:id", async (req, res) => {
     if (err.kind === "ObjectId") {
       return res.status(400).json({ message: "Invalid Product ID format" });
     }
+    res.status(500).json({ message: err.message });
+  }
+});
+
+/**
+ * Merge duplicate products by name.
+ * Keeps the oldest product as canonical, updates all references,
+ * deletes duplicates. Quantities are NOT summed — they remain unchanged.
+ */
+router.post("/merge-duplicates", async (req, res) => {
+  try {
+    if (req.user?.role !== "admin") {
+      return res.status(403).json({ message: "Only admins can merge products" });
+    }
+
+    const products = await Product.find().sort({ createdAt: 1 }).lean();
+    const groups = new Map();
+
+    for (const p of products) {
+      const key = p.name?.toLowerCase().trim();
+      if (!key) continue;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(p);
+    }
+
+    const merged = [];
+    const collections = [
+      { model: Stock, name: "Stock" },
+      { model: Store, name: "Store" },
+      { model: Sale, name: "Sale" },
+      { model: GoodIn, name: "GoodIn" },
+      { model: Stockout, name: "Stockout" },
+      { model: Transfer, name: "Transfer" },
+    ];
+
+    for (const [key, group] of groups) {
+      if (group.length < 2) continue;
+
+      const canonical = group[0];
+      const duplicates = group.slice(1);
+      const dupIds = duplicates.map((d) => d._id.toString());
+
+      for (const dupId of dupIds) {
+        for (const { model } of collections) {
+          await model.updateMany(
+            { "items.item_id": dupId },
+            { $set: { "items.$[elem].item_id": canonical._id } },
+            { arrayFilters: [{ "elem.item_id": dupId }] }
+          );
+        }
+      }
+
+      // Delete duplicate products
+      await Product.deleteMany({ _id: { $in: dupIds } });
+
+      // Clean up duplicate images
+      for (const dup of duplicates) {
+        if (dup.image && dup.image !== canonical.image) {
+          deleteImage(dup.image);
+        }
+      }
+
+      merged.push({
+        name: canonical.name,
+        kept: canonical._id,
+        removed: dupIds,
+        count: duplicates.length,
+      });
+    }
+
+    res.json({
+      message: `Merged ${merged.length} duplicate groups.`,
+      merged,
+    });
+  } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });

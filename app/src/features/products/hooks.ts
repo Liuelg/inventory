@@ -41,3 +41,20 @@ export function useDeleteProduct() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] }),
   })
 }
+
+export function useMergeDuplicateProducts() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: () => productApi.mergeDuplicates(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["products"] })
+      qc.invalidateQueries({ queryKey: ["stock"] })
+      qc.invalidateQueries({ queryKey: ["stores"] })
+      qc.invalidateQueries({ queryKey: ["sales"] })
+      qc.invalidateQueries({ queryKey: ["goodIns"] })
+      qc.invalidateQueries({ queryKey: ["stockouts"] })
+      qc.invalidateQueries({ queryKey: ["transfers"] })
+    },
+  })
+}

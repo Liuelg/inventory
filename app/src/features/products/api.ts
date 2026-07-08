@@ -27,4 +27,9 @@ export const productApi = {
     fetcher<DeleteProductResponse>(`/api/products/${id}`, {
       method: "DELETE",
     }),
+
+  mergeDuplicates: () =>
+    fetcher<{ message: string; merged: Array<{ name: string; kept: string; removed: string[]; count: number }> }>("/api/products/merge-duplicates", {
+      method: "POST",
+    }),
 }
