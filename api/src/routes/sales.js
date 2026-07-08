@@ -247,27 +247,27 @@ router.patch('/:id', uploadSaleImages, async (req, res) => {
     delete body.store;
     delete body.processedBy;
     delete body.salesName;
-    delete body.date_time;
+
+    // Always load the existing sale so we can preserve immutable fields
+    const existingSale = await Sale.findById(req.params.id);
+    if (!existingSale) {
+      return res.status(404).json({ message: 'Sale record not found' });
+    }
 
     // Non-admins can only edit their own store's sales
-    let existingSale = null;
-    if (!isAdmin) {
-      existingSale = await Sale.findOne({ _id: req.params.id, store: req.user?.store });
-      if (!existingSale) {
-        return res.status(404).json({ message: 'Sale record not found' });
-      }
+    if (!isAdmin && existingSale.store.toString() !== req.user?.store?.toString?.()) {
+      return res.status(404).json({ message: 'Sale record not found' });
+    }
+
+    // Preserve the original sale date unless the client explicitly sent a new one
+    if (!body.date_time) {
+      body.date_time = existingSale.date_time;
     }
 
     // If items are being updated, look up product prices and adjust inventory
     if (body.items !== undefined) {
-      if (!existingSale) {
-        existingSale = await Sale.findById(req.params.id);
-      }
-
       // Restore old quantities first
-      if (existingSale) {
-        await restoreItemsToStore(existingSale.store, existingSale.items);
-      }
+      await restoreItemsToStore(existingSale.store, existingSale.items);
 
       const items = body.items.map((i) => ({
         item_id: i.item_id,
@@ -280,14 +280,12 @@ router.patch('/:id', uploadSaleImages, async (req, res) => {
       }));
 
       // Deduct new quantities
-      const storeId = isAdmin ? existingSale?.store : req.user?.store;
+      const storeId = isAdmin ? existingSale.store : req.user?.store;
       try {
         await deductItemsFromStore(storeId, items);
       } catch (err) {
         // Restore old quantities back since deduction failed
-        if (existingSale) {
-          await restoreItemsToStore(existingSale.store, existingSale.items);
-        }
+        await restoreItemsToStore(existingSale.store, existingSale.items);
         throw err;
       }
 
@@ -315,7 +313,7 @@ router.patch('/:id', uploadSaleImages, async (req, res) => {
     }
 
     // Delete old images that were replaced or cleared
-    if (existingSale && body.items) {
+    if (body.items) {
       existingSale.items.forEach((oldItem, index) => {
         const newItem = body.items[index];
         if (oldItem.image && oldItem.image !== newItem?.image) {

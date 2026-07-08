@@ -39,6 +39,7 @@ type SaleItemForm = {
 
 type SaleFormState = {
   customerName: string
+  date: string
   items: SaleItemForm[]
 }
 
@@ -55,6 +56,7 @@ const emptyItem: SaleItemForm = {
 
 const initialState: SaleFormState = {
   customerName: "",
+  date: "",
   items: [{ ...emptyItem }],
 }
 
@@ -89,10 +91,19 @@ function migrateOldPrice(item: Sale["items"][number]): Omit<SaleItemForm, "item_
   return { eur: "", usd: String(price), birr: "", visa: "" }
 }
 
+function formatDateInputValue(isoDate: string): string {
+  const d = new Date(isoDate)
+  const year = d.getUTCFullYear()
+  const month = String(d.getUTCMonth() + 1).padStart(2, "0")
+  const day = String(d.getUTCDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
 function getInitialState(editing?: Sale | null): SaleFormState {
   if (!editing) return { ...initialState }
   return {
     customerName: editing.customerName ?? "",
+    date: editing.date_time ? formatDateInputValue(editing.date_time) : "",
     items: editing.items.length
       ? editing.items.map((i) => ({
           item_id: getItemId(i.item_id),
@@ -129,13 +140,16 @@ function toPayload(form: SaleFormState, editing?: Sale | null): SalePayload {
     totalAmount,
   }
 
-  // Only set date_time on new sales; preserve existing date on edits.
-  // Store the local business date at UTC midnight so reports match the user's calendar day.
   if (!editing) {
+    // New sale: store the local business date at UTC midnight
     const now = new Date()
     payload.date_time = new Date(
       Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
     ).toISOString()
+  } else if (form.date) {
+    // Editing: allow explicit date correction (UTC midnight)
+    const [year, month, day] = form.date.split("-").map(Number)
+    payload.date_time = new Date(Date.UTC(year, month - 1, day)).toISOString()
   }
 
   return payload
@@ -533,6 +547,18 @@ export function SalesForm({
               onChange={(e) => setField("customerName", e.target.value)}
             />
           </div>
+
+          {editing && (
+            <div className="grid gap-2">
+              <Label htmlFor="sale-date">Sale Date</Label>
+              <Input
+                id="sale-date"
+                type="date"
+                value={form.date}
+                onChange={(e) => setField("date", e.target.value)}
+              />
+            </div>
+          )}
 
           <Label>Items</Label>
 
