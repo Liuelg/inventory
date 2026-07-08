@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/table"
 import { Pencil, Trash2, Eye } from "lucide-react"
 import { useDeleteSale, useSales } from "../hooks"
+import { useAuthSession } from "@/hooks/use-auth-session"
 import { ProductImageCell } from "@/components/ProductImageCell"
 import { getCurrencySymbol } from "./CurrencySelector"
 import type { Sale, SaleItem } from "../types"
@@ -140,6 +141,8 @@ interface SalesTableProps {
 export function SalesTable({ onEdit, displayCurrency, rates }: SalesTableProps) {
   const { data: sales, isLoading } = useSales()
   const remove = useDeleteSale()
+  const { data: user } = useAuthSession()
+  const isAdmin = user?.role === "admin"
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [detailSale, setDetailSale] = useState<Sale | null>(null)
 
@@ -239,9 +242,11 @@ export function SalesTable({ onEdit, displayCurrency, rates }: SalesTableProps) 
           >
             <Eye />
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => onEdit(sale)}>
-            <Pencil />
-          </Button>
+          {isAdmin && (
+            <Button variant="ghost" size="sm" onClick={() => onEdit(sale)}>
+              <Pencil />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -263,7 +268,6 @@ export function SalesTable({ onEdit, displayCurrency, rates }: SalesTableProps) 
         keyExtractor={(sale) => sale._id}
         loading={isLoading}
         emptyMessage="No sales found."
-        onRowClick={(sale) => setDetailSale(sale)}
       />
 
       {/* Sale Detail Dialog */}
