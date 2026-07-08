@@ -175,19 +175,22 @@ export function SalesTable({ onEdit, displayCurrency, rates }: SalesTableProps) 
           </div>
         )
       },
-      className: "max-w-[180px] !whitespace-normal align-top break-words",
+      className: "max-w-[120px] sm:max-w-[180px] !whitespace-normal align-top break-words",
     },
     {
       header: "Customer",
       cell: (sale) => sale.customerName || "-",
+      className: "hidden sm:table-cell",
     },
     {
       header: "Sales Person",
       cell: (sale) => sale.salesName || "-",
+      className: "hidden md:table-cell",
     },
     {
       header: "Store",
       cell: (sale) => getStoreName(sale.store),
+      className: "hidden md:table-cell",
     },
     {
       header: "Items",
@@ -227,11 +230,11 @@ export function SalesTable({ onEdit, displayCurrency, rates }: SalesTableProps) 
         sale.date_time
           ? new Date(sale.date_time).toLocaleDateString()
           : "-",
-      className: "w-[120px]",
+      className: "w-[120px] hidden sm:table-cell",
     },
     {
       header: "Actions",
-      className: "w-[140px] text-right",
+      className: "w-auto sm:w-[140px] text-right",
       cell: (sale) => (
         <div className="flex justify-end gap-1">
           <Button

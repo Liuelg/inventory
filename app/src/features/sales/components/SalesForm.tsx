@@ -432,11 +432,14 @@ export function SalesForm({
     })
   }
 
+  const isAdmin = session?.role === "admin"
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
 
-    if (!session?.store) {
+    // Creating a sale always requires a store; editing relies on the sale's own store
+    if (!editing && !session?.store) {
       setError("Your account is not assigned to a store. Contact an admin.")
       return
     }
@@ -465,17 +468,19 @@ export function SalesForm({
       }
     }
 
-    // Validate stock availability
-    for (const item of validItems) {
-      const available = storeItemsMap.get(item.item_id) || 0
-      const requested = Number(item.quantity)
-      if (requested > available) {
-        const productName =
-          products?.find((p) => p._id === item.item_id)?.name || item.item_id
-        setError(
-          `${productName}: requested ${requested} but only ${available} available in store.`
-        )
-        return
+    // Validate stock availability (skip for admins when editing — backend handles it)
+    if (!isAdmin || !editing) {
+      for (const item of validItems) {
+        const available = storeItemsMap.get(item.item_id) || 0
+        const requested = Number(item.quantity)
+        if (requested > available) {
+          const productName =
+            products?.find((p) => p._id === item.item_id)?.name || item.item_id
+          setError(
+            `${productName}: requested ${requested} but only ${available} available in store.`
+          )
+          return
+        }
       }
     }
 
