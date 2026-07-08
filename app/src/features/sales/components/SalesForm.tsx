@@ -129,9 +129,13 @@ function toPayload(form: SaleFormState, editing?: Sale | null): SalePayload {
     totalAmount,
   }
 
-  // Only set date_time on new sales; preserve existing date on edits
+  // Only set date_time on new sales; preserve existing date on edits.
+  // Store the local business date at UTC midnight so reports match the user's calendar day.
   if (!editing) {
-    payload.date_time = new Date().toISOString()
+    const now = new Date()
+    payload.date_time = new Date(
+      Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
+    ).toISOString()
   }
 
   return payload
