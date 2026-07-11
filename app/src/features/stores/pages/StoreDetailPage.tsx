@@ -187,7 +187,7 @@ export function StoreDetailPage() {
       ) : data ? (
         <>
           {/* Today's Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 shrink-0">
             <div className="rounded-lg border p-4">
               <p className="text-sm text-muted-foreground">Total Sales Today</p>
               <p className="text-xl font-bold">
@@ -206,26 +206,29 @@ export function StoreDetailPage() {
             </div>
           </div>
 
-          {/* Today's Sales Table */}
-          <div className="flex flex-col gap-2">
-            <h2 className="text-lg font-semibold">Today&apos;s Sales</h2>
-            <DataTable
-              data={data.sales}
-              columns={saleColumns}
-              keyExtractor={(s) => s._id}
-              emptyMessage="No sales recorded today."
-            />
-          </div>
+          {/* Tables scroll together below the summary cards */}
+          <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
+            {/* Today's Sales Table */}
+            <div className="flex flex-col gap-2">
+              <h2 className="text-lg font-semibold">Today&apos;s Sales</h2>
+              <DataTable
+                data={data.sales}
+                columns={saleColumns}
+                keyExtractor={(s) => s._id}
+                emptyMessage="No sales recorded today."
+              />
+            </div>
 
-          {/* Remaining Products — Unified Table */}
-          <div className="flex flex-col gap-2">
-            <h2 className="text-lg font-semibold">Remaining Products</h2>
-            <DataTable
-              data={rows}
-              columns={remainingColumns}
-              keyExtractor={(r) => r.key}
-              emptyMessage="No products in stock."
-            />
+            {/* Remaining Products — Unified Table */}
+            <div className="flex flex-col gap-2">
+              <h2 className="text-lg font-semibold">Remaining Products</h2>
+              <DataTable
+                data={rows}
+                columns={remainingColumns}
+                keyExtractor={(r) => r.key}
+                emptyMessage="No products in stock."
+              />
+            </div>
           </div>
         </>
       ) : null}

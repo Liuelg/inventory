@@ -50,9 +50,9 @@ export function CategoryPage() {
       defaultValue="categories"
       value={selectedTab}
       onValueChange={onTabChange}
-      className="h-full w-full"
+      className="flex h-full w-full flex-col"
     >
-      <div className="flex w-full flex-col sm:flex-row items-start justify-between gap-4">
+      <div className="flex w-full flex-col sm:flex-row items-start justify-between gap-4 shrink-0">
         <div>
           <h1 className="text-2xl font-bold">Category</h1>
           <p className="text-sm text-gray-500">Setup category directory</p>
@@ -69,14 +69,14 @@ export function CategoryPage() {
           </Button>
         )}
       </div>
-      <TabsList className="mt-4">
+      <TabsList className="mt-4 shrink-0">
         <TabsTrigger value="categories">Category</TabsTrigger>
         <TabsTrigger value="sub-categories">Sub Category</TabsTrigger>
       </TabsList>
-      <TabsContent value="categories" className="h-[calc(100%-100px)]">
+      <TabsContent value="categories" className="min-h-0 flex-1 overflow-hidden">
         <CategoryTable onEdit={openEditCategory} />
       </TabsContent>
-      <TabsContent value="sub-categories" className="h-[calc(100%-100px)]">
+      <TabsContent value="sub-categories" className="min-h-0 flex-1 overflow-hidden">
         <SubCategoryTable onEdit={openEditSubCategory} />
       </TabsContent>
 

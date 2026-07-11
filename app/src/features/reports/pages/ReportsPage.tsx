@@ -81,42 +81,44 @@ export function ReportsPage() {
           <Skeleton className="h-64 w-full" />
         </div>
       ) : report ? (
-        <div className="flex flex-col gap-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
           <ReportSummaryCards
             summary={report.summary}
             currency={report.currency}
           />
 
-          {report.type === "remaining" ? (
-            <ReportBreakdownTable
-              data={report.breakdown}
-              currency={report.currency}
-            />
-          ) : (
-            <Tabs defaultValue="product">
-              <TabsList>
-                <TabsTrigger value="product">By Product</TabsTrigger>
-                {report.type === "sales" && (
-                  <TabsTrigger value="transaction">By Transaction</TabsTrigger>
-                )}
-              </TabsList>
-              <TabsContent value="product" className="pt-2">
-                <ReportBreakdownTable
-                  data={report.breakdown}
-                  currency={report.currency}
-                />
-              </TabsContent>
-              
-              {report.type === "sales" && (
-                <TabsContent value="transaction" className="pt-2">
-                  <ReportTransactionsTable
-                    data={report.transactions}
+          <div className="min-h-0 flex-1 overflow-auto">
+            {report.type === "remaining" ? (
+              <ReportBreakdownTable
+                data={report.breakdown}
+                currency={report.currency}
+              />
+            ) : (
+              <Tabs defaultValue="product" className="h-full">
+                <TabsList>
+                  <TabsTrigger value="product">By Product</TabsTrigger>
+                  {report.type === "sales" && (
+                    <TabsTrigger value="transaction">By Transaction</TabsTrigger>
+                  )}
+                </TabsList>
+                <TabsContent value="product" className="pt-2 h-[calc(100%-40px)]">
+                  <ReportBreakdownTable
+                    data={report.breakdown}
                     currency={report.currency}
                   />
                 </TabsContent>
-              )}
-            </Tabs>
-          )}
+                
+                {report.type === "sales" && (
+                  <TabsContent value="transaction" className="pt-2 h-[calc(100%-40px)]">
+                    <ReportTransactionsTable
+                      data={report.transactions}
+                      currency={report.currency}
+                    />
+                  </TabsContent>
+                )}
+              </Tabs>
+            )}
+          </div>
         </div>
       ) : null}
 

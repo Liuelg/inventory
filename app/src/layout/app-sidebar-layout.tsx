@@ -213,7 +213,7 @@ export function AppSidebarLayout({ children }: AppSidebarLayoutProps) {
   }
 
   return (
-    <SidebarProvider>
+    <SidebarProvider className="h-svh overflow-hidden">
       <Sidebar collapsible="icon">
         <SidebarHeader>
           <SidebarMenu>
@@ -254,7 +254,7 @@ export function AppSidebarLayout({ children }: AppSidebarLayoutProps) {
         </SidebarContent>
         <SidebarRail />
       </Sidebar>
-      <SidebarInset className="min-h-0">
+      <SidebarInset className="min-h-0 overflow-hidden">
         <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b px-4">
           <SidebarTrigger />
           <UserMenu />
