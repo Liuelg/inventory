@@ -1,15 +1,12 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table.tsx"
-
-export { Table, TableBody, TableCell, TableHead, TableHeader, TableRow }
 
 /* ------------------------------------------------------------------ */
 /*  Reusable DataTable                                                 */
@@ -51,54 +48,55 @@ export function DataTable<T>({
   }
 
   return (
-    <Table
-      containerClassName={cn(
-        "min-h-0 min-w-0 flex-1 overflow-auto rounded-lg border border-border bg-background",
+    <div
+      className={cn(
+        "relative w-full h-0 min-h-0 min-w-0 flex-1 overflow-auto rounded-lg border border-border bg-background",
         containerClassName
       )}
-      className={cn("relative", tableClassName)}
     >
-      <TableHeader className="bg-background shadow-[0_1px_0_0_var(--border)]">
-        <TableRow>
-          {columns.map((col, i) => (
-            <TableHead
-              key={i}
-              className={cn("sticky top-0 z-10 bg-background", col.className)}
-            >
-              {col.header}
-            </TableHead>
-          ))}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {data.length === 0 ? (
+      <table className={cn("w-full caption-bottom text-sm", tableClassName)}>
+        <TableHeader className="bg-background shadow-[0_1px_0_0_var(--border)]">
           <TableRow>
-            <TableCell
-              colSpan={columns.length}
-              className="text-center text-muted-foreground"
-            >
-              {emptyMessage}
-            </TableCell>
+            {columns.map((col, i) => (
+              <TableHead
+                key={i}
+                className={cn("sticky top-0 z-10 bg-background", col.className)}
+              >
+                {col.header}
+              </TableHead>
+            ))}
           </TableRow>
-        ) : (
-          data.map((row, rowIndex) => (
-            <TableRow
-              key={keyExtractor(row)}
-              onClick={() => onRowClick?.(row)}
-              className={cn(
-                onRowClick && "cursor-pointer hover:bg-muted/50"
-              )}
-            >
-              {columns.map((col, colIndex) => (
-                <TableCell key={colIndex} className={col.className}>
-                  {col.cell(row, rowIndex)}
-                </TableCell>
-              ))}
+        </TableHeader>
+        <TableBody>
+          {data.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={columns.length}
+                className="text-center text-muted-foreground"
+              >
+                {emptyMessage}
+              </TableCell>
             </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+          ) : (
+            data.map((row, rowIndex) => (
+              <TableRow
+                key={keyExtractor(row)}
+                onClick={() => onRowClick?.(row)}
+                className={cn(
+                  onRowClick && "cursor-pointer hover:bg-muted/50"
+                )}
+              >
+                {columns.map((col, colIndex) => (
+                  <TableCell key={colIndex} className={col.className}>
+                    {col.cell(row, rowIndex)}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </table>
+    </div>
   )
 }
 
