@@ -24,6 +24,12 @@ function getStoreName(store: Stockout["store"]) {
   return store.name || store._id || "-"
 }
 
+function getUserName(user: Stockout["accepted_by"] | Stockout["created_by"]) {
+  if (!user) return "-"
+  if (typeof user === "string") return user
+  return user.name || user.email || "-"
+}
+
 function getTotalItems(stockout: Stockout) {
   return stockout.items.reduce((sum, item) => sum + item.quantity, 0)
 }
@@ -220,6 +226,20 @@ export function GoodInTable() {
                 </div>
               </div>
 
+              {viewing.status === "accepted" && viewing.accepted_by ? (
+                <div className="text-sm">
+                  <p className="text-muted-foreground">Approved By</p>
+                  <p className="font-medium">{getUserName(viewing.accepted_by)}</p>
+                </div>
+              ) : null}
+              {viewing.status === "accepted" && viewing.accepted_at ? (
+                <div className="text-sm">
+                  <p className="text-muted-foreground">Approved At</p>
+                  <p className="font-medium">
+                    {new Date(viewing.accepted_at).toLocaleString()}
+                  </p>
+                </div>
+              ) : null}
               {viewing.note ? (
                 <div className="text-sm">
                   <p className="text-muted-foreground">Note</p>
