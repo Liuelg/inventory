@@ -31,9 +31,9 @@ export function ReportByStoreTable({ data }: Props) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Store</TableHead>
-            <TableHead className="text-right">Records</TableHead>
-            <TableHead className="text-right">Quantity</TableHead>
+            <TableHead className="sticky top-0 z-10 bg-background">Store</TableHead>
+            <TableHead className="sticky top-0 z-10 bg-background text-right">Records</TableHead>
+            <TableHead className="sticky top-0 z-10 bg-background text-right">Quantity</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

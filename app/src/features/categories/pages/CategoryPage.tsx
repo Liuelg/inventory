@@ -50,7 +50,7 @@ export function CategoryPage() {
       defaultValue="categories"
       value={selectedTab}
       onValueChange={onTabChange}
-      className="flex h-full w-full flex-col"
+      className="flex w-full flex-col"
     >
       <div className="flex w-full flex-col sm:flex-row items-start justify-between gap-4 shrink-0">
         <div>

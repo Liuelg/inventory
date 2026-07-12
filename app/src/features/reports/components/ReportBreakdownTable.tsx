@@ -31,8 +31,8 @@ export function ReportBreakdownTable({ data }: Props) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Product</TableHead>
-            <TableHead className="text-right">Quantity</TableHead>
+            <TableHead className="sticky top-0 z-10 bg-background">Product</TableHead>
+            <TableHead className="sticky top-0 z-10 bg-background text-right">Quantity</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

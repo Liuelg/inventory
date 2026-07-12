@@ -50,7 +50,7 @@ export function DataTable<T>({
   return (
     <div
       className={cn(
-        "relative w-full h-0 min-h-0 min-w-0 flex-1 overflow-auto rounded-lg border border-border bg-background",
+        "relative w-full min-w-0 rounded-lg border border-border bg-background",
         containerClassName
       )}
     >
@@ -130,7 +130,7 @@ const invoiceColumns: ColumnDef<Invoice>[] = [
 
 export function TableDemo() {
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+    <div className="flex flex-col">
       <DataTable
         data={invoices}
         columns={invoiceColumns}

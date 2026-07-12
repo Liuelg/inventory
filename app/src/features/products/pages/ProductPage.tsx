@@ -83,7 +83,7 @@ export function ProductPage() {
   }
 
   return (
-    <div className="flex h-full w-full flex-col gap-4">
+    <div className="flex w-full flex-col gap-4">
       <div className="flex w-full flex-col sm:flex-row items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">

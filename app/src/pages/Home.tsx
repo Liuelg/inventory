@@ -65,7 +65,7 @@ export function Home() {
   })
 
   return (
-    <div className="flex h-full flex-col gap-4">
+    <div className="flex flex-col gap-4">
       <div className="flex w-full flex-col sm:flex-row items-start justify-between gap-2 shrink-0">
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>

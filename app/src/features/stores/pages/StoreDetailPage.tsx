@@ -158,7 +158,7 @@ export function StoreDetailPage() {
   ]
 
   return (
-    <div className="flex h-full w-full flex-col gap-6">
+    <div className="flex w-full flex-col gap-6">
       <div className="flex flex-col gap-4">
         <Button
           variant="ghost"
@@ -207,7 +207,7 @@ export function StoreDetailPage() {
           </div>
 
           {/* Tables scroll together below the summary cards */}
-          <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
+          <div className="flex flex-col gap-6">
             {/* Today's Sales Table */}
             <div className="flex flex-col gap-2">
               <h2 className="text-lg font-semibold">Today&apos;s Sales</h2>

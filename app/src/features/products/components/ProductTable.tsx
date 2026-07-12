@@ -117,7 +117,7 @@ export function ProductTable({ products, isLoading, onEdit }: ProductTableProps)
   ]
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
+    <div className="flex flex-col gap-4">
       <DataTable
         data={products}
         columns={columns}

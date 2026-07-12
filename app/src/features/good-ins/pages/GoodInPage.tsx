@@ -2,7 +2,7 @@ import { GoodInTable } from "../components/GoodInTable"
 
 export function GoodInPage() {
   return (
-    <div className="flex h-full w-full flex-col gap-4">
+    <div className="flex w-full flex-col gap-4">
       <div className="flex w-full flex-col sm:flex-row items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Stock In</h1>
