@@ -125,7 +125,7 @@
   html,
   body,
   #root {
-    @apply h-full;
+    @apply h-full overflow-hidden;
     }
   body {
     @apply bg-background text-foreground;
@@ -143,10 +143,10 @@
   }
 }
 
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
+@utility no-scrollbar {
+  &::-webkit-scrollbar {
+    display: none;
+  }
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
