@@ -29,10 +29,10 @@ export function ReportBreakdownTable({ data }: Props) {
   return (
     <div className="rounded-md border">
       <Table>
-        <TableHeader>
+        <TableHeader className="sticky top-0 z-10 bg-background">
           <TableRow>
-            <TableHead className="sticky top-0 z-10 bg-background">Product</TableHead>
-            <TableHead className="sticky top-0 z-10 bg-background text-right">Quantity</TableHead>
+            <TableHead className="bg-background">Product</TableHead>
+            <TableHead className="bg-background text-right">Quantity</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

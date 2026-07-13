@@ -55,12 +55,12 @@ export function DataTable<T>({
       )}
     >
       <table className={cn("w-full caption-bottom border-separate border-spacing-0 text-sm", tableClassName)}>
-        <TableHeader className="bg-background shadow-[0_1px_0_0_var(--border)]">
+        <TableHeader className="sticky top-0 z-10 bg-background shadow-[0_1px_0_0_var(--border)]">
           <TableRow>
             {columns.map((col, i) => (
               <TableHead
                 key={i}
-                className={cn("sticky top-0 z-10 bg-background", col.className)}
+                className={cn("bg-background", col.className)}
               >
                 {col.header}
               </TableHead>
