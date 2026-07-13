@@ -36,7 +36,7 @@ export function ReportBreakdownTable({ data }: Props) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.map((item) => (
+          {[...data].sort((a, b) => a.product.name.localeCompare(b.product.name)).map((item) => (
             <TableRow key={item.product._id}>
               <TableCell className="font-medium">{item.product.name}</TableCell>
               <TableCell className="text-right">{item.quantity}</TableCell>

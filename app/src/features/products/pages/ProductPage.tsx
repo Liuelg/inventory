@@ -69,7 +69,7 @@ export function ProductPage() {
       result = result.filter((p) => getSubCategoryId(p) === selectedSubCategory)
     }
 
-    return result
+    return result.sort((a, b) => a.name.localeCompare(b.name))
   }, [products, searchQuery, selectedCategory, selectedSubCategory])
 
   const openAdd = () => {

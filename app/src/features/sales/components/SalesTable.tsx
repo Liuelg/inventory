@@ -185,7 +185,6 @@ export function SalesTable({ onEdit, displayCurrency, rates }: SalesTableProps) 
     {
       header: "Sales Person",
       cell: (sale) => sale.salesName || "-",
-      className: "hidden md:table-cell",
     },
     {
       header: "Store",
