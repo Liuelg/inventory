@@ -259,8 +259,10 @@ export function AppSidebarLayout({ children }: AppSidebarLayoutProps) {
           <SidebarTrigger />
           <UserMenu />
         </header>
-        <div className="flex min-w-0 flex-1 flex-col overflow-auto px-4 py-4">
-          {children ?? <Outlet />}
+        <div className="flex min-w-0 flex-1 flex-col overflow-auto px-4 pb-4">
+          <div className="pt-4">
+            {children ?? <Outlet />}
+          </div>
         </div>
       </SidebarInset>
     </SidebarProvider>
