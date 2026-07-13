@@ -152,7 +152,7 @@ export function SalesTable({ onEdit, displayCurrency, rates }: SalesTableProps) 
       cell: (sale) => (
         <span className="font-medium">{sale.invoiceNumber || "-"}</span>
       ),
-      className: "w-[120px]",
+      className: "w-[72px] sm:w-[120px]",
     },
     {
       header: "Products",
@@ -175,7 +175,7 @@ export function SalesTable({ onEdit, displayCurrency, rates }: SalesTableProps) 
           </div>
         )
       },
-      className: "max-w-[120px] sm:max-w-[180px] !whitespace-normal align-top break-words",
+      className: "max-w-[100px] sm:max-w-[180px] !whitespace-normal align-top break-words",
     },
     {
       header: "Customer",
@@ -222,7 +222,7 @@ export function SalesTable({ onEdit, displayCurrency, rates }: SalesTableProps) 
           </div>
         )
       },
-      className: "w-[140px] text-right whitespace-nowrap",
+      className: "w-[100px] sm:w-[140px] text-right whitespace-nowrap",
     },
     {
       header: "Date",

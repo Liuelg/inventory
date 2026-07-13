@@ -50,7 +50,7 @@ export function DataTable<T>({
   return (
     <div
       className={cn(
-        "relative w-full min-w-0 rounded-lg border border-border bg-background",
+        "relative w-full min-w-0 overflow-x-auto rounded-lg border border-border bg-background",
         containerClassName
       )}
     >
