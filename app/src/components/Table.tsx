@@ -54,7 +54,7 @@ export function DataTable<T>({
         containerClassName
       )}
     >
-      <table className={cn("w-full caption-bottom text-sm", tableClassName)}>
+      <table className={cn("w-full caption-bottom border-separate border-spacing-0 text-sm", tableClassName)}>
         <TableHeader className="bg-background shadow-[0_1px_0_0_var(--border)]">
           <TableRow>
             {columns.map((col, i) => (
