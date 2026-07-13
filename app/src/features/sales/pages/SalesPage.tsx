@@ -1,14 +1,40 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { SalesTable } from "../components/SalesTable"
 import { SalesForm } from "../components/SalesForm"
 import { CurrencySelector } from "../components/CurrencySelector"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Plus } from "lucide-react"
 import { useCurrencyRates } from "@/features/currency/hooks"
+import { useSales } from "../hooks"
+import { useCategories } from "@/features/categories/hooks"
 import type { Sale } from "../types"
 import type { CurrencyCode } from "@/features/currency/types"
 
 const DEFAULT_RATES = { eur: 1, usd: 1, birr: 1, visa: 1 }
+
+function getSaleCategoryIds(sale: Sale): string[] {
+  const ids: string[] = []
+  for (const item of sale.items) {
+    if (typeof item.item_id === "object" && item.item_id !== null) {
+      const cat = item.item_id.category
+      if (typeof cat === "string") {
+        if (cat) ids.push(cat)
+      } else if (cat && typeof cat === "object" && "_id" in cat) {
+        ids.push(cat._id)
+      }
+    }
+  }
+  return [...new Set(ids)]
+}
 
 export function SalesPage() {
   const [formOpen, setFormOpen] = useState(false)
@@ -16,7 +42,52 @@ export function SalesPage() {
   const [displayCurrency, setDisplayCurrency] = useState<CurrencyCode>("usd")
   const { data: ratesData } = useCurrencyRates()
 
+  // Filters
+  const [salesPerson, setSalesPerson] = useState<string>("all")
+  const [startDate, setStartDate] = useState<string>("")
+  const [endDate, setEndDate] = useState<string>("")
+  const [category, setCategory] = useState<string>("all")
+
+  const { data: sales, isLoading } = useSales()
+  const { data: categories } = useCategories()
+
   const rates = ratesData?.data?.rates ?? DEFAULT_RATES
+
+  const salesPersons = useMemo(() => {
+    if (!sales) return []
+    const names = new Set<string>()
+    for (const s of sales) {
+      if (s.salesName) names.add(s.salesName)
+    }
+    return [...names].sort()
+  }, [sales])
+
+  const filteredSales = useMemo(() => {
+    if (!sales) return []
+    let result = [...sales]
+
+    if (salesPerson && salesPerson !== "all") {
+      result = result.filter((s) => s.salesName === salesPerson)
+    }
+
+    if (startDate) {
+      const start = new Date(startDate)
+      start.setHours(0, 0, 0, 0)
+      result = result.filter((s) => new Date(s.date_time) >= start)
+    }
+
+    if (endDate) {
+      const end = new Date(endDate)
+      end.setHours(23, 59, 59, 999)
+      result = result.filter((s) => new Date(s.date_time) <= end)
+    }
+
+    if (category && category !== "all") {
+      result = result.filter((s) => getSaleCategoryIds(s).includes(category))
+    }
+
+    return result
+  }, [sales, salesPerson, startDate, endDate, category])
 
   const openAdd = () => {
     setEditing(null)
@@ -46,11 +117,72 @@ export function SalesPage() {
           </Button>
         </div>
       </div>
+
+      {/* Filters */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="grid gap-1.5 w-full sm:w-[200px]">
+          <Label className="text-xs text-muted-foreground">Sales Person</Label>
+          <Select value={salesPerson} onValueChange={setSalesPerson}>
+            <SelectTrigger>
+              <SelectValue placeholder="All sales persons" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              {salesPersons.map((name) => (
+                <SelectItem key={name} value={name}>
+                  {name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="grid gap-1.5 w-full sm:w-[160px]">
+          <Label className="text-xs text-muted-foreground">Start Date</Label>
+          <Input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+          />
+        </div>
+
+        <div className="grid gap-1.5 w-full sm:w-[160px]">
+          <Label className="text-xs text-muted-foreground">End Date</Label>
+          <Input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
+        </div>
+
+        <div className="grid gap-1.5 w-full sm:w-[200px]">
+          <Label className="text-xs text-muted-foreground">
+            Product Category
+          </Label>
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger>
+              <SelectValue placeholder="All categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              {categories?.map((c) => (
+                <SelectItem key={c._id} value={c._id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       <SalesTable
+        sales={filteredSales}
+        isLoading={isLoading}
         onEdit={openEdit}
         displayCurrency={displayCurrency}
         rates={rates}
       />
+
       {formOpen ? (
         <SalesForm
           key={editing?._id ?? "new-sale"}

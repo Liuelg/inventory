@@ -27,7 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Pencil, Trash2, Eye } from "lucide-react"
-import { useDeleteSale, useSales } from "../hooks"
+import { useDeleteSale } from "../hooks"
 import { useAuthSession } from "@/hooks/use-auth-session"
 import { ProductImageCell } from "@/components/ProductImageCell"
 import { getCurrencySymbol } from "./CurrencySelector"
@@ -133,13 +133,14 @@ function getItemPriceBreakdown(item: SaleItem): string {
 }
 
 interface SalesTableProps {
+  sales: Sale[]
+  isLoading?: boolean
   onEdit: (sale: Sale) => void
   displayCurrency: CurrencyCode
   rates: CurrencyRates
 }
 
-export function SalesTable({ onEdit, displayCurrency, rates }: SalesTableProps) {
-  const { data: sales, isLoading } = useSales()
+export function SalesTable({ sales, isLoading, onEdit, displayCurrency, rates }: SalesTableProps) {
   const remove = useDeleteSale()
   const { data: user } = useAuthSession()
   const isAdmin = user?.role === "admin"
@@ -265,10 +266,10 @@ export function SalesTable({ onEdit, displayCurrency, rates }: SalesTableProps) 
   return (
     <div className="flex flex-col gap-4">
       <DataTable
-        data={sales ?? []}
+        data={sales}
         columns={columns}
         keyExtractor={(sale) => sale._id}
-        loading={isLoading}
+        loading={isLoading ?? false}
         emptyMessage="No sales found."
       />
 
