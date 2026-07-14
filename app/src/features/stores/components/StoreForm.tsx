@@ -31,7 +31,12 @@ const initialState: StoreFormState = {
   address: "",
 }
 
-function getManagerName(manager: Store["manager_id"]): string {
+function getManagerName(store: Store): string {
+  // Prefer sales person (store staff) over manager_id — same logic as StoreTable
+  const sp = store.salesPerson
+  if (sp?.name) return sp.name
+
+  const manager = store.manager_id
   if (!manager) return "Not assigned"
   if (typeof manager === "string") return manager
   return manager.name ?? "Unknown"
@@ -153,7 +158,7 @@ export function StoreForm({
               <Label htmlFor="store-manager-name">Manager</Label>
               <Input
                 id="store-manager-name"
-                value={getManagerName(editing.manager_id)}
+                value={getManagerName(editing)}
                 disabled
                 className="bg-muted"
               />
