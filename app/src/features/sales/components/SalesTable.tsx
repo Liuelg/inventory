@@ -172,7 +172,6 @@ export function SalesTable({ sales, lineItems, isLoading, onEdit, displayCurrenc
   const [detailSale, setDetailSale] = useState<Sale | null>(null)
 
   const isLineItemView = lineItems !== undefined
-  const data = isLineItemView ? lineItems : sales
 
   const saleColumns: ColumnDef<Sale>[] = [
     {
