@@ -5,8 +5,8 @@ export const reportApi = {
   generate: (params: ReportParams) => {
     const query = new URLSearchParams()
     query.set("type", params.type)
-    query.set("period", params.period)
-    query.set("date", params.date)
+    query.set("startDate", params.startDate)
+    query.set("endDate", params.endDate)
     if (params.store) query.set("store", params.store)
     if (params.currency) query.set("currency", params.currency)
     if (params.timezoneOffset !== undefined) {

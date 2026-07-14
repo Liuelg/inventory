@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select"
 import { useStores } from "@/features/stores/hooks"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
-import type { ReportType, ReportPeriod, ReportParams } from "../types"
+import type { ReportType, ReportParams } from "../types"
 import { BarChart3 } from "lucide-react"
 
 const REPORT_TYPES: { value: ReportType; label: string }[] = [
@@ -20,12 +20,6 @@ const REPORT_TYPES: { value: ReportType; label: string }[] = [
   { value: "goodIns", label: "Stock In" },
   { value: "stockouts", label: "Stock Out" },
   { value: "remaining", label: "Remaining Products" },
-]
-
-const PERIODS: { value: ReportPeriod; label: string }[] = [
-  { value: "daily", label: "Daily" },
-  { value: "weekly", label: "Weekly" },
-  { value: "monthly", label: "Monthly" },
 ]
 
 function formatDateInput(date: Date): string {
@@ -46,8 +40,8 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
   const userStore = session?.store
 
   const [type, setType] = useState<ReportType>("sales")
-  const [period, setPeriod] = useState<ReportPeriod>("daily")
-  const [date, setDate] = useState(formatDateInput(new Date()))
+  const [startDate, setStartDate] = useState(formatDateInput(new Date()))
+  const [endDate, setEndDate] = useState(formatDateInput(new Date()))
   const [store, setStore] = useState<string>(userStore || "all")
 
   const { data: storesData } = useStores()
@@ -60,8 +54,8 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
   const handleGenerate = () => {
     const params: ReportParams = {
       type,
-      period,
-      date,
+      startDate,
+      endDate,
       timezoneOffset: new Date().getTimezoneOffset(),
     }
     const effectiveStore = isAdmin ? store : userStore
@@ -93,31 +87,22 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
         {type !== "remaining" && (
           <>
             <div className="flex flex-1 flex-col gap-2 px-0 sm:px-4 py-0 sm:py-2">
-              <Label htmlFor="report-period">Period</Label>
-              <Select
-                value={period}
-                onValueChange={(v) => setPeriod(v as ReportPeriod)}
-              >
-                <SelectTrigger id="report-period">
-                  <SelectValue placeholder="Select period" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PERIODS.map((p) => (
-                    <SelectItem key={p.value} value={p.value}>
-                      {p.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="report-start-date">Start Date</Label>
+              <Input
+                id="report-start-date"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
             </div>
 
             <div className="flex flex-1 flex-col gap-2 px-0 sm:px-4 py-0 sm:py-2">
-              <Label htmlFor="report-date">Date</Label>
+              <Label htmlFor="report-end-date">End Date</Label>
               <Input
-                id="report-date"
+                id="report-end-date"
                 type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
               />
             </div>
           </>
@@ -143,8 +128,6 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
             </SelectContent>
           </Select>
         </div>
-
-      
 
         <div className="flex flex-1 items-end px-0 sm:px-4 py-0 sm:py-2">
           <Button onClick={handleGenerate} disabled={isLoading} className="w-full">

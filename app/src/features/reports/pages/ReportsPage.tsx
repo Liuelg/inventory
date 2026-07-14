@@ -27,8 +27,8 @@ export function ReportsPage() {
       <div>
         <h1 className="text-2xl font-bold">Reports</h1>
         <p className="text-sm text-gray-500">
-          Generate daily, weekly, and monthly reports for sales, stock ins,
-          stock outs, and remaining products.
+          Generate reports for sales, stock ins, stock outs, and remaining
+          products using a date range.
         </p>
       </div>
 
@@ -45,9 +45,7 @@ export function ReportsPage() {
               </>
             ) : (
               <>
-                Showing{" "}
-                <span className="font-medium capitalize">{report.period}</span>{" "}
-                report for{" "}
+                Showing report for{" "}
                 <span className="font-medium capitalize">
                   {report.type === "goodIns"
                     ? "Stock In"

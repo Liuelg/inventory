@@ -16,34 +16,10 @@ function parseLocalDate(dateStr) {
   return new Date(Date.UTC(year, month - 1, day))
 }
 
-function getDateRange(period, anchorDate, tzOffsetMinutes = 0) {
-  const date = anchorDate ? parseLocalDate(anchorDate) : new Date()
+function getRangeFromDates(startDateStr, endDateStr, tzOffsetMinutes = 0) {
   const offsetMs = tzOffsetMinutes * 60000
-  const y = date.getUTCFullYear()
-  const m = date.getUTCMonth()
-  const d = date.getUTCDate()
-
-  if (period === "daily") {
-    const start = new Date(Date.UTC(y, m, d) + offsetMs)
-    const end = new Date(Date.UTC(y, m, d + 1) + offsetMs)
-    return { start, end }
-  }
-
-  if (period === "weekly") {
-    const end = new Date(Date.UTC(y, m, d + 1) + offsetMs)
-    const start = new Date(Date.UTC(y, m, d - 6) + offsetMs)
-    return { start, end }
-  }
-
-  if (period === "monthly") {
-    const start = new Date(Date.UTC(y, m, 1) + offsetMs)
-    const end = new Date(Date.UTC(y, m + 1, 1) + offsetMs)
-    return { start, end }
-  }
-
-  // default to daily
-  const start = new Date(Date.UTC(y, m, d) + offsetMs)
-  const end = new Date(Date.UTC(y, m, d + 1) + offsetMs)
+  const start = new Date(parseLocalDate(startDateStr).getTime() + offsetMs)
+  const end = new Date(parseLocalDate(endDateStr).getTime() + offsetMs + 24 * 60 * 60 * 1000)
   return { start, end }
 }
 
@@ -90,7 +66,7 @@ function convertUSDToCurrency(amountUSD, targetCurrency, rates) {
 
 router.get("/", async (req, res, next) => {
   try {
-    const { type, period, date, store, currency, timezoneOffset } = req.query
+    const { type, startDate, endDate, store, currency, timezoneOffset } = req.query
     const targetCurrency = currency || 'usd'
     const isAdmin = req.user?.role === 'admin'
     const userStore = req.user?.store?.toString?.()
@@ -230,13 +206,13 @@ router.get("/", async (req, res, next) => {
       })
     }
 
-    if (!period || !["daily", "weekly", "monthly"].includes(period)) {
-      return res.status(400).json({ success: false, message: "Invalid or missing period. Use daily, weekly, or monthly." })
+    if (!startDate || !endDate) {
+      return res.status(400).json({ success: false, message: "startDate and endDate are required." })
     }
 
     const Model = getModel(type)
     const dateField = getDateField(type)
-    const { start, end } = getDateRange(period, date, tzOffset)
+    const { start, end } = getRangeFromDates(startDate, endDate, tzOffset)
 
     const query = {
       [dateField]: { $gte: start, $lt: end },
@@ -381,7 +357,6 @@ router.get("/", async (req, res, next) => {
       success: true,
       data: {
         type,
-        period,
         start: start.toISOString(),
         end: end.toISOString(),
         storeFilter: store || null,

@@ -1,7 +1,6 @@
 import type { CurrencyCode } from "@/features/currency/types"
 
 export type ReportType = "sales" | "goodIns" | "stockouts" | "remaining"
-export type ReportPeriod = "daily" | "weekly" | "monthly"
 
 export type ReportSummary = {
   totalRecords: number
@@ -45,7 +44,6 @@ export type ReportTransaction = {
 
 export type ReportData = {
   type: ReportType
-  period: ReportPeriod
   start: string
   end: string
   storeFilter: string | null
@@ -58,8 +56,8 @@ export type ReportData = {
 
 export type ReportParams = {
   type: ReportType
-  period: ReportPeriod
-  date: string
+  startDate: string
+  endDate: string
   store?: string
   currency?: CurrencyCode
   timezoneOffset?: number

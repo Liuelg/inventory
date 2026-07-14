@@ -1,6 +1,6 @@
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
-import type { ReportData, ReportType, ReportPeriod } from "./types"
+import type { ReportData, ReportType } from "./types"
 
 function getReportTypeLabel(type: ReportType): string {
   switch (type) {
@@ -13,10 +13,6 @@ function getReportTypeLabel(type: ReportType): string {
     case "remaining":
       return "Remaining Products"
   }
-}
-
-function getPeriodLabel(period: ReportPeriod): string {
-  return period.charAt(0).toUpperCase() + period.slice(1)
 }
 
 export function generateReportPDF(report: ReportData) {
@@ -35,21 +31,19 @@ export function generateReportPDF(report: ReportData) {
   doc.setFontSize(11)
   doc.setTextColor(80, 80, 80)
   const typeLabel = getReportTypeLabel(report.type)
-  const periodLabel = getPeriodLabel(report.period)
   const dateRange = `${new Date(report.start).toLocaleDateString()} – ${new Date(report.end).toLocaleDateString()}`
   const storeText = report.storeFilter || "All Stores"
 
   doc.text(`Type: ${typeLabel}`, margin, 32)
-  doc.text(`Period: ${periodLabel}`, margin, 38)
-  doc.text(`Date Range: ${dateRange}`, margin, 44)
-  doc.text(`Store: ${storeText}`, margin, 50)
+  doc.text(`Date Range: ${dateRange}`, margin, 38)
+  doc.text(`Store: ${storeText}`, margin, 44)
 
   // Summary section
   doc.setFontSize(12)
   doc.setTextColor(33, 33, 33)
-  doc.text("Summary", margin, 62)
+  doc.text("Summary", margin, 56)
 
-  const summaryY = 68
+  const summaryY = 62
   const colW = contentWidth / 3
   const summaryData = [
     {
@@ -174,6 +168,6 @@ export function generateReportPDF(report: ReportData) {
     )
   }
 
-  const fileName = `${report.type}_${report.period}_${report.start}.pdf`
+  const fileName = `${report.type}_${report.start}_${report.end}.pdf`
   doc.save(fileName)
 }
