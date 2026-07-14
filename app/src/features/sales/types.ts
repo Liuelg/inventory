@@ -27,6 +27,12 @@ export type Sale = {
   updatedAt?: string
 }
 
+export type SaleLineItemRow = {
+  _id: string
+  sale: Sale
+  item: SaleItem
+}
+
 export type SalePayload = {
   items: Omit<SaleItem, "_id">[]
   totalAmount: number

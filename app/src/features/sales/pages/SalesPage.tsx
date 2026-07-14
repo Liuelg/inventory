@@ -16,7 +16,7 @@ import { Plus, ListFilter, X } from "lucide-react"
 import { useCurrencyRates } from "@/features/currency/hooks"
 import { useSales } from "../hooks"
 import { useCategories } from "@/features/categories/hooks"
-import type { Sale } from "../types"
+import type { Sale, SaleLineItemRow } from "../types"
 import type { CurrencyCode } from "@/features/currency/types"
 
 const DEFAULT_RATES = { eur: 1, usd: 1, birr: 1, visa: 1 }
@@ -34,6 +34,18 @@ function getSaleCategoryIds(sale: Sale): string[] {
     }
   }
   return [...new Set(ids)]
+}
+
+function getItemCategoryId(item: Sale["items"][number]): string | null {
+  if (typeof item.item_id === "object" && item.item_id !== null) {
+    const cat = item.item_id.category
+    if (typeof cat === "string") {
+      return cat || null
+    } else if (cat && typeof cat === "object" && "_id" in cat) {
+      return cat._id
+    }
+  }
+  return null
 }
 
 export function SalesPage() {
@@ -98,6 +110,24 @@ export function SalesPage() {
 
     return result
   }, [sales, salesPerson, startDate, endDate, category])
+
+  const lineItems: SaleLineItemRow[] | undefined = useMemo(() => {
+    if (category === "all" || !category) return undefined
+    const rows: SaleLineItemRow[] = []
+    for (const sale of filteredSales) {
+      for (let i = 0; i < sale.items.length; i++) {
+        const item = sale.items[i]
+        if (getItemCategoryId(item) === category) {
+          rows.push({
+            _id: `${sale._id}-${item._id ?? i}`,
+            sale,
+            item,
+          })
+        }
+      }
+    }
+    return rows
+  }, [filteredSales, category])
 
   const openAdd = () => {
     setEditing(null)
@@ -222,6 +252,7 @@ export function SalesPage() {
 
       <SalesTable
         sales={filteredSales}
+        lineItems={lineItems}
         isLoading={isLoading}
         onEdit={openEdit}
         displayCurrency={displayCurrency}

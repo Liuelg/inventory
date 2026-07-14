@@ -31,7 +31,7 @@ import { useDeleteSale } from "../hooks"
 import { useAuthSession } from "@/hooks/use-auth-session"
 import { ProductImageCell } from "@/components/ProductImageCell"
 import { getCurrencySymbol } from "./CurrencySelector"
-import type { Sale, SaleItem } from "../types"
+import type { Sale, SaleItem, SaleLineItemRow } from "../types"
 import type { CurrencyCode, CurrencyRates } from "@/features/currency/types"
 
 function getStoreName(store: Sale["store"]) {
@@ -71,6 +71,16 @@ function getSaleCurrencies(sale: Sale): { label: string; total: number }[] {
     { label: "USD", total: sums.usd },
     { label: "BIRR", total: sums.birr },
     { label: "VISA", total: sums.visa },
+  ]
+  return map.filter((c) => c.total > 0)
+}
+
+function getItemCurrencies(item: SaleItem): { label: string; total: number }[] {
+  const map = [
+    { label: "EUR", total: item.eur || 0 },
+    { label: "USD", total: item.usd || 0 },
+    { label: "BIRR", total: item.birr || 0 },
+    { label: "VISA", total: item.visa || 0 },
   ]
   return map.filter((c) => c.total > 0)
 }
@@ -123,6 +133,19 @@ function getConvertedTotal(
   return total
 }
 
+function getItemConvertedTotal(
+  item: SaleItem,
+  targetCurrency: CurrencyCode,
+  latestRates: CurrencyRates
+): number {
+  return (
+    convertCurrency(item.eur || 0, "eur", targetCurrency, latestRates) +
+    convertCurrency(item.usd || 0, "usd", targetCurrency, latestRates) +
+    convertCurrency(item.birr || 0, "birr", targetCurrency, latestRates) +
+    convertCurrency(item.visa || 0, "visa", targetCurrency, latestRates)
+  )
+}
+
 function getItemPriceBreakdown(item: SaleItem): string {
   const parts: string[] = []
   if (item.eur) parts.push(`€${item.eur}`)
@@ -134,20 +157,24 @@ function getItemPriceBreakdown(item: SaleItem): string {
 
 interface SalesTableProps {
   sales: Sale[]
+  lineItems?: SaleLineItemRow[]
   isLoading?: boolean
   onEdit: (sale: Sale) => void
   displayCurrency: CurrencyCode
   rates: CurrencyRates
 }
 
-export function SalesTable({ sales, isLoading, onEdit, displayCurrency, rates }: SalesTableProps) {
+export function SalesTable({ sales, lineItems, isLoading, onEdit, displayCurrency, rates }: SalesTableProps) {
   const remove = useDeleteSale()
   const { data: user } = useAuthSession()
   const isAdmin = user?.role === "admin"
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [detailSale, setDetailSale] = useState<Sale | null>(null)
 
-  const columns: ColumnDef<Sale>[] = [
+  const isLineItemView = lineItems !== undefined
+  const data = isLineItemView ? lineItems : sales
+
+  const saleColumns: ColumnDef<Sale>[] = [
     {
       header: "Invoice",
       cell: (sale) => (
@@ -263,15 +290,138 @@ export function SalesTable({ sales, isLoading, onEdit, displayCurrency, rates }:
     },
   ]
 
+  const lineItemColumns: ColumnDef<SaleLineItemRow>[] = [
+    {
+      header: "Invoice",
+      cell: (row) => (
+        <span className="font-medium">{row.sale.invoiceNumber || "-"}</span>
+      ),
+      className: "w-[72px] sm:w-[120px]",
+    },
+    {
+      header: "Product",
+      cell: (row) => {
+        const name = getProductName(row.item)
+        const image = getProductImage(row.item)
+        return (
+          <div className="flex items-start gap-2 w-full">
+            {image && (
+              <ProductImageCell image={image} altName={name} />
+            )}
+            <div className="flex flex-col w-full min-w-0">
+              <span className="text-sm leading-tight break-words whitespace-normal">
+                {name}
+              </span>
+            </div>
+          </div>
+        )
+      },
+      className: "max-w-[100px] sm:max-w-[180px] !whitespace-normal align-top break-words",
+    },
+    {
+      header: "Customer",
+      cell: (row) => row.sale.customerName || "-",
+      className: "hidden sm:table-cell",
+    },
+    {
+      header: "Sales Person",
+      cell: (row) => row.sale.salesName || "-",
+    },
+    {
+      header: "Store",
+      cell: (row) => getStoreName(row.sale.store),
+      className: "hidden md:table-cell",
+    },
+    {
+      header: "Qty",
+      cell: (row) => row.item.quantity,
+      className: "w-[60px] text-right",
+    },
+    {
+      header: "Total",
+      cell: (row) => {
+        const currencies = getItemCurrencies(row.item)
+        const converted = getItemConvertedTotal(row.item, displayCurrency, rates)
+        return (
+          <div className="text-right">
+            <div className="font-medium">
+              {getCurrencySymbol(displayCurrency)}{converted.toFixed(2)}
+            </div>
+            {currencies.length > 0 && (
+              <div className="flex justify-end gap-1 mt-0.5">
+                {currencies.map((c) => (
+                  <span
+                    key={c.label}
+                    className="inline-flex items-center rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+                  >
+                    {c.label} {c.total.toFixed(0)}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      },
+      className: "w-[100px] sm:w-[140px] text-right whitespace-nowrap",
+    },
+    {
+      header: "Date",
+      cell: (row) =>
+        row.sale.date_time
+          ? new Date(row.sale.date_time).toLocaleDateString()
+          : "-",
+      className: "w-[120px] hidden sm:table-cell",
+    },
+    {
+      header: "Actions",
+      className: "w-auto sm:w-[140px] text-right",
+      cell: (row) => (
+        <div className="flex justify-end gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setDetailSale(row.sale)}
+            title="View details"
+          >
+            <Eye />
+          </Button>
+          {isAdmin && (
+            <Button variant="ghost" size="sm" onClick={() => onEdit(row.sale)}>
+              <Pencil />
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive"
+            onClick={() => setDeleteId(row.sale._id)}
+          >
+            <Trash2 />
+          </Button>
+        </div>
+      ),
+    },
+  ]
+
   return (
     <div className="flex flex-col gap-4">
-      <DataTable
-        data={sales}
-        columns={columns}
-        keyExtractor={(sale) => sale._id}
-        loading={isLoading ?? false}
-        emptyMessage="No sales found."
-      />
+      {isLineItemView ? (
+        <DataTable
+          data={lineItems}
+          columns={lineItemColumns}
+          keyExtractor={(row) => row._id}
+          loading={isLoading ?? false}
+          emptyMessage="No sales found."
+        />
+      ) : (
+        <DataTable
+          data={sales}
+          columns={saleColumns}
+          keyExtractor={(sale) => sale._id}
+          loading={isLoading ?? false}
+          emptyMessage="No sales found."
+        />
+      )}
 
       {/* Sale Detail Dialog */}
       <Dialog open={!!detailSale} onOpenChange={() => setDetailSale(null)}>
