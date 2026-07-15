@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button.tsx"
 import { Input } from "@/components/ui/input.tsx"
 import { Label } from "@/components/ui/label.tsx"
@@ -119,6 +119,11 @@ export function StockoutForm({
   const { data: stores } = useStores()
   const create = useCreateStockout()
   const update = useUpdateStockout()
+
+  const sortedProducts = useMemo(() => {
+    if (!products) return []
+    return [...products].sort((a, b) => a.name.localeCompare(b.name))
+  }, [products])
 
   useEffect(() => {
     setForm(getInitialState(editing))
@@ -297,7 +302,7 @@ export function StockoutForm({
                       <SelectValue placeholder="Select product" />
                     </SelectTrigger>
                     <SelectContent>
-                      {products?.map((p) => (
+                      {sortedProducts.map((p) => (
                         <SelectItem key={p._id} value={p._id} textValue={p.name}>
                           <div className="flex items-center gap-2">
                             {p.image ? (
@@ -313,7 +318,7 @@ export function StockoutForm({
                   </Select>
                   {item.item_id && (
                     <span className="text-xs text-muted-foreground">
-                      Price: {getProductPrice(products, item.item_id)?.toFixed(2) ?? "—"}
+                      Price: {getProductPrice(sortedProducts, item.item_id)?.toFixed(2) ?? "—"}
                     </span>
                   )}
                 </div>
@@ -338,7 +343,7 @@ export function StockoutForm({
                     <SelectValue placeholder="Select product" />
                   </SelectTrigger>
                   <SelectContent>
-                    {products?.map((p) => (
+                    {sortedProducts.map((p) => (
                       <SelectItem key={p._id} value={p._id} textValue={p.name}>
                         <div className="flex items-center gap-2">
                           {p.image ? (

@@ -38,9 +38,9 @@ export function MyStorePage() {
     return map
   }, [categories])
 
-  const items = ((store?.items || []) as unknown as PopulatedStoreItem[]).filter(
-    (item) => item.quantity > 0 && item.item_id?._id
-  )
+  const items = ((store?.items || []) as unknown as PopulatedStoreItem[])
+    .filter((item) => item.quantity > 0 && item.item_id?._id)
+    .sort((a, b) => (a.item_id?.name || "").localeCompare(b.item_id?.name || ""))
 
   const columns: ColumnDef<PopulatedStoreItem>[] = [
     {

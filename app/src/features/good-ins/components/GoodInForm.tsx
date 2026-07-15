@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -99,6 +99,11 @@ export function GoodInForm({
   const { data: stores } = useStores()
   const create = useCreateGoodIn()
   const update = useUpdateGoodIn()
+
+  const sortedProducts = useMemo(() => {
+    if (!products) return []
+    return [...products].sort((a, b) => a.name.localeCompare(b.name))
+  }, [products])
 
   useEffect(() => {
     setForm(getInitialState(editing))
@@ -250,7 +255,7 @@ export function GoodInForm({
                     <SelectValue placeholder="Select product" />
                   </SelectTrigger>
                   <SelectContent>
-                    {products?.map((p) => (
+                    {sortedProducts.map((p) => (
                       <SelectItem key={p._id} value={p._id}>
                         {p.name}
                       </SelectItem>

@@ -47,6 +47,7 @@ function buildUnifiedRows(
       quantity: p.quantity,
       price: p.price,
     }))
+    .sort((a, b) => a.name.localeCompare(b.name))
 }
 
 export function StoreDetailPage() {

@@ -176,6 +176,7 @@ router.get("/store/:storeId", async (req, res, next) => {
             : null,
         }
       })
+      .sort((a, b) => a.product.name.localeCompare(b.product.name))
 
     res.json({
       success: true,
