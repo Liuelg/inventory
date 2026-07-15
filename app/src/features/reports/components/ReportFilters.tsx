@@ -96,7 +96,7 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
 
         {type !== "remaining" && (
           <>
-            <div className="flex flex-1 flex-col gap-2 px-0 lg:px-3 py-0 lg:py-2 min-w-[130px]">
+            <div className="flex flex-1 flex-col gap-2 px-0 lg:px-3 py-0 lg:py-2 min-w-[170px]">
               <Label htmlFor="report-start-date">Start Date</Label>
               <Input
                 id="report-start-date"
@@ -106,7 +106,7 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
               />
             </div>
 
-            <div className="flex flex-1 flex-col gap-2 px-0 lg:px-3 py-0 lg:py-2 min-w-[130px]">
+            <div className="flex flex-1 flex-col gap-2 px-0 lg:px-3 py-0 lg:py-2 min-w-[170px]">
               <Label htmlFor="report-end-date">End Date</Label>
               <Input
                 id="report-end-date"
