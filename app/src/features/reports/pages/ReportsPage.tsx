@@ -7,9 +7,9 @@ import { ReportSummaryCards } from "../components/ReportSummaryCards"
 import { ReportBreakdownTable } from "../components/ReportBreakdownTable"
 import { ReportTransactionsTable } from "../components/ReportTransactionsTable"
 import { useReport } from "../hooks"
-import { generateReportPDF } from "../utils"
+import { generateReportExcel } from "../utils"
 import type { ReportParams } from "../types"
-import { Printer } from "lucide-react"
+import { FileSpreadsheet } from "lucide-react"
 
 export function ReportsPage() {
   const [params, setParams] = useState<ReportParams | null>(null)
@@ -61,10 +61,10 @@ export function ReportsPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => generateReportPDF(report)}
+            onClick={() => generateReportExcel(report)}
           >
-            <Printer className="mr-2 h-4 w-4" />
-            Export PDF
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Export Excel
           </Button>
         </div>
       )}

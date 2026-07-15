@@ -182,7 +182,7 @@ router.get("/", async (req, res, next) => {
         recordCount = productMap.size
       }
 
-      const breakdown = Array.from(productMap.values()).sort((a, b) => b.quantity - a.quantity)
+      const breakdown = Array.from(productMap.values()).sort((a, b) => a.product.name.localeCompare(b.product.name))
       const now = new Date()
 
       return res.json({
@@ -337,7 +337,7 @@ router.get("/", async (req, res, next) => {
     const breakdown = Array.from(productMap.values()).map((item) => ({
       ...item,
       value: convertUSDToCurrency(item.value, targetCurrency, conversionRates),
-    })).sort((a, b) => b.quantity - a.quantity)
+    })).sort((a, b) => a.product.name.localeCompare(b.product.name))
 
     const byStore = Array.from(storeMap.values()).map((item) => ({
       ...item,
