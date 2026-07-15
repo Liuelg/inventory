@@ -77,8 +77,8 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
 
   return (
     <Card>
-      <CardContent className="flex w-full flex-col sm:flex-row sm:divide-x sm:divide-border pt-6 gap-4 sm:gap-0">
-        <div className="flex flex-1 flex-col gap-2 px-0 sm:px-4 py-0 sm:py-2">
+      <CardContent className="flex w-full flex-col flex-wrap lg:flex-nowrap lg:flex-row lg:divide-x lg:divide-border pt-6 gap-4 lg:gap-0">
+        <div className="flex flex-1 flex-col gap-2 px-0 lg:px-3 py-0 lg:py-2 min-w-[140px]">
           <Label htmlFor="report-type">Report Type</Label>
           <Select value={type} onValueChange={(v) => setType(v as ReportType)}>
             <SelectTrigger id="report-type">
@@ -96,7 +96,7 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
 
         {type !== "remaining" && (
           <>
-            <div className="flex flex-1 flex-col gap-2 px-0 sm:px-4 py-0 sm:py-2">
+            <div className="flex flex-1 flex-col gap-2 px-0 lg:px-3 py-0 lg:py-2 min-w-[130px]">
               <Label htmlFor="report-start-date">Start Date</Label>
               <Input
                 id="report-start-date"
@@ -106,7 +106,7 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
               />
             </div>
 
-            <div className="flex flex-1 flex-col gap-2 px-0 sm:px-4 py-0 sm:py-2">
+            <div className="flex flex-1 flex-col gap-2 px-0 lg:px-3 py-0 lg:py-2 min-w-[130px]">
               <Label htmlFor="report-end-date">End Date</Label>
               <Input
                 id="report-end-date"
@@ -118,7 +118,7 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
           </>
         )}
 
-        <div className="flex flex-1 flex-col gap-2 px-0 sm:px-4 py-0 sm:py-2">
+        <div className="flex flex-1 flex-col gap-2 px-0 lg:px-3 py-0 lg:py-2 min-w-[140px]">
           <Label htmlFor="report-store">{storeLabel}</Label>
           <Select
             value={isAdmin ? store : userStore || "all"}
@@ -139,7 +139,7 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
           </Select>
         </div>
 
-        <div className="flex flex-1 flex-col gap-2 px-0 sm:px-4 py-0 sm:py-2">
+        <div className="flex flex-col gap-2 px-0 lg:px-3 py-0 lg:py-2 w-full lg:w-[150px] shrink-0">
           <Label htmlFor="report-currency">Currency</Label>
           <Select
             value={currency}
@@ -158,8 +158,8 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
           </Select>
         </div>
 
-        <div className="flex flex-1 items-end px-0 sm:px-4 py-0 sm:py-2">
-          <Button onClick={handleGenerate} disabled={isLoading} className="w-full">
+        <div className="flex items-end px-0 lg:px-3 py-0 lg:py-2 w-full lg:w-auto shrink-0">
+          <Button onClick={handleGenerate} disabled={isLoading} className="w-full lg:w-auto">
             <BarChart3 className="mr-2 h-4 w-4" />
             {isLoading ? "Generating..." : "Generate Report"}
           </Button>
