@@ -47,6 +47,39 @@ export function generateReportExcel(report: ReportData) {
   const summaryWs = XLSX.utils.aoa_to_sheet(summaryRows)
   XLSX.utils.book_append_sheet(wb, summaryWs, "Summary")
 
+  // --- Records Sheet (every individual record with items) ---
+  if (report.records && report.records.length > 0) {
+    const recordRows: Record<string, string | number>[] = []
+    for (const r of report.records) {
+      for (const item of r.items) {
+        const row: Record<string, string | number> = {
+          Date: r.date ? new Date(r.date).toLocaleString() : "—",
+          Store: r.storeName,
+          Product: item.product.name,
+          Quantity: item.quantity,
+          "Unit Price": item.price,
+          Value: item.value,
+        }
+        if (r.invoiceNumber) row["Invoice #"] = r.invoiceNumber
+        if (r.customerName) row["Customer"] = r.customerName
+        if (r.salesName) row["Sales Person"] = r.salesName
+        if (r.status) row["Status"] = r.status
+        if (item.eur) row["EUR"] = item.eur
+        if (item.usd) row["USD"] = item.usd
+        if (item.birr) row["BIRR"] = item.birr
+        if (item.visa) row["VISA"] = item.visa
+        recordRows.push(row)
+      }
+    }
+    const recordsWs = XLSX.utils.json_to_sheet(recordRows)
+    XLSX.utils.sheet_add_aoa(
+      recordsWs,
+      [[`Values shown in ${report.currency.toUpperCase()} (${sym})`]],
+      { origin: -1 }
+    )
+    XLSX.utils.book_append_sheet(wb, recordsWs, "Records")
+  }
+
   // --- By Product Sheet ---
   if (report.breakdown.length > 0) {
     const productData = report.breakdown.map((item) => ({
@@ -55,7 +88,6 @@ export function generateReportExcel(report: ReportData) {
       Value: item.value,
     }))
     const productWs = XLSX.utils.json_to_sheet(productData)
-    // Add currency header note
     XLSX.utils.sheet_add_aoa(
       productWs,
       [[`Values shown in ${report.currency.toUpperCase()} (${sym})`]],
@@ -81,7 +113,7 @@ export function generateReportExcel(report: ReportData) {
     XLSX.utils.book_append_sheet(wb, storeWs, "By Store")
   }
 
-  // --- Transactions Sheet (sales only) ---
+  // --- Transactions Sheet (sales only, exploded items) ---
   if (report.transactions && report.transactions.length > 0) {
     const txRows: Record<string, string | number>[] = []
     for (const t of report.transactions) {
@@ -95,6 +127,10 @@ export function generateReportExcel(report: ReportData) {
           Product: item.product.name,
           Quantity: item.quantity,
           Value: item.value,
+          EUR: item.eur,
+          USD: item.usd,
+          BIRR: item.birr,
+          VISA: item.visa,
         })
       }
     }

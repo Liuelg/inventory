@@ -42,6 +42,29 @@ export type ReportTransaction = {
   items: ReportTransactionItem[]
 }
 
+export type ReportRecordItem = {
+  product: { _id: string; name: string }
+  quantity: number
+  price: number
+  value: number
+  eur?: number
+  usd?: number
+  birr?: number
+  visa?: number
+}
+
+export type ReportRecord = {
+  _id: string
+  date: string
+  storeName: string
+  items: ReportRecordItem[]
+  totalValue: number
+  invoiceNumber?: string
+  customerName?: string
+  salesName?: string
+  status?: string
+}
+
 export type ReportData = {
   type: ReportType
   start: string
@@ -51,6 +74,7 @@ export type ReportData = {
   breakdown: ReportBreakdownItem[]
   byStore: ReportByStoreItem[]
   transactions: ReportTransaction[]
+  records: ReportRecord[]
   currency: CurrencyCode
 }
 

@@ -202,6 +202,7 @@ router.get("/", async (req, res, next) => {
           breakdown,
           byStore: [],
           transactions: [],
+          records: [],
         },
       })
     }
@@ -243,6 +244,9 @@ router.get("/", async (req, res, next) => {
 
     // Individual transactions (for sales detail view)
     const transactions = []
+
+    // Raw records for detail export
+    const rawRecords = []
 
     for (const record of records) {
       const storeId = record.store?._id?.toString?.() || record.store?.toString?.()
@@ -329,6 +333,38 @@ router.get("/", async (req, res, next) => {
         existing.records += 1
         storeMap.set(storeId, existing)
       }
+
+      // Build raw record for detail export
+      const recordItems = (record.items || []).map((item) => {
+        const productId = item.item_id?._id?.toString?.() || item.item_id?.toString?.() || "—"
+        const productName = item.item_id?.name || "Unknown Product"
+        const qty = item.quantity || 0
+        const itemValueUSD = isSales
+          ? computeItemValueUSD(item, recordRates)
+          : qty * (item.price || 0)
+        return {
+          product: { _id: productId, name: productName },
+          quantity: qty,
+          price: item.price || 0,
+          value: itemValueUSD,
+          eur: item.eur || 0,
+          usd: item.usd || 0,
+          birr: item.birr || 0,
+          visa: item.visa || 0,
+        }
+      })
+
+      rawRecords.push({
+        _id: record._id.toString(),
+        date: record[dateField]?.toISOString?.() || record[dateField],
+        storeName,
+        items: recordItems,
+        totalValue: recordValueUSD,
+        invoiceNumber: record.invoiceNumber || undefined,
+        customerName: record.customerName || undefined,
+        salesName: record.processedBy?.name || record.salesName || undefined,
+        status: record.status || undefined,
+      })
     }
 
     // Convert all USD values to target currency
@@ -353,6 +389,15 @@ router.get("/", async (req, res, next) => {
       })),
     }))
 
+    const recordsConverted = rawRecords.map((r) => ({
+      ...r,
+      totalValue: convertUSDToCurrency(r.totalValue, targetCurrency, conversionRates),
+      items: r.items.map((i) => ({
+        ...i,
+        value: convertUSDToCurrency(i.value, targetCurrency, conversionRates),
+      })),
+    }))
+
     res.json({
       success: true,
       data: {
@@ -369,6 +414,7 @@ router.get("/", async (req, res, next) => {
         breakdown,
         byStore,
         transactions: transactionsConverted,
+        records: recordsConverted,
       },
     })
   } catch (err) {
