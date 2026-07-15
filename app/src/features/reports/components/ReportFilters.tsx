@@ -13,6 +13,7 @@ import {
 import { useStores } from "@/features/stores/hooks"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import type { ReportType, ReportParams } from "../types"
+import type { CurrencyCode } from "@/features/currency/types"
 import { BarChart3 } from "lucide-react"
 
 const REPORT_TYPES: { value: ReportType; label: string }[] = [
@@ -21,6 +22,13 @@ const REPORT_TYPES: { value: ReportType; label: string }[] = [
   { value: "stockouts", label: "Stock Out" },
   { value: "remaining", label: "Remaining Products" },
 ]
+
+const CURRENCY_LABELS: Record<CurrencyCode, string> = {
+  eur: "EUR (€)",
+  usd: "USD ($)",
+  birr: "Birr (Br)",
+  visa: "Visa ($)",
+}
 
 function formatDateInput(date: Date): string {
   const year = date.getFullYear()
@@ -43,6 +51,7 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
   const [startDate, setStartDate] = useState(formatDateInput(new Date()))
   const [endDate, setEndDate] = useState(formatDateInput(new Date()))
   const [store, setStore] = useState<string>(userStore || "all")
+  const [currency, setCurrency] = useState<CurrencyCode>("usd")
 
   const { data: storesData } = useStores()
 
@@ -57,6 +66,7 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
       startDate,
       endDate,
       timezoneOffset: new Date().getTimezoneOffset(),
+      currency,
     }
     const effectiveStore = isAdmin ? store : userStore
     if (effectiveStore && effectiveStore !== "all") {
@@ -123,6 +133,25 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
               {storesData?.map((s) => (
                 <SelectItem key={s._id} value={s._id}>
                   {s.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-1 flex-col gap-2 px-0 sm:px-4 py-0 sm:py-2">
+          <Label htmlFor="report-currency">Currency</Label>
+          <Select
+            value={currency}
+            onValueChange={(v) => setCurrency(v as CurrencyCode)}
+          >
+            <SelectTrigger id="report-currency">
+              <SelectValue placeholder="Select currency" />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(CURRENCY_LABELS) as CurrencyCode[]).map((code) => (
+                <SelectItem key={code} value={code}>
+                  {CURRENCY_LABELS[code]}
                 </SelectItem>
               ))}
             </SelectContent>
