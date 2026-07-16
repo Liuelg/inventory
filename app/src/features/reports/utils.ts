@@ -25,30 +25,45 @@ export function generateReportExcel(report: ReportData) {
       ? new Date(report.start).toLocaleDateString()
       : `${new Date(report.start).toLocaleDateString()} – ${new Date(report.end).toLocaleDateString()}`
 
-  // --- Summary Sheet ---
-  const summaryRows = [
-    ["Inventory Report"],
-    [],
-    ["Type", typeLabel],
-    ["Date Range", dateRange],
-    ["Store", report.storeFilter || "All Stores"],
-    [],
-    ["Metric", "Value"],
-    ["Total Records", report.summary.totalRecords],
-    ["Total Items", report.summary.totalItems],
-    [
-      "Total Value",
-      `${sym}${report.summary.totalValue.toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`,
-    ],
-  ]
-  const summaryWs = XLSX.utils.aoa_to_sheet(summaryRows)
-  XLSX.utils.book_append_sheet(wb, summaryWs, "Summary")
+  // ============================================================
+  // SHEET 1: Detailed Records (opens first so user sees it immediately)
+  // ============================================================
 
-  // --- Records Sheet (every individual record with items) ---
-  if (report.records && report.records.length > 0) {
+  // For sales: use transactions (already has every sale exploded by item)
+  // For goodIns/stockouts: use records if available
+  // For remaining: use breakdown (individual products)
+  const hasTransactions = report.transactions && report.transactions.length > 0
+  const hasRecords = report.records && report.records.length > 0
+  const hasBreakdown = report.breakdown && report.breakdown.length > 0
+
+  if (hasTransactions) {
+    const txRows: Record<string, string | number>[] = []
+    for (const t of report.transactions) {
+      for (const item of t.items) {
+        txRows.push({
+          "Invoice #": t.invoiceNumber,
+          Date: t.date ? new Date(t.date).toLocaleString() : "—",
+          Store: t.storeName,
+          "Sales Person": t.salesName || "—",
+          Customer: t.customerName || "—",
+          Product: item.product.name,
+          Quantity: item.quantity,
+          Value: item.value,
+          EUR: item.eur ?? 0,
+          USD: item.usd ?? 0,
+          BIRR: item.birr ?? 0,
+          VISA: item.visa ?? 0,
+        })
+      }
+    }
+    const txWs = XLSX.utils.json_to_sheet(txRows)
+    XLSX.utils.sheet_add_aoa(
+      txWs,
+      [[`Values shown in ${report.currency.toUpperCase()} (${sym})`]],
+      { origin: -1 }
+    )
+    XLSX.utils.book_append_sheet(wb, txWs, "All Sales")
+  } else if (hasRecords) {
     const recordRows: Record<string, string | number>[] = []
     for (const r of report.records) {
       for (const item of r.items) {
@@ -77,11 +92,51 @@ export function generateReportExcel(report: ReportData) {
       [[`Values shown in ${report.currency.toUpperCase()} (${sym})`]],
       { origin: -1 }
     )
-    XLSX.utils.book_append_sheet(wb, recordsWs, "Records")
+    XLSX.utils.book_append_sheet(wb, recordsWs, "All Records")
+  } else if (hasBreakdown) {
+    // Fallback for remaining products or if no detailed records available
+    const detailRows = report.breakdown.map((item) => ({
+      Product: item.product.name,
+      Quantity: item.quantity,
+      Value: item.value,
+    }))
+    const detailWs = XLSX.utils.json_to_sheet(detailRows)
+    XLSX.utils.sheet_add_aoa(
+      detailWs,
+      [[`Values shown in ${report.currency.toUpperCase()} (${sym})`]],
+      { origin: -1 }
+    )
+    XLSX.utils.book_append_sheet(wb, detailWs, "Details")
   }
 
-  // --- By Product Sheet ---
-  if (report.breakdown.length > 0) {
+  // ============================================================
+  // SHEET 2: Summary
+  // ============================================================
+  const summaryRows = [
+    ["Inventory Report"],
+    [],
+    ["Type", typeLabel],
+    ["Date Range", dateRange],
+    ["Store", report.storeFilter || "All Stores"],
+    [],
+    ["Metric", "Value"],
+    ["Total Records", report.summary.totalRecords],
+    ["Total Items", report.summary.totalItems],
+    [
+      "Total Value",
+      `${sym}${report.summary.totalValue.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`,
+    ],
+  ]
+  const summaryWs = XLSX.utils.aoa_to_sheet(summaryRows)
+  XLSX.utils.book_append_sheet(wb, summaryWs, "Summary")
+
+  // ============================================================
+  // SHEET 3: By Product
+  // ============================================================
+  if (hasBreakdown) {
     const productData = report.breakdown.map((item) => ({
       Product: item.product.name,
       Quantity: item.quantity,
@@ -96,7 +151,9 @@ export function generateReportExcel(report: ReportData) {
     XLSX.utils.book_append_sheet(wb, productWs, "By Product")
   }
 
-  // --- By Store Sheet ---
+  // ============================================================
+  // SHEET 4: By Store
+  // ============================================================
   if (report.byStore.length > 0) {
     const storeData = report.byStore.map((item) => ({
       Store: item.store.name,
@@ -111,36 +168,6 @@ export function generateReportExcel(report: ReportData) {
       { origin: -1 }
     )
     XLSX.utils.book_append_sheet(wb, storeWs, "By Store")
-  }
-
-  // --- Transactions Sheet (sales only, exploded items) ---
-  if (report.transactions && report.transactions.length > 0) {
-    const txRows: Record<string, string | number>[] = []
-    for (const t of report.transactions) {
-      for (const item of t.items) {
-        txRows.push({
-          "Invoice #": t.invoiceNumber,
-          Date: t.date ? new Date(t.date).toLocaleString() : "—",
-          Store: t.storeName,
-          "Sales Person": t.salesName || "—",
-          Customer: t.customerName || "—",
-          Product: item.product.name,
-          Quantity: item.quantity,
-          Value: item.value,
-          EUR: item.eur,
-          USD: item.usd,
-          BIRR: item.birr,
-          VISA: item.visa,
-        })
-      }
-    }
-    const txWs = XLSX.utils.json_to_sheet(txRows)
-    XLSX.utils.sheet_add_aoa(
-      txWs,
-      [[`Values shown in ${report.currency.toUpperCase()} (${sym})`]],
-      { origin: -1 }
-    )
-    XLSX.utils.book_append_sheet(wb, txWs, "Transactions")
   }
 
   const fileName = `${report.type}_${report.start}_${report.end}.xlsx`
