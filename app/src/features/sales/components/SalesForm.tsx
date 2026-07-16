@@ -141,15 +141,21 @@ function toPayload(form: SaleFormState, editing?: Sale | null): SalePayload {
   }
 
   if (!editing) {
-    // New sale: store the local business date at UTC midnight
-    const now = new Date()
-    payload.date_time = new Date(
-      Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
-    ).toISOString()
+    // New sale: store the exact current time
+    payload.date_time = new Date().toISOString()
   } else if (form.date) {
-    // Editing: allow explicit date correction (UTC midnight)
+    // Editing: use the selected date but preserve the original time component
     const [year, month, day] = form.date.split("-").map(Number)
-    payload.date_time = new Date(Date.UTC(year, month - 1, day)).toISOString()
+    const original = editing.date_time ? new Date(editing.date_time) : null
+    const now = new Date()
+    payload.date_time = new Date(Date.UTC(
+      year,
+      month - 1,
+      day,
+      original ? original.getUTCHours() : now.getUTCHours(),
+      original ? original.getUTCMinutes() : now.getUTCMinutes(),
+      original ? original.getUTCSeconds() : now.getUTCSeconds()
+    )).toISOString()
   }
 
   return payload

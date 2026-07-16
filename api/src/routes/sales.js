@@ -116,20 +116,14 @@ async function restoreItemsToStore(storeId, items) {
   return store;
 }
 
-function normalizeDateTimeToUTC(dateStr) {
-  if (!dateStr) return undefined;
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return undefined;
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
-}
-
 router.post('/', uploadSaleImages, async (req, res) => {
   try {
     const body = mapImagesToItems(parseBody(req), req.files);
 
-    // Normalize date_time to UTC midnight (business date) if provided
+    // Parse date_time preserving the actual time; fallback to now if missing/invalid
     if (body.date_time) {
-      body.date_time = normalizeDateTimeToUTC(body.date_time);
+      const d = new Date(body.date_time);
+      body.date_time = isNaN(d.getTime()) ? new Date() : d;
     }
 
     // Use the logged-in user's assigned store
