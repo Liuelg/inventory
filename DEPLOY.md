@@ -170,6 +170,10 @@ Paste and edit (generate a strong secret):
 JWT_SECRET=REPLACE_THIS_WITH_A_LONG_RANDOM_STRING
 JWT_EXPIRES_IN=1d
 CORS_ORIGIN=https://yourdomain.com
+
+# Optional: Telegram sale notifications
+# TELEGRAM_BOT_TOKEN=your-bot-token-from-botfather
+# TELEGRAM_CHAT_ID=your-chat-id-or-group-id
 ```
 
 > **Generate a strong JWT secret:**
