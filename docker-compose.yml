@@ -8,6 +8,8 @@ services:
       - MONGO_URI=mongodb://mongo:27017/inventory_db
       - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-1d}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
     expose:
       - "3000"
     volumes:
