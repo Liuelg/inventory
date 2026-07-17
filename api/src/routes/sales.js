@@ -6,6 +6,7 @@ import Store from '../models/Stores.js';
 import InvoiceCounter from '../models/InvoiceCounter.js';
 import { getLatestRates } from '../services/rates.js';
 import { uploadSaleImages } from '../middleware/upload.js';
+import { sendSaleNotification } from '../services/telegram.js';
 
 const router = Router();
 
@@ -177,6 +178,17 @@ router.post('/', uploadSaleImages, async (req, res) => {
       salesName: req.user?.name || undefined,
     });
     await sale.save();
+
+    // Send Telegram notification (fire-and-forget, should not block the response)
+    try {
+      const populatedSale = await Sale.findById(sale._id)
+        .populate({ path: 'items.item_id', model: 'Products' })
+        .lean();
+      await sendSaleNotification(populatedSale, store);
+    } catch (err) {
+      console.error('[telegram] Notification error:', err.message);
+    }
+
     res.status(201).json(sale);
   } catch (err) {
     // Clean up uploaded images on error

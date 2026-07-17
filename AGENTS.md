@@ -29,6 +29,7 @@ The repository is located at `C:\Users\HP\Documents\My-Project\Inventory Managem
 | Auth | bcryptjs, jsonwebtoken | ^3.0.3, ^9.0.3 |
 | Rate Limiting | express-rate-limit | ^8.5.2 |
 | Dev reload | nodemon | ^3.0.0 |
+| Telegram Bot | telegraf | ^4.x |
 | Linter | ESLint | ^10.4.0 |
 
 ### Frontend (`app/`)
@@ -252,6 +253,8 @@ npm run typecheck         # tsc --noEmit
 | `JWT_SECRET` | *(none)* | Secret key for signing JWT tokens |
 | `JWT_EXPIRES_IN` | `1d` | JWT token expiration time |
 | `CORS_ORIGIN` | *(empty)* | Optional comma-separated allowed origins |
+| `TELEGRAM_BOT_TOKEN` | *(none)* | Telegram bot token for sale notifications |
+| `TELEGRAM_CHAT_ID` | *(none)* | Target chat or group ID for sale notifications |
 
 In Docker Compose, `MONGO_URI` is overridden to `mongodb://mongo:27017/inventory_db` and `JWT_SECRET` is read from the root `.env` file.
 
