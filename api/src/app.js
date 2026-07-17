@@ -1,5 +1,6 @@
 import express from "express";
 import mongoose from "mongoose";
+import './services/telegram.js';
 import cors from "cors";
 import "dotenv/config";
 import { authMiddleware } from "./middleware/auth.js";
@@ -11,7 +12,12 @@ function requireEnv(name) {
     process.exit(1);
   }
   return value;
+
 }
+
+requireEnv("MONGO_URI");
+requireEnv("TELEGRAM_BOT_TOKEN");
+requireEnv("TELEGRAM_CHAT_ID");
 
 import userRoutes from "./routes/users.js";
 import salesRoutes from "./routes/sales.js";
@@ -101,7 +107,7 @@ app.get("/health", (_req, res) => {
   });
 });
 
-app.use((err, req, res, next) => {
+app.use((err, req, res) => {
   console.error(err.stack);
   res.status(500).json({ message: err.message || "Something went wrong on the server" });
 });

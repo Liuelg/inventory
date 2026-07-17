@@ -12,6 +12,8 @@ services:
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-1d}
       - CORS_ORIGIN=${CORS_ORIGIN}
       - NODE_ENV=production
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
     expose:
       - "3000"
     depends_on:
@@ -19,18 +21,6 @@ services:
         condition: service_healthy
     networks:
       - inventory-network
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-        reservations:
-          memory: 256M
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
   mongo:
     image: mongo:6
     container_name: inventory-mongo
