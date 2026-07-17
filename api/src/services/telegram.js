@@ -308,13 +308,19 @@ async function sendDailyReport() {
     console.log('[cron] Compiling detailed frontend-matched database reports...');
     const todayStr = getEthiopianDateString();
 
-    const reportData = await generateDailyReportData(todayStr);
+    // Cron runs at 00:00, so report on the day that just ended
+    const [y, m, d] = todayStr.split('-').map(Number);
+    const yesterday = new Date(Date.UTC(y, m - 1, d - 1));
+    const reportDateStr = yesterday.toISOString().slice(0, 10);
+
+    const reportData = await generateDailyReportData(reportDateStr);
+    const sym = getServerCurrencySymbol(reportData.currency);
 
     const textSummaryMessage = [
       '📊 <b>DAILY DISPATCH UPDATE (EAT)</b>',
-      `📅 Date: <b>${todayStr}</b>`,
+      `📅 Date: <b>${reportDateStr}</b>`,
       '--------------------------------',
-      `💰 <b>Total Sales:</b> $${(reportData.summary.totalValue || 0).toFixed(2)}`,
+      `💰 <b>Total Sales:</b> ${sym}${(reportData.summary.totalValue || 0).toFixed(2)}`,
       `🧾 <b>Total Orders:</b> ${reportData.summary.totalRecords}`,
       `📦 <b>Total Items Sold:</b> ${reportData.summary.totalItems}`,
       '',
@@ -324,12 +330,12 @@ async function sendDailyReport() {
     const excelBuffer = buildReportExcelBuffer(reportData);
 
     await bot.telegram.sendMessage(chatId, textSummaryMessage, { parse_mode: 'HTML' });
-    
+
     await bot.telegram.sendDocument(chatId, {
       source: excelBuffer,
-      filename: `Sales_Report_${todayStr}.xlsx`
+      filename: `Sales_Report_${reportDateStr}.xlsx`
     }, {
-      caption: `📈 Excel Sales Report Summary - ${todayStr}`
+      caption: `📈 Excel Sales Report Summary - ${reportDateStr}`
     });
 
     console.log('[cron] Automated dispatch successfully completed.');

@@ -1,8 +1,8 @@
+import "dotenv/config";
 import express from "express";
 import mongoose from "mongoose";
 import './services/telegram.js';
 import cors from "cors";
-import "dotenv/config";
 import { authMiddleware } from "./middleware/auth.js";
 
 function requireEnv(name) {
@@ -16,8 +16,6 @@ function requireEnv(name) {
 }
 
 requireEnv("MONGO_URI");
-requireEnv("TELEGRAM_BOT_TOKEN");
-requireEnv("TELEGRAM_CHAT_ID");
 
 import userRoutes from "./routes/users.js";
 import salesRoutes from "./routes/sales.js";
