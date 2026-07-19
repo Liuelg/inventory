@@ -38,31 +38,7 @@ export function generateReportExcel(report: ReportData) {
 
   if (hasTransactions) {
     // ---------------------------------------------------------
-    // SHEET 1a: By Transaction — one row per sale/invoice
-    // ---------------------------------------------------------
-    const transactionRows: Record<string, string | number>[] = []
-    for (const t of report.transactions) {
-      const totalItems = t.items.reduce((sum, item) => sum + (item.quantity || 0), 0)
-      transactionRows.push({
-        "Invoice #": t.invoiceNumber,
-        Date: t.date ? new Date(t.date).toLocaleString() : "—",
-        Store: t.storeName,
-        "Sales Person": t.salesName || "—",
-        Customer: t.customerName || "—",
-        "Total Items": totalItems,
-        "Total Amount": t.totalAmount,
-      })
-    }
-    const transactionWs = XLSX.utils.json_to_sheet(transactionRows)
-    XLSX.utils.sheet_add_aoa(
-      transactionWs,
-      [[`Values shown in ${report.currency.toUpperCase()} (${sym})`]],
-      { origin: -1 }
-    )
-    XLSX.utils.book_append_sheet(wb, transactionWs, "By Transaction")
-
-    // ---------------------------------------------------------
-    // SHEET 1b: All Sales — one row per item (exploded detail)
+    // SHEET 1a: All Sales — one row per item (exploded detail)
     // ---------------------------------------------------------
     const txRows: Record<string, string | number>[] = []
     for (const t of report.transactions) {
@@ -90,6 +66,30 @@ export function generateReportExcel(report: ReportData) {
       { origin: -1 }
     )
     XLSX.utils.book_append_sheet(wb, txWs, "All Sales")
+
+    // ---------------------------------------------------------
+    // SHEET 1b: By Transaction — one row per sale/invoice
+    // ---------------------------------------------------------
+    const transactionRows: Record<string, string | number>[] = []
+    for (const t of report.transactions) {
+      const totalItems = t.items.reduce((sum, item) => sum + (item.quantity || 0), 0)
+      transactionRows.push({
+        "Invoice #": t.invoiceNumber,
+        Date: t.date ? new Date(t.date).toLocaleString() : "—",
+        Store: t.storeName,
+        "Sales Person": t.salesName || "—",
+        Customer: t.customerName || "—",
+        "Total Items": totalItems,
+        "Total Amount": t.totalAmount,
+      })
+    }
+    const transactionWs = XLSX.utils.json_to_sheet(transactionRows)
+    XLSX.utils.sheet_add_aoa(
+      transactionWs,
+      [[`Values shown in ${report.currency.toUpperCase()} (${sym})`]],
+      { origin: -1 }
+    )
+    XLSX.utils.book_append_sheet(wb, transactionWs, "By Transaction")
   } else if (hasRecords) {
     const recordRows: Record<string, string | number>[] = []
     for (const r of report.records) {
