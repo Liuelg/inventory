@@ -64,7 +64,7 @@ export function ReportsPage() {
             onClick={() => generateReportExcel(report)}
           >
             <FileSpreadsheet className="mr-2 h-4 w-4" />
-            Export Excel
+            Export Data (.xlsx)
           </Button>
         </div>
       )}
