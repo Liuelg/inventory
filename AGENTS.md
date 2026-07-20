@@ -254,7 +254,7 @@ npm run typecheck         # tsc --noEmit
 | `JWT_EXPIRES_IN` | `1d` | JWT token expiration time |
 | `CORS_ORIGIN` | *(empty)* | Optional comma-separated allowed origins |
 | `TELEGRAM_BOT_TOKEN` | *(none)* | Telegram bot token for sale notifications |
-| `TELEGRAM_CHAT_ID` | *(none)* | Target chat or group ID for sale notifications |
+| `TELEGRAM_CHAT_ID` | *(none)* | Target chat or group ID(s) for sale notifications. Use comma-separated values for multiple IDs (e.g. `123456789,-987654321`) |
 
 In Docker Compose, `MONGO_URI` is overridden to `mongodb://mongo:27017/inventory_db` and `JWT_SECRET` is read from the root `.env` file.
 

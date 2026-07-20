@@ -5,7 +5,10 @@ import Sale from '../models/Sale.js';
 
 // 1. Initialize Bot First
 const botToken = process.env.TELEGRAM_BOT_TOKEN;
-const chatId = process.env.TELEGRAM_CHAT_ID;
+const chatIds = (process.env.TELEGRAM_CHAT_ID || '')
+  .split(',')
+  .map((id) => id.trim())
+  .filter(Boolean);
 const bot = botToken ? new Telegraf(botToken) : null;
 
 // Helper to get local Ethiopian date as a string (YYYY-MM-DD)
@@ -299,7 +302,7 @@ async function generateDailyReportData(startDateStr) {
  * Main automated task scheduler
  */
 async function sendDailyReport() {
-  if (!bot || !chatId) {
+  if (!bot || chatIds.length === 0) {
     console.log('[cron] Skipping report dispatch: Bot or Chat ID missing');
     return;
   }
@@ -329,14 +332,16 @@ async function sendDailyReport() {
 
     const excelBuffer = buildReportExcelBuffer(reportData);
 
-    await bot.telegram.sendMessage(chatId, textSummaryMessage, { parse_mode: 'HTML' });
+    for (const chatId of chatIds) {
+      await bot.telegram.sendMessage(chatId, textSummaryMessage, { parse_mode: 'HTML' });
 
-    await bot.telegram.sendDocument(chatId, {
-      source: excelBuffer,
-      filename: `Sales_Report_${reportDateStr}.xlsx`
-    }, {
-      caption: `📈 Excel Sales Report Summary - ${reportDateStr}`
-    });
+      await bot.telegram.sendDocument(chatId, {
+        source: excelBuffer,
+        filename: `Sales_Report_${reportDateStr}.xlsx`
+      }, {
+        caption: `📈 Excel Sales Report Summary - ${reportDateStr}`
+      });
+    }
 
     console.log('[cron] Automated dispatch successfully completed.');
   } catch (err) {
@@ -356,7 +361,7 @@ cron.schedule('0 0 * * *', () => {
  * Send individual Telegram sale notifications.
  */
 export async function sendSaleNotification(sale, store) {
-  if (!bot || !chatId) {
+  if (!bot || chatIds.length === 0) {
     console.log('[telegram] Skipping notification: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not set');
     return;
   }
@@ -394,7 +399,9 @@ export async function sendSaleNotification(sale, store) {
   ].join('\n');
 
   try {
-    await bot.telegram.sendMessage(chatId, message, { parse_mode: 'HTML' });
+    for (const chatId of chatIds) {
+      await bot.telegram.sendMessage(chatId, message, { parse_mode: 'HTML' });
+    }
     console.log('[telegram] Sale notification sent for invoice:', sale.invoiceNumber);
   } catch (err) {
     console.error('[telegram] Failed to send sale notification:', err.message);
