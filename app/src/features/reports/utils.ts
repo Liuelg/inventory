@@ -90,6 +90,51 @@ export function generateReportExcel(report: ReportData) {
       { origin: -1 }
     )
     XLSX.utils.book_append_sheet(wb, transactionWs, "By Transaction")
+
+    // ---------------------------------------------------------
+    // SHEET 1c: By Sales Person — what each person sold
+    // ---------------------------------------------------------
+    const salesPersonMap = new Map<string, Map<string, { quantity: number; value: number }>>()
+    for (const t of report.transactions) {
+      const person = t.salesName || "—"
+      if (!salesPersonMap.has(person)) {
+        salesPersonMap.set(person, new Map())
+      }
+      const productMap = salesPersonMap.get(person)!
+      for (const item of t.items) {
+        const existing = productMap.get(item.product.name) || { quantity: 0, value: 0 }
+        existing.quantity += item.quantity || 0
+        existing.value += item.value || 0
+        productMap.set(item.product.name, existing)
+      }
+    }
+
+    const salesPersonRows: Record<string, string | number>[] = []
+    for (const [person, products] of salesPersonMap) {
+      for (const [productName, data] of products) {
+        salesPersonRows.push({
+          "Sales Person": person,
+          Product: productName,
+          Quantity: data.quantity,
+          Value: data.value,
+        })
+      }
+    }
+    salesPersonRows.sort((a, b) => {
+      const personA = String(a["Sales Person"])
+      const personB = String(b["Sales Person"])
+      if (personA === personB) {
+        return String(a["Product"]).localeCompare(String(b["Product"]))
+      }
+      return personA.localeCompare(personB)
+    })
+    const spWs = XLSX.utils.json_to_sheet(salesPersonRows)
+    XLSX.utils.sheet_add_aoa(
+      spWs,
+      [[`Values shown in ${report.currency.toUpperCase()} (${sym})`]],
+      { origin: -1 }
+    )
+    XLSX.utils.book_append_sheet(wb, spWs, "By Sales Person")
   } else if (hasRecords) {
     const recordRows: Record<string, string | number>[] = []
     for (const r of report.records) {
