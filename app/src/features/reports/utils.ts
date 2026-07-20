@@ -15,7 +15,7 @@ function autoFitColumns(ws: XLSX.WorkSheet) {
     }, 0)
   })
 
-  ws["!cols"] = colWidths.map((w) => ({ wch: Math.min(w + 2, 60) }))
+  ws["!cols"] = colWidths.map((w) => ({ wch: Math.min(w, 50) }))
 }
 
 function getReportTypeLabel(type: ReportType): string {
@@ -60,10 +60,9 @@ export function generateReportExcel(report: ReportData) {
       for (const item of t.items) {
         txRows.push({
           "Invoice #": t.invoiceNumber,
-          Date: t.date ? new Date(t.date).toLocaleString() : "—",
+          Date: t.date ? new Date(t.date).toLocaleDateString() : "—",
           Store: t.storeName,
           "Sales Person": t.salesName || "—",
-          Customer: t.customerName || "—",
           Product: item.product.name,
           Quantity: item.quantity,
           Value: item.value,
@@ -91,10 +90,9 @@ export function generateReportExcel(report: ReportData) {
       const totalItems = t.items.reduce((sum, item) => sum + (item.quantity || 0), 0)
       transactionRows.push({
         "Invoice #": t.invoiceNumber,
-        Date: t.date ? new Date(t.date).toLocaleString() : "—",
+        Date: t.date ? new Date(t.date).toLocaleDateString() : "—",
         Store: t.storeName,
         "Sales Person": t.salesName || "—",
-        Customer: t.customerName || "—",
         "Total Items": totalItems,
         "Total Amount": t.totalAmount,
       })
@@ -158,7 +156,7 @@ export function generateReportExcel(report: ReportData) {
     for (const r of report.records) {
       for (const item of r.items) {
         const row: Record<string, string | number> = {
-          Date: r.date ? new Date(r.date).toLocaleString() : "—",
+          Date: r.date ? new Date(r.date).toLocaleDateString() : "—",
           Store: r.storeName,
           Product: item.product.name,
           Quantity: item.quantity,
@@ -166,7 +164,6 @@ export function generateReportExcel(report: ReportData) {
           Value: item.value,
         }
         if (r.invoiceNumber) row["Invoice #"] = r.invoiceNumber
-        if (r.customerName) row["Customer"] = r.customerName
         if (r.salesName) row["Sales Person"] = r.salesName
         if (r.status) row["Status"] = r.status
         if (item.eur) row["EUR"] = item.eur
