@@ -3,6 +3,21 @@ import type { ReportData, ReportType } from "./types"
 import { getCurrencySymbol } from "@/features/sales/components/CurrencySelector"
 import type { CurrencyCode } from "@/features/currency/types"
 
+function autoFitColumns(ws: XLSX.WorkSheet) {
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1 }) as unknown[][]
+  if (!rows.length) return
+
+  const colWidths = rows[0].map((_, colIndex) => {
+    return rows.reduce((maxWidth, row) => {
+      const cell = row[colIndex]
+      const str = cell !== undefined && cell !== null ? String(cell) : ""
+      return Math.max(maxWidth, str.length)
+    }, 0)
+  })
+
+  ws["!cols"] = colWidths.map((w) => ({ wch: Math.min(w + 2, 60) }))
+}
+
 function getReportTypeLabel(type: ReportType): string {
   switch (type) {
     case "goodIns":
@@ -65,6 +80,7 @@ export function generateReportExcel(report: ReportData) {
       [[`Values shown in ${report.currency.toUpperCase()} (${sym})`]],
       { origin: -1 }
     )
+    autoFitColumns(txWs)
     XLSX.utils.book_append_sheet(wb, txWs, "All Sales")
 
     // ---------------------------------------------------------
@@ -89,6 +105,7 @@ export function generateReportExcel(report: ReportData) {
       [[`Values shown in ${report.currency.toUpperCase()} (${sym})`]],
       { origin: -1 }
     )
+    autoFitColumns(transactionWs)
     XLSX.utils.book_append_sheet(wb, transactionWs, "By Transaction")
 
     // ---------------------------------------------------------
@@ -134,6 +151,7 @@ export function generateReportExcel(report: ReportData) {
       [[`Values shown in ${report.currency.toUpperCase()} (${sym})`]],
       { origin: -1 }
     )
+    autoFitColumns(spWs)
     XLSX.utils.book_append_sheet(wb, spWs, "By Sales Person")
   } else if (hasRecords) {
     const recordRows: Record<string, string | number>[] = []
@@ -164,6 +182,7 @@ export function generateReportExcel(report: ReportData) {
       [[`Values shown in ${report.currency.toUpperCase()} (${sym})`]],
       { origin: -1 }
     )
+    autoFitColumns(recordsWs)
     XLSX.utils.book_append_sheet(wb, recordsWs, "All Records")
   } else if (hasBreakdown) {
     // Fallback for remaining products or if no detailed records available
@@ -178,6 +197,7 @@ export function generateReportExcel(report: ReportData) {
       [[`Values shown in ${report.currency.toUpperCase()} (${sym})`]],
       { origin: -1 }
     )
+    autoFitColumns(detailWs)
     XLSX.utils.book_append_sheet(wb, detailWs, "Details")
   }
 
@@ -203,6 +223,7 @@ export function generateReportExcel(report: ReportData) {
     ],
   ]
   const summaryWs = XLSX.utils.aoa_to_sheet(summaryRows)
+  autoFitColumns(summaryWs)
   XLSX.utils.book_append_sheet(wb, summaryWs, "Summary")
 
   // ============================================================
@@ -220,6 +241,7 @@ export function generateReportExcel(report: ReportData) {
       [[`Values shown in ${report.currency.toUpperCase()} (${sym})`]],
       { origin: -1 }
     )
+    autoFitColumns(productWs)
     XLSX.utils.book_append_sheet(wb, productWs, "By Product")
   }
 
@@ -239,6 +261,7 @@ export function generateReportExcel(report: ReportData) {
       [[`Values shown in ${report.currency.toUpperCase()} (${sym})`]],
       { origin: -1 }
     )
+    autoFitColumns(storeWs)
     XLSX.utils.book_append_sheet(wb, storeWs, "By Store")
   }
 
