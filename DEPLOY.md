@@ -362,49 +362,77 @@ docker system df
 
 ## 9. Backup Strategy
 
-### Automated daily MongoDB backup
+The project includes a production-ready backup script that:
+- Dumps MongoDB from the running Docker container
+- Compresses the dump into a `.tar.gz` archive
+- Uploads it to **Google Drive** via `rclone`
+- Keeps only the last **12 backups** (automatic retention)
 
-Create a backup script:
+### 9.1 Prerequisites
 
-```bash
-mkdir -p ~/backups
-nano ~/backup-mongo.sh
-```
+- `rclone` installed and configured with a `gdrive:` remote
+- A `InventoryBackups` folder on Google Drive
 
-Paste:
-
-```bash
-#!/bin/bash
-BACKUP_DIR="/home/deployer/backups"
-DATE=$(date +%Y-%m-%d_%H-%M-%S)
-CONTAINER="inventory-mongo"
-DB_NAME="inventory_db"
-
-mkdir -p "$BACKUP_DIR"
-
-docker exec "$CONTAINER" mongodump --db "$DB_NAME" --archive > "$BACKUP_DIR/${DB_NAME}_${DATE}.archive"
-
-# Keep only last 7 backups
-find "$BACKUP_DIR" -name "*.archive" -type f -mtime +7 -delete
-
-echo "Backup completed: ${DB_NAME}_${DATE}.archive"
-```
-
-Make it executable and add to cron:
+Install rclone on Ubuntu if not already:
 
 ```bash
-chmod +x ~/backup-mongo.sh
-
-# Add cron job (runs daily at 3 AM)
-(crontab -l 2>/dev/null; echo "0 3 * * * /home/deployer/backup-mongo.sh >> /home/deployer/backups/backup.log 2>&1") | crontab -
+sudo -v ; curl https://rclone.org/install.sh | sudo bash
+rclone config
+# Follow prompts to set up Google Drive remote named "gdrive"
 ```
 
-### Restore from backup
+### 9.2 Install the backup cron job
+
+The repo includes a setup script that installs the cron job automatically:
 
 ```bash
-# Replace with your backup file
-docker exec -i inventory-mongo mongorestore --db inventory_db --archive < ~/backups/inventory_db_YYYY-MM-DD_HH-MM-SS.archive
+cd ~/inventory-app
+./scripts/setup-cron.sh
 ```
+
+This creates a weekly cron job that runs every **Sunday at 2:00 AM**.
+
+To verify:
+
+```bash
+crontab -l
+```
+
+Expected output:
+```
+0 2 * * 0 /home/deployer/inventory-app/scripts/backup.sh >> /home/deployer/inventory-app/backups/backup.log 2>&1
+```
+
+### 9.3 Run a manual backup
+
+```bash
+~/inventory-app/scripts/backup.sh
+```
+
+### 9.4 View backup logs
+
+```bash
+tail -f ~/inventory-app/backups/backup.log
+```
+
+### 9.5 Restore from backup
+
+1. Download the backup archive from Google Drive to the server.
+2. Extract and restore:
+
+```bash
+# Download backup (or use rclone copy)
+cd ~/inventory-app/backups
+rclone copy gdrive:InventoryBackups/inventory-backup-YYYY-MM-DD.tar.gz .
+
+# Extract
+tar -xzf inventory-backup-YYYY-MM-DD.tar.gz
+
+# Restore into MongoDB
+docker exec -i inventory-mongo mongorestore --db inventory_db --drop mongodump-YYYY-MM-DD/inventory_db
+```
+
+> **Tip:** Test restoring backups monthly to ensure they are valid.
 
 ---
 
@@ -462,7 +490,9 @@ Before going live, verify:
 - [ ] UFW firewall is enabled and only allows SSH + Nginx
 - [ ] Default admin password has been changed
 - [ ] `api/.env` and `app/.env` are NOT committed to Git
-- [ ] Backups are running and restorable
+- [ ] `rclone` is configured with a working `gdrive:` remote
+- [ ] `./scripts/setup-cron.sh` has been run and backups are running
+- [ ] At least one restore test has been performed
 - [ ] SSL certificate is valid and auto-renewing
 
 ---
@@ -491,8 +521,9 @@ sudo systemctl status nginx
 # Full update
 cd ~/inventory-app && git pull && docker compose -f docker-compose.prod.yml down && docker compose -f docker-compose.prod.yml up --build -d
 
-# Backup
-~/backup-mongo.sh
+# Backup (manual run or view logs)
+~/inventory-app/scripts/backup.sh
+tail -f ~/inventory-app/backups/backup.log
 ```
 
 ---
