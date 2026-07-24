@@ -27,6 +27,7 @@ DUMP_NAME="mongodump-$DATE_STR"
 ARCHIVE_NAME="inventory-backup-$DATE_STR.tar.gz"
 
 # In production docker-compose.prod.yml mounts ./backups:/backups
+# If the mount is missing, we fall back to docker cp.
 STAGING_DIR="/backups"
 
 # ------------------------------------------------------------------
@@ -57,29 +58,50 @@ echo "Date:       $DATE_STR"
 echo "Container:  $CONTAINER"
 echo "DB:         $DB_NAME"
 echo "Remote:     $RCLONE_REMOTE"
+echo "Backup dir: $BACKUP_DIR"
 echo ""
 
 # Ensure backup directory exists
 mkdir -p "$BACKUP_DIR"
 
-# 1. mongodump inside Docker container (writes directly to shared volume)
+# 1. mongodump inside Docker container
 echo "[1/5] Running mongodump inside container '$CONTAINER'..."
 docker exec "$CONTAINER" mongodump --db="$DB_NAME" --out="$STAGING_DIR/$DUMP_NAME"
 
-# 2. Compress the dump (on host, reading from shared volume)
+# 2. Check if the dump appeared on the host (shared volume mount)
+DUMP_HOST_PATH="$BACKUP_DIR/$DUMP_NAME"
+
+if [ ! -d "$DUMP_HOST_PATH" ]; then
+    echo ""
+    echo "WARNING: Dump not found at expected host path:"
+    echo "  $DUMP_HOST_PATH"
+    echo ""
+    echo "This usually means the Docker volume mount './backups:/backups'"
+    echo "is not active. Did you re-deploy after adding the mount?"
+    echo ""
+    echo "Falling back to docker cp to copy the dump from the container..."
+    echo ""
+    docker cp "$CONTAINER:$STAGING_DIR/$DUMP_NAME" "$DUMP_HOST_PATH"
+    USED_FALLBACK=1
+else
+    USED_FALLBACK=0
+fi
+
+# 3. Compress the dump
 echo "[2/5] Compressing backup to '$ARCHIVE_NAME'..."
 tar -czf "$BACKUP_DIR/$ARCHIVE_NAME" -C "$BACKUP_DIR" "$DUMP_NAME"
 
-# 3. Upload to Google Drive via rclone
+# 4. Upload to Google Drive via rclone
 echo "[3/5] Uploading to Google Drive..."
 rclone copy "$BACKUP_DIR/$ARCHIVE_NAME" "$RCLONE_REMOTE"
 
-# 4. Clean up local and container temp files
+# 5. Clean up local and container temp files
 echo "[4/5] Cleaning up temporary files..."
 docker exec "$CONTAINER" rm -rf "$STAGING_DIR/$DUMP_NAME"
+rm -rf "$DUMP_HOST_PATH"
 rm -f "$BACKUP_DIR/$ARCHIVE_NAME"
 
-# 5. Retention policy — keep only the last N backups
+# 6. Retention policy — keep only the last N backups
 echo "[5/5] Applying retention policy (keep last $RETENTION_COUNT backups)..."
 mapfile -t FILES < <(rclone lsf "$RCLONE_REMOTE" --format "p" 2>/dev/null | grep -E '^inventory-backup-.*\.tar\.gz$' | sort)
 COUNT=${#FILES[@]}
@@ -101,4 +123,10 @@ echo "========================================"
 echo " Backup completed successfully!"
 echo " File: $ARCHIVE_NAME"
 echo " Remote: $RCLONE_REMOTE"
+if [ "$USED_FALLBACK" -eq 1 ]; then
+    echo ""
+    echo " NOTE: docker cp fallback was used. To use the faster shared"
+    echo "       volume method, re-deploy with the updated compose file:"
+    echo "       docker compose -f docker-compose.prod.yml up -d"
+fi
 echo "========================================"

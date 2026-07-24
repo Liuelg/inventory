@@ -434,6 +434,26 @@ docker exec -i inventory-mongo mongorestore --db inventory_db --drop mongodump-Y
 
 > **Tip:** Test restoring backups monthly to ensure they are valid.
 
+### 9.6 Common backup issue: "Cannot stat: No such file or directory"
+
+If you see this error during step `[2/5]`:
+
+```
+tar: mongodump-YYYY-MM-DD: Cannot stat: No such file or directory
+```
+
+**Cause:** The `inventory-mongo` container was started **before** the `./backups:/backups` volume mount was added to `docker-compose.prod.yml`. The dump is created inside the container but never appears on the host.
+
+**Fix:** Re-deploy so the new volume mount takes effect:
+
+```bash
+cd ~/inventory-app
+docker compose -f docker-compose.prod.yml down
+docker compose -f docker-compose.prod.yml up -d
+```
+
+The backup script will still work using a `docker cp` fallback, but re-deploying enables the faster shared-volume method.
+
 ---
 
 ## 10. Firewall (UFW)
