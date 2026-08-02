@@ -30,6 +30,12 @@ export type Store = {
   manager_id?: string | StoreManager | null
   salesPerson?: StoreSalesPerson | null
   items?: StoreItem[]
+  pedsEnabled?: boolean
+  pedsBaseUrl?: string
+  pedsPosId?: string
+  pedsMachineId?: string
+  pedsUsername?: string
+  pedsPassword?: string
 }
 
 export type StorePayload = {
@@ -37,4 +43,10 @@ export type StorePayload = {
   code: string
   address: string
   manager_id?: string
+  pedsEnabled?: boolean
+  pedsBaseUrl?: string
+  pedsPosId?: string
+  pedsMachineId?: string
+  pedsUsername?: string
+  pedsPassword?: string
 }

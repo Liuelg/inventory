@@ -32,6 +32,7 @@ import stockoutRoutes from "./routes/stockout.js";
 import reportRoutes from "./routes/reports.js";
 import productGroupRoutes from "./routes/productGroups.js";
 import currencyRoutes from "./routes/currency.js";
+import pedsRoutes from "./routes/peds.js";
 
 const app = express();
 
@@ -96,6 +97,7 @@ app.use("/api/stockouts", authMiddleware, stockoutRoutes);
 app.use("/api/reports", authMiddleware, reportRoutes);
 app.use("/api/product-groups", authMiddleware, productGroupRoutes);
 app.use("/api/currency-rates", authMiddleware, currencyRoutes);
+app.use("/api/peds", pedsRoutes);
 
 app.get("/health", (_req, res) => {
   const dbState = mongoose.connection.readyState;

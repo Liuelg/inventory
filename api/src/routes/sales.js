@@ -7,6 +7,7 @@ import InvoiceCounter from '../models/InvoiceCounter.js';
 import { getLatestRates } from '../services/rates.js';
 import { uploadSaleImages } from '../middleware/upload.js';
 import { sendSaleNotification } from '../services/telegram.js';
+import { voidInvoice } from '../services/peds.js';
 
 const router = Router();
 
@@ -362,6 +363,25 @@ router.delete('/:id', async (req, res) => {
       deletedSale.items.forEach((item) => {
         if (item.image) deleteImage(item.image);
       });
+    }
+
+    // If the sale is linked to PEDS, attempt to void it there (fire-and-forget)
+    if (deletedSale.pedsInvoiceNo) {
+      Store.findById(deletedSale.store)
+        .then((store) => {
+          if (store && store.pedsEnabled) {
+            return voidInvoice(store, deletedSale.pedsInvoiceNo);
+          }
+          return null;
+        })
+        .then((result) => {
+          if (result) {
+            console.log(`[peds] Voided invoice ${deletedSale.pedsInvoiceNo}:`, result.Message);
+          }
+        })
+        .catch((err) => {
+          console.error(`[peds] Failed to void invoice ${deletedSale.pedsInvoiceNo}:`, err.message);
+        });
     }
 
     res.json({ message: 'Sale record deleted successfully', deletedSale });

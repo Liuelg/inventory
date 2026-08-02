@@ -63,3 +63,9 @@ export function useDeleteStoreItem() {
     },
   })
 }
+
+export function useTestPedsConnection() {
+  return useMutation({
+    mutationFn: (storeId: string) => storeApi.testPedsConnection(storeId),
+  })
+}

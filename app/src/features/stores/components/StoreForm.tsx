@@ -9,8 +9,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { useCreateStore, useUpdateStore } from "../hooks"
+import { useCreateStore, useUpdateStore, useTestPedsConnection } from "../hooks"
 import type { Store, StorePayload } from "../types"
+import { Loader2, CheckCircle2, XCircle } from "lucide-react"
 
 interface StoreFormProps {
   open: boolean
@@ -23,12 +24,24 @@ type StoreFormState = {
   name: string
   code: string
   address: string
+  pedsEnabled: boolean
+  pedsBaseUrl: string
+  pedsPosId: string
+  pedsMachineId: string
+  pedsUsername: string
+  pedsPassword: string
 }
 
 const initialState: StoreFormState = {
   name: "",
   code: "",
   address: "",
+  pedsEnabled: false,
+  pedsBaseUrl: "",
+  pedsPosId: "",
+  pedsMachineId: "",
+  pedsUsername: "",
+  pedsPassword: "",
 }
 
 function getManagerName(store: Store): string {
@@ -51,6 +64,12 @@ function getInitialState(editing?: Store | null): StoreFormState {
     name: editing.name ?? "",
     code: editing.code ?? "",
     address: editing.address ?? "",
+    pedsEnabled: editing.pedsEnabled ?? false,
+    pedsBaseUrl: editing.pedsBaseUrl ?? "",
+    pedsPosId: editing.pedsPosId ?? "",
+    pedsMachineId: editing.pedsMachineId ?? "",
+    pedsUsername: editing.pedsUsername ?? "",
+    pedsPassword: editing.pedsPassword ?? "",
   }
 }
 
@@ -59,6 +78,12 @@ function toPayload(form: StoreFormState): StorePayload {
     name: form.name.trim(),
     code: form.code.trim().toUpperCase(),
     address: form.address.trim(),
+    pedsEnabled: form.pedsEnabled,
+    pedsBaseUrl: form.pedsBaseUrl.trim() || undefined,
+    pedsPosId: form.pedsPosId.trim() || undefined,
+    pedsMachineId: form.pedsMachineId.trim() || undefined,
+    pedsUsername: form.pedsUsername.trim() || undefined,
+    pedsPassword: form.pedsPassword || undefined,
   }
 }
 
@@ -71,7 +96,12 @@ export function StoreForm({
   const [form, setForm] = useState<StoreFormState>(() => getInitialState(editing))
   const create = useCreateStore()
   const update = useUpdateStore()
+  const testPeds = useTestPedsConnection()
   const [error, setError] = useState<string | null>(null)
+  const [testResult, setTestResult] = useState<{
+    type: "success" | "error"
+    message: string
+  } | null>(null)
 
   function setField<Key extends keyof StoreFormState>(
     key: Key,
@@ -100,6 +130,27 @@ export function StoreForm({
     create.mutate(payload, {
       onSuccess: () => onSuccess?.(),
       onError: (err) => setError(err.message),
+    })
+  }
+
+  function handleTestConnection() {
+    if (!editing) return
+    setTestResult(null)
+    testPeds.mutate(editing._id, {
+      onSuccess: (data) => {
+        setTestResult({
+          type: "success",
+          message: data.connected
+            ? `Connected — ${data.message}`
+            : `PEDS responded but connection failed — ${data.message}`,
+        })
+      },
+      onError: (err) => {
+        setTestResult({
+          type: "error",
+          message: err.message || "Failed to reach PEDS. Check the Base URL and credentials.",
+        })
+      },
     })
   }
 
@@ -164,6 +215,107 @@ export function StoreForm({
               />
             </div>
           ) : null}
+
+          <div className="border-t pt-4 mt-2">
+            <label className="flex items-center gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={form.pedsEnabled}
+                onChange={(e) => setField("pedsEnabled", e.target.checked)}
+                className="h-4 w-4"
+              />
+              Enable PEDS POS Integration
+            </label>
+          </div>
+
+          {form.pedsEnabled && (
+            <div className="flex flex-col gap-3 rounded-md border p-3">
+              <div className="grid gap-2">
+                <Label htmlFor="peds-base-url">PEDS Base URL</Label>
+                <Input
+                  id="peds-base-url"
+                  placeholder="http://192.168.1.50:2010"
+                  value={form.pedsBaseUrl}
+                  onChange={(e) => setField("pedsBaseUrl", e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-2">
+                  <Label htmlFor="peds-pos-id">POS ID</Label>
+                  <Input
+                    id="peds-pos-id"
+                    placeholder="POS-001"
+                    value={form.pedsPosId}
+                    onChange={(e) => setField("pedsPosId", e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="peds-machine-id">Machine ID</Label>
+                  <Input
+                    id="peds-machine-id"
+                    placeholder="AAD0001230"
+                    value={form.pedsMachineId}
+                    onChange={(e) => setField("pedsMachineId", e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-2">
+                  <Label htmlFor="peds-username">Username</Label>
+                  <Input
+                    id="peds-username"
+                    placeholder="PEDSAPI"
+                    value={form.pedsUsername}
+                    onChange={(e) => setField("pedsUsername", e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="peds-password">Password</Label>
+                  <Input
+                    id="peds-password"
+                    type="password"
+                    placeholder="••••••"
+                    value={form.pedsPassword}
+                    onChange={(e) => setField("pedsPassword", e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {editing && (
+                <div className="flex flex-col gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-fit"
+                    disabled={testPeds.isPending || !form.pedsBaseUrl.trim()}
+                    onClick={handleTestConnection}
+                  >
+                    {testPeds.isPending && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Test PEDS Connection
+                  </Button>
+                  {testResult && (
+                    <div
+                      className={`flex items-center gap-2 text-sm ${
+                        testResult.type === "success"
+                          ? "text-green-600"
+                          : "text-destructive"
+                      }`}
+                    >
+                      {testResult.type === "success" ? (
+                        <CheckCircle2 className="h-4 w-4 shrink-0" />
+                      ) : (
+                        <XCircle className="h-4 w-4 shrink-0" />
+                      )}
+                      {testResult.message}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex justify-end gap-2">
             <Button

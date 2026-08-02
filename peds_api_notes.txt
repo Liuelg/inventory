@@ -1,0 +1,201 @@
+PEDS BUILDING, INFRONT OF GREEK SCHOOL
+TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53 EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+PEDSPOS Integration Notes
+This note gives you a brief understanding of the different options we provide to integrate with PEDSPOS system. The third party system can use any of the three integration options. The options are:1) Shared Folder 2) SOAP 3) REST API
+1) Shared Folder This type of integration uses a shared folder that will be available to both applications. The third party application drops the invoice in to the shared folder and PEDSPOS will pick from there.
+Pros  Easy to integrate  requires a minimum effort to communicate
+Cons  one-way communication  security issues
+2) SOAP This type of integration uses Simple Object Access Protocol (SOAP). The SOAP is a standard objects to consume web service and XML used to format the data.
+Web Service Definition Language (WSDL) http://localhost:2010/PEDS/api/HoldSalesService?WSDL
+Pros  two-way communication  better security
+Cons  requires more effort to communicate  heavy data
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL
+TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53
+EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+
+3) REST This type of integration uses Representational State Transfer (REST). REST is software architectural style that defines a set of constraints to be used for creating Web services and JSON is used to format the data.
+
+API URL
+
+http://localhost:2010/PEDS/api/HoldSalesService/help
+
+Pros
+
+ two-way communication
+
+ better security
+
+ Lightweight
+
+Cons
+
+ requires more effort to communicate
+
+Property Dictionary
+
+Hold Sales
+
+Name
+
+Type
+
+Nullable
+
+Remarks
+
+HoldSalesIdentifierId nvarchar(150) No
+
+TransactionType
+
+nchar(10)
+
+No
+
+Sales = 0
+
+InvoiceNo
+
+nvarchar(50)
+
+No
+
+PaymentType
+
+nvarchar(50)
+
+No
+
+CASH=0, CHECK=1, CREDIT= 2
+
+TableNumber
+
+nvarchar(50)
+
+No
+
+SalesPerson
+
+nvarchar(50)
+
+No
+
+HoldMemo
+
+nvarchar(MAX) No
+
+Date
+
+Datetime
+
+No
+
+"2018-11-09 12:58:10"
+
+CustomerName
+
+nvarchar(50)
+
+No
+
+CustomerTIN
+
+nvarchar(50)
+
+Yes
+
+Valid TIN string length (10,13)
+
+CustomerVAT
+
+nvarchar(50)
+
+Yes
+
+CashierUpdated
+
+nvarchar(50)
+
+No
+
+POSId
+
+nvarchar(50)
+
+No
+
+Unique identifier of PEDS POS ID. Defined in our system.
+
+Hold Sales Item
+
+Name
+
+Type
+
+Nullable
+
+Remarks
+
+HoldSalesItemIdentifierId nvarchar(150) No
+
+Identifier of each line item.
+
+CategoryIdentifierId CategoryName
+
+nvarchar(150) No nvarchar(50) No
+
+Must be unique for different Category Identifier Id.
+
+ItemIdentifierId
+
+nvarchar(150) No
+
+Must be unique for different Items
+
+ItemDescription
+
+nvarchar(MAX) No
+
+Identifier Id.
+
+ItemCode
+
+nvarchar(50) No
+
+UomIdentifierId
+
+nvarchar(150) No
+
+Must be unique for different Uom
+
+UomName
+
+nvarchar(50) No
+
+Identifier Id.
+
+Quantity
+
+decimal(18, 2) No
+
+SalesUnitPrice
+
+decimal(18, 2) No
+
+TaxType
+
+int
+
+No
+
+Tax1 = 1, NonTaxable = 4
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+

@@ -31,4 +31,10 @@ export const storeApi = {
     fetcher<{ success: boolean; message: string }>(`/api/stores/${storeId}/items/${itemId}`, {
       method: "DELETE",
     }),
+
+  testPedsConnection: (storeId: string) =>
+    fetcher<{ connected: boolean; message: string; pedsResponse: unknown }>(
+      `/api/peds/${storeId}/test-connection`,
+      { method: "POST" }
+    ),
 }

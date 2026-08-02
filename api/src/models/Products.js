@@ -12,6 +12,9 @@ const productSchema = new Schema({
   previous_prices: Number,
   tags: [String],
   image: String,
+  code: { type: String, unique: true, sparse: true },
+  pedsItemId: { type: String, unique: true, sparse: true },
+  taxType: { type: Number, default: 4 }, // 1 = Taxable, 4 = NonTaxable
 });
 
 productSchema.index({ category: 1 });

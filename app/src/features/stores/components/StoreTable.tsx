@@ -62,6 +62,18 @@ export function StoreTable({ onEdit }: StoreTableProps) {
       cell: (store) => store.address || "-",
     },
     {
+      header: "PEDS",
+      cell: (store) =>
+        store.pedsEnabled ? (
+          <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+            ON
+          </span>
+        ) : (
+          <span className="text-muted-foreground text-xs">-</span>
+        ),
+      className: "w-[60px]",
+    },
+    {
       header: "Manager",
       cell: (store) => getManagerLabel(store),
     },

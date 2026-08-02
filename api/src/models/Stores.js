@@ -28,7 +28,13 @@ const storeSchema = Schema({
   code: { type: String, required: true, unique: true, uppercase: true, trim: true },
   address: {type: String, required: true},
   manager_id: { type: Schema.Types.ObjectId, ref: 'User' },
-  items: [StoreItemSchema]
+  items: [StoreItemSchema],
+  pedsEnabled: { type: Boolean, default: false },
+  pedsBaseUrl: { type: String, default: '' },
+  pedsPosId: { type: String, default: '' },
+  pedsMachineId: { type: String, default: '' },
+  pedsUsername: { type: String, default: '' },
+  pedsPassword: { type: String, default: '' },
 });
 
 export default model('Store', storeSchema);

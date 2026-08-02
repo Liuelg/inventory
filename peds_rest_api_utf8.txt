@@ -1,0 +1,792 @@
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53
+EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+
+PEDSPOS REST API 1.2.0 Integration
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53 EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+Contents
+Property Definition ..................................................................................................................... 3 Hold Sales ............................................................................................................................... 3 Hold Sales Item....................................................................................................................... 3
+Add.................................................................................................................................................. 4 Exists............................................................................................................................................... 8 GetInvoiceStatus ............................................................................................................................. 9 GetInvoiceStatusList..................................................................................................................... 12 GetPaidStatus ................................................................................................................................ 16 GetPaidStatusList.......................................................................................................................... 20 GetSalesByTime ........................................................................................................................... 24 GetSalesInfo.................................................................................................................................. 26 GetVoidStatus ............................................................................................................................... 28 GetVoidStatusList......................................................................................................................... 30 Void............................................................................................................................................... 32 Callback API................................................................................................................................. 33 General Error Response ................................................................................................................ 36
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53
+EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+
+Property Definition
+
+Hold Sales Name HoldSalesIdentifierId TransactionType InvoiceNo PaymentType TableNumber SalesPerson HoldMemo Date CustomerName CustomerTIN CustomerVAT CashierUpdated POSId
+
+Type nvarchar(150) nchar(10) nvarchar(50) nvarchar(50) nvarchar(50) nvarchar(50) nvarchar(MAX) Datetime nvarchar(50) nvarchar(50) nvarchar(50) nvarchar(50)
+nvarchar(50)
+
+Nullable No No No No No No No No No Yes Yes No
+No
+
+Remarks Sales = 0 CASH=0, CHECK=1, CREDIT= 2
+"2018-11-09 12:58:10" Valid TIN string length (10,13)
+Unique identifier of PEDS POS ID. Defined in our system.
+
+Hold Sales Item Name HoldSalesItemIdentifierId CategoryIdentifierId CategoryName ItemIdentifierId ItemDescription ItemCode UomIdentifierId UomName Quantity SalesUnitPrice TaxType
+
+Type nvarchar(150) nvarchar(150) nvarchar(50) nvarchar(150) nvarchar(MAX) nvarchar(50) nvarchar(150) nvarchar(50) decimal(18, 2) decimal(18, 2) int
+
+Nullable No No No No No No No No No No No
+
+Remarks
+Identifier of each line item. Must be unique for different Category Identifier Id. Must be unique for different Items Identifier Id.
+Must be unique for different Uom Identifier Id.
+Tax1 = 1, NonTaxable = 4
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53
+EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+
+Name Add
+Address http://localhost:2010/PEDS/API/HoldSalesService/Add
+
+Request Header Request Method
+
+Authorization: Basic UEVEU0FQSTo2MjUxMTM= Content-Type: application/Json POST
+Request Body
+
+{ "HoldSalesIdentifierId": "inv-03941", "TransactionType": "0", "InvoiceNo": "I-0000004", "PaymentType": "1", "TableNumber": "", "SalesPerson": "Marta", "HoldMemo": "", "Date": "2018-11-09 12:58:10", "CustomerName": "PEDS PLC", "CustomerTIN": "0016175194", "CustomerVAT": "", "CashierUpdated": "Almaz", "POSId": "POS-001", "HoldSalesItems": [ { "HoldSalesItemIdentifierId": "inv01-I011", "CategoryIdentifierId": "cat01", "CategoryName": "Medicine", "ItemIdentifierId": "i01", "ItemDescription": "Panadol", "ItemCode": "01", "UomIdentifierId": "uom01", "UomName": "Pcs", "Quantity": 3, "SalesUnitPrice": 12.25, "TaxType": 4 },{ "HoldSalesItemIdentifierId": "inv01-I012", "CategoryIdentifierId": "cat02", "CategoryName": "Products", "ItemIdentifierId": "i02", "ItemDescription": "Knee support", "ItemCode": "02", "UomIdentifierId": "uom01", "UomName": "Pcs", "Quantity": 1, "SalesUnitPrice": 76.7, "TaxType": 1 }]}
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53
+EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+
+Response 1
+{ "Ex": null, "Message": "Invoice successfully saved.", "Status": null, "Success": true, "Content": { "CashierUpdated": "Almaz", "CustomerName": "PEDS PLC", "CustomerTIN": "0016175194", "CustomerVAT": "", "Date": "2018-11-09 12:58:10", "HoldMemo": "", "HoldSalesIdentifierId": "inv-03941", "HoldSalesItems": [ { "CategoryIdentifierId": "cat01", "CategoryName": "Medicine", "HoldSalesItemIdentifierId": "inv01-I011", "ItemCode": "01", "ItemDescription": "Panadol", "ItemIdentifierId": "i01", "PrintedQty": 0, "Quantity": 3, "SalesUnitPrice": 12.25, "TaxType": 4, "UomIdentifierId": "uom01", "UomName": "Pcs" }, { "CategoryIdentifierId": "cat02", "CategoryName": "Products", "HoldSalesItemIdentifierId": "inv01-I012", "ItemCode": "02", "ItemDescription": "Knee support", "ItemIdentifierId": "i02", "PrintedQty": 0, "Quantity": 1, "SalesUnitPrice": 76.7, "TaxType": 1, "UomIdentifierId": "uom01", "UomName": "Pcs" } ], "InvoiceNo": "I-0000004", "IsPrinted": false, "IsVoid": false, "POSId": "POS-001", "PaymentType": "1",
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53
+EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+
+"SalesPerson": "Marta", "TableNumber": "", "TransactionType": "0" } }
+
+Response 2
+
+{ "Ex": null, "Message": "Please provide the invoice.", "Status": null, "Success": false, "Content": null
+}
+Response 3
+{ "Ex": null, "Message": "Failed to save invoice.", "Status": null, "Success": false, "Content": { "CashierUpdated": "Almaz", "CustomerName": "PEDS PLC", "CustomerTIN": "0016175194", "CustomerVAT": "", "Date": "2018-11-09 12:58:10", "HoldMemo": "", "HoldSalesIdentifierId": "inv-03941", "HoldSalesItems": [ { "CategoryIdentifierId": "cat01", "CategoryName": "Medicine", "HoldSalesItemIdentifierId": "inv01-I011", "ItemCode": "01", "ItemDescription": "", "ItemIdentifierId": "i0000fed01", "PrintedQty": 0, "Quantity": 3, "SalesUnitPrice": 12.25, "TaxType": 4, "UomIdentifierId": "uom01", "UomName": "Pcs" }, { "CategoryIdentifierId": "cat02", "CategoryName": "Products", "HoldSalesItemIdentifierId": "inv01-I012", "ItemCode": "02", "ItemDescription": "Knee support",
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53 EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+"ItemIdentifierId": "i02", "PrintedQty": 0, "Quantity": 1, "SalesUnitPrice": 76.7, "TaxType": 1, "UomIdentifierId": "uom01", "UomName": "Pcs" } ], "InvoiceNo": "I-0000004", "IsPrinted": false, "IsVoid": false, "POSId": "POS-001", "PaymentType": "1", "SalesPerson": "Marta", "TableNumber": "" "TransactionType": "0" } }
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53
+EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+
+Name
+Address Request Header Request Method Request Body
+
+Exists
+http://localhost:2010/PEDS/api/HoldSalesService/Exists Authorization: Basic UEVEU0FQSTo2MjUxMTM= Content-Type: application/Json POST
+
+Value
+
+Remark
+
+I-0000004 Invoice number
+
+Response 1
+
+{ "Ex":null, "Message":"Invoice exists.", "Status":"Found", "Success":true, "Content":true
+}
+
+Response 2
+
+{ "Ex":null, "Message":"Invoice does not exist.", "Status":"NotFound", "Success":false, "Content":false
+}
+
+Response 3
+
+{ "Ex":null, "Message":"Please provide invoice number.", "Status":"NotFound", "Success":false, "Content":false
+}
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53
+EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+
+Name
+
+GetInvoiceStatus
+
+Address http://localhost:2010/PEDS/api/HoldSalesService/GetInvoiceStatus
+
+Request Authorization: Basic UEVEU0FQSTo2MjUxMTM=
+
+Header
+
+Content-Type: application/Json
+
+Request Method Request Body
+
+POST
+Value
+I-0000004
+
+Remark Invoice number
+
+Response 1
+
+{
+
+"Ex": null, "Message": "Success",
+
+"Status": null, "Success": true,
+
+"Content": { "HoldSales": { "CashierUpdated": "Almaz", "CustomerName": "PEDS PLC",
+
+"CustomerTIN": "0016175194", "CustomerVAT": "", "Date": "2018-11-09 12:58:10", "HoldMemo": "", "HoldSalesIdentifierId": "inv-03941", "HoldSalesItems": [], "InvoiceNo": "I-0000004", "IsPrinted": false, "IsVoid": false, "POSId": "POS-001", "PaymentType": "1", "SalesPerson": "Marta", "TableNumber": "", "TransactionType": "0" }, "InvoiceNo": "I-0000004", "Message": "Invoice is not paid.", "Status": "NotPaid" }
+
+}
+
+Response 2
+
+{ "Ex": null, "Message": "Success", "Status": null, "Success": true, "Content": { "HoldSales": { "CashierUpdated": "Almaz", "CustomerName": "PEDS PLC", "CustomerTIN": "0016175194",
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53
+EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+
+"CustomerVAT": "", "Date": "2018-11-09 12:58:10", "HoldMemo": "", "HoldSalesIdentifierId": "inv-03941", "HoldSalesItems": [], "InvoiceNo": "I-0000004", "IsPrinted": true, "IsVoid": false, "POSId": "POS-001", "PaymentType": "1", "SalesPerson": "Marta", "TableNumber": "", "TransactionType": "0" }, "InvoiceNo": "I-0000004", "Message": "Fully paid invoice.", "Status": "FullyPaid" } }
+Response 3 {
+"Ex": null, "Message": "Success", "Status": null, "Success": true, "Content": {
+"HoldSales": { "CashierUpdated": "Almaz", "CustomerName": "PEDS PLC", "CustomerTIN": "0016175194", "CustomerVAT": "", "Date": "2018-11-09 12:58:10", "HoldMemo": "", "HoldSalesIdentifierId": "inv-03941", "HoldSalesItems": [], "InvoiceNo": "I-0000004", "IsPrinted": false, "IsVoid": false, "POSId": "POS-001", "PaymentType": "1", "SalesPerson": "Marta", "TableNumber": "", "TransactionType": "0"
+}, "InvoiceNo": "I-0000004", "Message": "Partially paid invoice.", "Status": "PartiallyPaid" } }
+Response 4 {
+"Ex": null,
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53 EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+"Message": "Success", "Status": null, "Success": true, "Content": {
+"HoldSales": { "CashierUpdated": "Almaz", "CustomerName": "PEDS PLC", "CustomerTIN": "0016175194", "CustomerVAT": "", "Date": "2018-11-09 12:58:10", "HoldMemo": "", "HoldSalesIdentifierId": "inv-03941", "HoldSalesItems": [], "InvoiceNo": "I-0000004", "IsPrinted": false, "IsVoid": true, "POSId": "POS-001", "PaymentType": "1", "SalesPerson": "Marta", "TableNumber": "", "TransactionType": "0"
+}, "InvoiceNo": "I-0000004", "Message": "The invoice has been voided.", "Status": "FullyVoid" } }
+Response 5
+{ "Ex":null, "Message":"Invoice does not exist.", "Status":"NotFound", "Success":false, "Content":false
+}
+Response 6
+{ "Ex":null, "Message":"Please provide invoice number.", "Status":"NotFound", "Success":false, "Content":false
+}
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53
+EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+
+Name
+
+GetInvoiceStatusList
+
+Address http://localhost:2010/PEDS/api/HoldSalesService/GetInvoiceStatusList
+
+Request Authorization: Basic UEVEU0FQSTo2MjUxMTM=
+
+Header
+
+Content-Type: application/Json
+
+Request Method Request Body
+
+POST
+Value
+[I-0000004, I-0000005]
+
+Remark Invoice number list
+
+Response 1
+
+{
+
+"Ex": null, "Message": "Success",
+
+"Status": null, "Success": true,
+
+"Content": [ { "HoldSales": { "CashierUpdated": "Almaz",
+
+"CustomerName": "PEDS PLC", "CustomerTIN": "0016175194", "CustomerVAT": "", "Date": "2018-11-09 12:58:10", "HoldMemo": "", "HoldSalesIdentifierId": "inv-03941", "HoldSalesItems": [], "InvoiceNo": "I-0000004", "IsPrinted": false, "IsVoid": false, "POSId": "POS-001", "PaymentType": "1", "SalesPerson": "Marta", "TableNumber": "", "TransactionType": "0" },
+
+"InvoiceNo": "I-0000004", "Message": "Invoice is not paid.", "Status": "NotPaid"
+
+},
+
+{
+
+"HoldSales": null,
+
+"InvoiceNo": "I-0000005", "Message": "Invoice does not exist.", "Status": "NotFound"
+
+}
+
+]
+
+}
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53
+EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+
+Response 2 {
+"Ex": null, "Message": "Success", "Status": null, "Success": true, "Content": [
+{ "HoldSales": { "CashierUpdated": "Almaz", "CustomerName": "PEDS PLC", "CustomerTIN": "0016175194", "CustomerVAT": "", "Date": "2018-11-09 12:58:10", "HoldMemo": "", "HoldSalesIdentifierId": "inv-03941", "HoldSalesItems": [], "InvoiceNo": "I-0000004", "IsPrinted": true, "IsVoid": false, "POSId": "POS-001", "PaymentType": "1", "SalesPerson": "Marta", "TableNumber": "", "TransactionType": "0" }, "InvoiceNo": "I-0000004", "Message": "Fully paid invoice.", "Status": "FullyPaid"
+}, {
+"HoldSales": null, "InvoiceNo": "I-0000005", "Message": "Invoice does not exist.", "Status": "NotFound" } ] }
+Response 3 {
+"Ex": null, "Message": "Success", "Status": null, "Success": true, "Content": [
+{ "HoldSales": { "CashierUpdated": "Almaz", "CustomerName": "PEDS PLC", "CustomerTIN": "0016175194",
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53
+EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+
+"CustomerVAT": "", "Date": "2018-11-09 12:58:10", "HoldMemo": "", "HoldSalesIdentifierId": "inv-03941", "HoldSalesItems": [], "InvoiceNo": "I-0000004", "IsPrinted": false, "IsVoid": false, "POSId": "POS-001", "PaymentType": "1", "SalesPerson": "Marta", "TableNumber": "", "TransactionType": "0" }, "InvoiceNo": "I-0000004", "Message": "Partially paid invoice.", "Status": "PartiallyPaid" }, { "HoldSales": null, "InvoiceNo": "I-0000005", "Message": "Invoice does not exist.", "Status": "NotFound" } ] }
+Response 4 {
+"Ex": null, "Message": "Success", "Status": null, "Success": true, "Content": [
+{ "HoldSales": { "CashierUpdated": "Almaz", "CustomerName": "PEDS PLC", "CustomerTIN": "0016175194", "CustomerVAT": "", "Date": "2018-11-09 12:58:10", "HoldMemo": "", "HoldSalesIdentifierId": "inv-03941", "HoldSalesItems": [], "InvoiceNo": "I-0000004", "IsPrinted": false, "IsVoid": true, "POSId": "POS-001", "PaymentType": "1", "SalesPerson": "Marta", "TableNumber": "",
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53 EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+"TransactionType": "0" }, "InvoiceNo": "I-0000004", "Message": "The invoice has been voided.", "Status": "FullyVoid" }, { "HoldSales": null, "InvoiceNo": "I-0000005", "Message": "Invoice does not exist.", "Status": "NotFound" } ] }
+Response 5
+{ "Ex":null, "Message":"Please provide invoice number list.", "Status":"NotFound", "Success":false, "Content":false
+}
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53
+EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+
+Name
+
+GetPaidStatus
+
+Address http://localhost:2010/PEDS/api/HoldSalesService/GetPaidStatus
+
+Request Authorization: Basic UEVEU0FQSTo2MjUxMTM=
+
+Header
+
+Content-Type: application/Json
+
+Request Method Request Body
+
+POST
+Value
+I-0000004
+
+Remark Invoice number list
+
+Response 1
+
+{
+
+"Ex": null, "Message": "Fully paid invoice.", "Status": "FullyPaid", "Success": true,
+
+"Content": [ { "CheckNo": null, "CustomerName": "PEDS PLC",
+
+"CustomerTIN": "0016175194", "EJNo": "", "FsInvoiceNo": "00025630", "InvoiceNumber": "I-0000004", "MachineID": "AAD0001230", "Memo": "", "PaymentType": "1", "GuId": "56284fa0-2f48-45a9-b988-99b435246ae0", "SalesDataDetails": [
+{ "ItemIdentifierId": "i01", "ItemName": "Panadol", "ItemTax": 0, "ItemUnitPrice": 12.25, "ItemUom": "Pcs", "Quantity": 3,
+
+"TotalAmount": 36.75,
+
+"TotalItemAddition": 0, "TotalItemBeforeTax": 36.75,
+
+"TotalItemDiscount": 0,
+
+"TotalItemPrice": 36.75,
+
+"UomIdentifierId": "uom01",
+
+"SIGuId": "c777702d-a310-4254-8569-eca547146529"
+
+},
+
+{
+
+"ItemIdentifierId": "i02",
+
+"ItemName": "Knee support",
+
+"ItemTax": 11.51,
+
+"ItemUnitPrice": 76.7,
+
+"ItemUom": "Pcs",
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53
+EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+
+"Quantity": 1, "TotalAmount": 88.21, "TotalItemAddition": 0, "TotalItemBeforeTax": 76.7, "TotalItemDiscount": 0, "TotalItemPrice": 76.7, "UomIdentifierId": "uom01", "SIGuId": "a60aa6b7-9a4d-4847-a95d-f424fc533c89" } ], "SoldDate": "2019-03-27 07:44:08", "TotalAdditionAmount": 0, "TotalAmount": 124.96, "TotalBeforeTax": 113.45, "TotalDiscountAmount": 0, "TotalTax": 11.51, "TransactionType": "0", "UserName": "PEDSAdmin", "WithHoldingTAXAmount": 0 } ] }
+Response 2 {
+"Ex": null, "Message": "Partially paid invoice.", "Status": "PartiallyPaid", "Success": true, "Content": [
+{ "CheckNo": null, "CustomerName": "PEDS PLC", "CustomerTIN": "0016175194", "EJNo": "", "FsInvoiceNo": "00025630", "InvoiceNumber": "I-0000004", "MachineID": "AAD0001230", "Memo": "", "PaymentType": "1", "GuId": "56284fa0-2f48-45a9-b988-99b435246ae0", "SalesDataDetails": [ { "ItemIdentifierId": "i01", "ItemName": "Panadol", "ItemTax": 0, "ItemUnitPrice": 12.25, "ItemUom": "Pcs", "Quantity": 3, "TotalAmount": 36.75, "TotalItemAddition": 0,
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53
+EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+
+"TotalItemBeforeTax": 36.75, "TotalItemDiscount": 0, "TotalItemPrice": 36.75, "UomIdentifierId": "uom01", "SIGuId": "c777702d-a310-4254-8569-eca547146529" }, { "ItemIdentifierId": "i02", "ItemName": "Knee support", "ItemTax": 11.51, "ItemUnitPrice": 76.7, "ItemUom": "Pcs", "Quantity": 1, "TotalAmount": 88.21, "TotalItemAddition": 0, "TotalItemBeforeTax": 76.7, "TotalItemDiscount": 0, "TotalItemPrice": 76.7, "UomIdentifierId": "uom01", "SIGuId": "a60aa6b7-9a4d-4847-a95d-f424fc533c89" } ], "SoldDate": "2019-03-27 07:44:08", "TotalAdditionAmount": 0, "TotalAmount": 124.96, "TotalBeforeTax": 113.45, "TotalDiscountAmount": 0, "TotalTax": 11.51, "TransactionType": "0", "UserName": "PEDSAdmin", "WithHoldingTAXAmount": 0 } ] }
+Response 2
+{ "Ex":null, "Message":"Invoice is not paid.", "Status":"NotPaid", "Success":true, "Content":[]
+}
+Response 3
+{ "Ex":null, "Message":"Invoice does not exist.", "Status":"NotFound",
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53 EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+"Success":false, "Content":[] }
+Response 4
+{ "Ex":null, "Message":"Please provide invoice number.", "Status":"NotFound", "Success":false, "Content":false
+}
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53
+EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+
+Name
+
+GetPaidStatusList
+
+Address http://localhost:2010/PEDS/api/HoldSalesService/GetPaidStatusList
+
+Request Authorization: Basic UEVEU0FQSTo2MjUxMTM=
+
+Header
+
+Content-Type: application/Json
+
+Request Method Request Body
+
+POST
+Value
+[I-0000004, I-0000005]
+
+Remark Invoice number list
+
+Response 1
+
+{
+
+"Ex": null, "Message": null,
+
+"Status": null, "Success": true,
+
+"Content": [ { "InvoiceNo": "I-0000004", "SalesInfo": [
+
+{ "CheckNo": null, "CustomerName": "PEDS PLC", "CustomerTIN": "0016175194", "EJNo": "", "FsInvoiceNo": "00025630", "InvoiceNumber": "I-0000004", "MachineID": "AAD0001230", "Memo": "", "PaymentType": "1", "GuId": "56284fa0-2f48-45a9-b988-99b435246ae0", "SalesDataDetails": [ { "ItemIdentifierId": "i01", "ItemName": "Panadol", "ItemTax": 0,
+
+"ItemUnitPrice": 12.25,
+
+"ItemUom": "Pcs", "Quantity": 3,
+
+"TotalAmount": 36.75,
+
+"TotalItemAddition": 0,
+
+"TotalItemBeforeTax": 36.75,
+
+"TotalItemDiscount": 0,
+
+"TotalItemPrice": 36.75,
+
+"UomIdentifierId": "uom01",
+
+"SIGuId": "c777702d-a310-4254-8569-eca547146529"
+
+},
+
+{
+
+"ItemIdentifierId": "i02",
+
+"ItemName": "Knee support",
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53
+EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+
+"ItemTax": 11.51, "ItemUnitPrice": 76.7, "ItemUom": "Pcs", "Quantity": 1, "TotalAmount": 88.21, "TotalItemAddition": 0, "TotalItemBeforeTax": 76.7, "TotalItemDiscount": 0, "TotalItemPrice": 76.7, "UomIdentifierId": "uom01", "SIGuId": "a60aa6b7-9a4d-4847-a95d-f424fc533c89" } ], "SoldDate": "2019-03-27 07:44:08", "TotalAdditionAmount": 0, "TotalAmount": 124.96, "TotalBeforeTax": 113.45, "TotalDiscountAmount": 0, "TotalTax": 11.51, "TransactionType": "0", "UserName": "PEDSAdmin", "WithHoldingTAXAmount": 0
+} ], "Status": "FullyPaid" }, { "InvoiceNo": "I-0000005", "SalesInfo": null, "Status": "NotFound" } ] }
+Response 2 {
+"Ex": null, "Message": null, "Status": null, "Success": true, "Content": [
+{ "InvoiceNo": "I-0000004", "SalesInfo": [ { "CheckNo": null, "CustomerName": "PEDS PLC", "CustomerTIN": "0016175194", "EJNo": "", "FsInvoiceNo": "00025630",
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53
+EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+
+"InvoiceNumber": "I-0000004", "MachineID": "AAD0001230", "Memo": "", "PaymentType": "1", "GuId": "56284fa0-2f48-45a9-b988-99b435246ae0", "SalesDataDetails": [
+{ "ItemIdentifierId": "i01", "ItemName": "Panadol", "ItemTax": 0, "ItemUnitPrice": 12.25, "ItemUom": "Pcs", "Quantity": 3, "TotalAmount": 36.75, "TotalItemAddition": 0, "TotalItemBeforeTax": 36.75, "TotalItemDiscount": 0, "TotalItemPrice": 36.75, "UomIdentifierId": "uom01", "SIGuId": "c777702d-a310-4254-8569-eca547146529"
+}, {
+"ItemIdentifierId": "i02", "ItemName": "Knee support", "ItemTax": 11.51, "ItemUnitPrice": 76.7, "ItemUom": "Pcs", "Quantity": 1, "TotalAmount": 88.21, "TotalItemAddition": 0, "TotalItemBeforeTax": 76.7, "TotalItemDiscount": 0, "TotalItemPrice": 76.7, "UomIdentifierId": "uom01", "SIGuId": "a60aa6b7-9a4d-4847-a95d-f424fc533c89" } ], "SoldDate": "2019-03-27 07:44:08", "TotalAdditionAmount": 0, "TotalAmount": 124.96, "TotalBeforeTax": 113.45, "TotalDiscountAmount": 0, "TotalTax": 11.51, "TransactionType": "0", "UserName": "PEDSAdmin", "WithHoldingTAXAmount": 0 } ], "Status": "PartiallyPaid" }, {
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53 EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+"InvoiceNo": "I-0000005", "SalesInfo": null, "Status": "NotFound" } ] }
+Response 3 {
+"Ex":null, "Message":null, "Status":null, "Success":true, "Content":[{
+"InvoiceNo":"I-0000004", "SalesInfo":[], "Status":"NotPaid" }, { "InvoiceNo":"I-0000005", "SalesInfo":[], "Status":"NotFound" }] }
+Response 4
+{ "Ex":null, "Message":"Please provide invoice number list.", "Status":"NotFound", "Success":false, "Content":false
+}
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53
+EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+
+Name
+
+GetSalesByTime
+
+Address http://localhost:2010/PEDS/api/HoldSalesService/GetSalesByTime
+
+Request Authorization: Basic UEVEU0FQSTo2MjUxMTM=
+
+Header
+
+Content-Type: application/Json
+
+Request Method Request Body
+
+POST
+Value
+60
+
+Remark Returns sales data within the given time period.
+
+Response 1
+
+{
+
+"Ex": null, "Message": "Sales record.", "Status": "Found", "Success": true,
+
+"Content": [ { "CheckNo": null, "CustomerName": "PEDS PLC",
+
+"CustomerTIN": "0016175194", "EJNo": "", "FsInvoiceNo": "00025630", "InvoiceNumber": "I-0000004", "MachineID": "AAD0001230", "Memo": "", "PaymentType": "1", "GuId": "56284fa0-2f48-45a9-b988-99b435246ae0", "SalesDataDetails": [
+{ "ItemIdentifierId": "i01", "ItemName": "Panadol", "ItemTax": 0, "ItemUnitPrice": 12.25, "ItemUom": "Pcs", "Quantity": 3,
+
+"TotalAmount": 36.75,
+
+"TotalItemAddition": 0, "TotalItemBeforeTax": 36.75,
+
+"TotalItemDiscount": 0,
+
+"TotalItemPrice": 36.75,
+
+"UomIdentifierId": "uom01",
+
+"SIGuId": "c777702d-a310-4254-8569-eca547146529"
+
+},
+
+{
+
+"ItemIdentifierId": "i02",
+
+"ItemName": "Knee support",
+
+"ItemTax": 11.51,
+
+"ItemUnitPrice": 76.7,
+
+"ItemUom": "Pcs",
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53 EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+"Quantity": 1, "TotalAmount": 88.21, "TotalItemAddition": 0, "TotalItemBeforeTax": 76.7, "TotalItemDiscount": 0, "TotalItemPrice": 76.7, "UomIdentifierId": "uom01", "SIGuId": "a60aa6b7-9a4d-4847-a95d-f424fc533c89" } ], "SoldDate": "2019-03-27 07:44:08", "TotalAdditionAmount": 0, "TotalAmount": 124.96, "TotalBeforeTax": 113.45, "TotalDiscountAmount": 0, "TotalTax": 11.51, "TransactionType": "0", "UserName": "PEDSAdmin", "WithHoldingTAXAmount": 0 } ] }
+Response 2
+{ "Ex":null, "Message":"No Sales Record.", "Status":"NotFound", "Success":false, "Content":[]
+}
+Response 3
+{ "Ex":null, "Message":"Invoice does not exists within the given time period.", "Status":"NotFound", "Success":false, "Content":[]
+}
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53
+EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+
+Name
+Address Request Header Request Method Request Body
+
+GetSalesInfo
+http://localhost:2010/PEDS/api/HoldSalesService/GetSalesInfo Authorization: Basic UEVEU0FQSTo2MjUxMTM= Content-Type: application/Json POST
+
+Value
+I-0000004
+
+Remark Invoice number.
+Response 1
+
+{ "Ex": null, "Message": "Sales record.", "Status": "Found", "Success": true, "Content": [ { "CheckNo": null, "CustomerName": "PEDS PLC", "CustomerTIN": "0016175194", "EJNo": "", "FsInvoiceNo": "00025630", "InvoiceNumber": "I-0000004", "MachineID": "AAD0001230", "Memo": "", "PaymentType": "1", "GuId": "56284fa0-2f48-45a9-b988-99b435246ae0", "SalesDataDetails": [ { "ItemIdentifierId": "i01", "ItemName": "Panadol", "ItemTax": 0, "ItemUnitPrice": 12.25, "ItemUom": "Pcs", "Quantity": 3, "TotalAmount": 36.75, "TotalItemAddition": 0, "TotalItemBeforeTax": 36.75, "TotalItemDiscount": 0, "TotalItemPrice": 36.75, "UomIdentifierId": "uom01", "SIGuId": "c777702d-a310-4254-8569-eca547146529" }, { "ItemIdentifierId": "i02", "ItemName": "Knee support", "ItemTax": 11.51,
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53 EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+"ItemUnitPrice": 76.7, "ItemUom": "Pcs", "Quantity": 1, "TotalAmount": 88.21, "TotalItemAddition": 0, "TotalItemBeforeTax": 76.7, "TotalItemDiscount": 0, "TotalItemPrice": 76.7, "UomIdentifierId": "uom01", "SIGuId": "a60aa6b7-9a4d-4847-a95d-f424fc533c89" } ], "SoldDate": "2019-03-27 07:44:08", "TotalAdditionAmount": 0, "TotalAmount": 124.96, "TotalBeforeTax": 113.45, "TotalDiscountAmount": 0, "TotalTax": 11.51, "TransactionType": "0", "UserName": "PEDSAdmin", "WithHoldingTAXAmount": 0 } ]}
+Response 2 {
+"Ex":null, "Message":"No sales record.", "Status":"NotFound", "Success":false, "Content":[] }
+Response 3 {
+"Ex":null, "Message":"Invoice does not exist.", "Status":"NotFound", "Success":false, "Content":[] }
+Response 4
+{ "Ex":null, "Message":"Please provide invoice number.", "Status":"NotFound", "Success":false, "Content":false
+}
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53
+EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+
+Name
+Address Request Header Request Method Request Body
+
+GetVoidStatus
+http://localhost:2010/PEDS/api/HoldSalesService/GetVoidStatus Authorization: Basic UEVEU0FQSTo2MjUxMTM= Content-Type: application/Json POST
+
+Value
+I-0000004
+
+Response 1
+
+Remark Invoice number.
+
+{ "Ex":null, "Message":"Invoice is not voided.", "Status":"NotVoid", "Success":true, "Content": { "CashierUpdated":"Almaz", "CustomerName":"PEDS PLC", "CustomerTIN":"0016175194", "CustomerVAT":"", "Date":"2018-11-09 12:58:10", "HoldMemo":"", "HoldSalesIdentifierId":"inv-03941", "HoldSalesItems":[], "InvoiceNo":"I-0000004", "IsPrinted":false, "IsVoid":false, "POSId":"POS-001", "PaymentType":"1", "SalesPerson":"Marta", "TableNumber":"", "TransactionType":"0" }
+}
+
+Response 2
+
+{ "Ex":null, "Message":"Invoice is voided.", "Status":"FullyVoid", "Success":true, "Content": { "CashierUpdated":"Almaz", "CustomerName":"PEDS PLC", "CustomerTIN":"0016175194",
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53 EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+"CustomerVAT":"", "Date":"2018-11-09 12:58:10", "HoldMemo":"", "HoldSalesIdentifierId":"inv-03941", "HoldSalesItems":[], "InvoiceNo":"I-0000004", "IsPrinted":false, "IsVoid":true, "POSId":"POS-001", "PaymentType":"1", "SalesPerson":"Marta", "TableNumber":"", "TransactionType":"0" } }
+Response 3
+{ "Ex":null, "Message":"Invoice does not exist.", "Status":"NotFound", "Content":null, "Success":false
+}
+Response 4
+{ "Ex":null, "Message":"Please provide invoice number.", "Status":"NotFound", "Success":false
+}
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53
+EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+
+Name
+Address Request Header Request Method Request Body
+
+GetVoidStatusList
+http://localhost:2010/PEDS/api/HoldSalesService/GetVoidStatusList Authorization: Basic UEVEU0FQSTo2MjUxMTM= Content-Type: application/Json POST
+
+Value
+[I-0000004, I-0000005] Response 1
+
+Remark Invoice number list.
+
+{ "Ex":null, "Message":null, "Status":null, "Success":true, "Content": [{ "InvoiceNo":"I-0000004", "Status":"NotVoid", "VoidInfo": { "CashierUpdated":"Almaz", "CustomerName":"PEDS PLC", "CustomerTIN":"0016175194", "CustomerVAT":"", "Date":"2018-11-09 12:58:10", "HoldMemo":"", "HoldSalesIdentifierId":"inv-03941", "HoldSalesItems":[], "InvoiceNo":"I-0000004", "IsPrinted":false, "IsVoid":false, "POSId":"POS-001", "PaymentType":"1", "SalesPerson":"Marta", "TableNumber":"", "TransactionType":"0" } }, { "InvoiceNo":"I-0000005", "Status":"NotFound", "VoidInfo":null } ]
+}
+
+Response 2
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53 EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+{ "Ex":null, "Message":null, "Status":null, "Success":true, "Content": [{ "InvoiceNo":"I-0000004", "Status":"FullyVoid", "VoidInfo": { "CashierUpdated":"Almaz", "CustomerName":"PEDS PLC", "CustomerTIN":"0016175194", "CustomerVAT":"", "Date":"2018-11-09 12:58:10", "HoldMemo":"", "HoldSalesIdentifierId":"inv-03941", "HoldSalesItems":[], "InvoiceNo":"I-0000004", "IsPrinted":false, "IsVoid":false, "POSId":"POS-001", "PaymentType":"1", "SalesPerson":"Marta", "TableNumber":"", "TransactionType":"0" } }, { "InvoiceNo":"I-0000005", "Status":"NotFound", "VoidInfo":null } ]
+}
+Response 3
+{ "Ex":null, "Message":"Please provide invoice number list.", "Status":"NotFound", "Success":false
+}
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53
+EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+
+Name
+Address Request Header Request Method Request Body
+
+Void
+http://localhost:2010/PEDS/api/HoldSalesService/Void Authorization: Basic UEVEU0FQSTo2MjUxMTM= Content-Type: application/Json POST
+
+Value
+I-0000004
+
+Response 1
+
+Remark Invoice number.
+
+{ "Ex":null, "Message":"Successfully voided.", "Status":"FullyVoid", "Success":true, "Content":true
+}
+
+Response 2
+
+{ "Ex":null, "Message":"Failed to void invoice." "Status":"NotVoid", "Success":false, "Content":false
+}
+
+Response 3
+
+{ "Ex":null, "Message":"Invoice does not exist.", "Status":"NotFound", "Content":null, "Success":false
+}
+
+Response 4
+
+{ "Ex":null, "Message":"Please provide invoice number.", "Status":"NotFound", "Success":false
+}
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53 EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+Response 5
+{ "Ex":null, "Message":"Invoice has already been invoiced.", "Success":false
+}
+
+Callback API
+The main purpose of this API is to notify the third party application when invoice is printed from PEDS POS application. The callback API is prepared by the third party application based on the specification described below.
+
+Name Address
+Request Header Request Method
+
+CONFIRMPAYMENT HTTP://IPADDRESS:PORT /COMPANYNAME/API/INVOICE/CONFIRMPAYMENT Authorization: Basic USERNAME AND PASSWORD Content-Type: application/Json POST
+Request Body
+
+{ "TransactionType": "0", "SoldDate": "2019-03-26T12:38:24.99", "FsInvoiceNo": "00025630", "EJNo": "", "PaymentType": "1", "MachineID": "AAD0001230", "CustomerName": "PEDS PLC", "CustomerTIN": "0016175194", "InvoiceNumber": "I-0000004", "Memo": "", "TotalAdditionAmount": 0.0, "TotalDiscountAmount": 0.0, "TotalBeforeTax": 113.45, "TotalTax": 11.51, "TotalAmount": 124.96, "WithHoldingTAXAmount": 0.0, "UserName": "PEDSAdmin", "GuId": "56284fa0-2f48-45a9-b988-99b435246ae0", "SalesDataDetails": [ {
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53 EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+"ItemIdentifierId": "i001", "ItemName": "Panadol", "UomIdentifierId": "uom01", "ItemUom": "Pcs", "Quantity": 3.00, "ItemUnitPrice": 12.25, "TotalItemPrice": 36.7500, "TotalItemAddition": 0.0, "TotalItemDiscount": 0.0, "TotalItemBeforeTax": 36.75, "ItemTax": 0.00, "TotalAmount": 36.75, "SIGuId": "c777702d-a310-4254-8569-eca547146529" }, { "ItemIdentifierId": "i02", "ItemName": "Knee support", "UomIdentifierId": "uom01", "ItemUom": "Pcs", "Quantity": 1.00, "ItemUnitPrice": 76.70, "TotalItemPrice": 76.7000, "TotalItemAddition": 0.0, "TotalItemDiscount": 0.0, "TotalItemBeforeTax": 76.70, "ItemTax": 11.51, "TotalAmount": 88.21, "SIGuId": "a60aa6b7-9a4d-4847-a95d-f424fc533c89" } ] }
+Response 1 Note : Content value represents invoice number
+{ "Ex":null, "Message":"Successfully Posted.", "Success":true, "Content":"I-0000004"
+} Response 2
+{ "Ex":null, "Message":"Failed to post sales.", "Success":false, "Content":""
+}
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53
+EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+PEDS BUILDING, INFRONT OF GREEK SCHOOL TEL: +251115 15 4000 MOB: +251 930 03 52 49 / +251 930 01 42 53
+EMAIL: INFO@P-EDS.COM WEB: WWW.P-EDS.COM
+
+General Error Response
+
+Response 1
+
+{ "Ex":null, "Message":"A transport-level error has occurred when sending the
+request to the server. (provider: Shared Memory Provider, error: 0 No process is on the other end of the pipe.)",
+"Status":null, "Success":false, "Content":false }
+
+Response 2
+
+{ "Ex":null, "Message":"ExecuteReader requires an open and available Connection.
+The connection's current state is closed.", "Status":null, "Success":false, "Content":false
+}
+
+Response 3
+
+The connection to 'localhost' failed. <br /> Error: ConnectionRefused (0x274d). <br />System.Net.Sockets.SocketException No connection could be made because the target machine actively refused it [::1]:2010
+
+©Professional Electronic Data Systems (PEDS), 2019
+
+Where quality reaches its limit
+
+
