@@ -37,70 +37,6 @@ function escapeHtml(text) {
 }
 
 /**
- * Build a detailed plain-text message from the daily report data.
- * Telegram messages have a max length of 4096 characters.
- */
-function buildDetailedReportMessages(report, sym) {
-  const transactions = report?.transactions || [];
-
-  if (transactions.length === 0) {
-    return ['📭 No sales transactions found for this day.'];
-  }
-
-  const header = [
-    '📋 <b>DETAILED SALES REPORT</b>',
-    '--------------------------------',
-  ].join('\n');
-
-  const chunks = [];
-  let current = header;
-
-  for (const t of transactions) {
-    const itemsText = (t.items || [])
-      .map((item) => `  • ${escapeHtml(item.product?.name || 'Unknown Product')} × ${item.quantity}`)
-      .join('\n');
-
-    const dateStr = t.date
-      ? new Date(t.date).toLocaleString('en-US', {
-          year: 'numeric',
-          month: 'short',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          timeZone: 'Africa/Addis_Ababa',
-        })
-      : '—';
-
-    const block = [
-      '',
-      `🧾 <b>Invoice:</b> ${escapeHtml(t.invoiceNumber || '—')}`,
-      `🏪 <b>Store:</b> ${escapeHtml(t.storeName || '—')}`,
-      `👤 <b>Sales Person:</b> ${escapeHtml(t.salesName || 'N/A')}`,
-      `🙋 <b>Customer:</b> ${escapeHtml(t.customerName || 'N/A')}`,
-      `📅 <b>Date:</b> ${dateStr}`,
-      '<b>Items:</b>',
-      itemsText || '  • No items',
-      `💰 <b>Total:</b> ${sym}${(t.totalAmount || 0).toFixed(2)}`,
-      '--------------------------------',
-    ].join('\n');
-
-    // Telegram max message length is 4096; keep a small margin
-    if (current.length + block.length > 4000) {
-      chunks.push(current);
-      current = block;
-    } else {
-      current += block;
-    }
-  }
-
-  if (current) {
-    chunks.push(current);
-  }
-
-  return chunks;
-}
-
-/**
  * Build a product-summary message.
  */
 function buildProductSummaryMessage(report, sym) {
@@ -145,21 +81,35 @@ async function generateDailyReportData(startDateStr) {
     totalSalesValue += sale.totalAmount || 0;
     const transactionItems = [];
 
+    // Use the sale's stored rates to compute each item's USD value
+    const safeRates = {
+      eur: sale.rates?.eur > 0 ? sale.rates.eur : 1,
+      usd: sale.rates?.usd > 0 ? sale.rates.usd : 1,
+      birr: sale.rates?.birr > 0 ? sale.rates.birr : 1,
+      visa: sale.rates?.visa > 0 ? sale.rates.visa : 1,
+    };
+
     for (const item of sale.items || []) {
       const qty = item.quantity || 0;
       totalSalesItems += qty;
       const pName = item.item_id?.name || 'Unknown Product';
       const pId = item.item_id?._id?.toString() || '—';
 
+      const itemValueUSD =
+        (item.eur || 0) / safeRates.eur +
+        (item.usd || 0) / safeRates.usd +
+        (item.birr || 0) / safeRates.birr +
+        (item.visa || 0) / safeRates.visa;
+
       const existing = productMap.get(pId) || { product: { _id: pId, name: pName }, quantity: 0, value: 0 };
       existing.quantity += qty;
-      existing.value += (item.price || 0) * qty;
+      existing.value += itemValueUSD;
       productMap.set(pId, existing);
 
       transactionItems.push({
         product: { _id: pId, name: pName },
         quantity: qty,
-        value: (item.price || 0) * qty,
+        value: itemValueUSD,
         eur: item.eur || 0,
         usd: item.usd || 0,
         birr: item.birr || 0,
@@ -197,55 +147,60 @@ async function generateDailyReportData(startDateStr) {
 }
 
 /**
- * Main automated task scheduler
+ * Send report for a specific date (YYYY-MM-DD).
+ * If no date is provided, uses today's Ethiopian date.
  */
-async function sendDailyReport() {
+export async function sendDailyReportForDate(reportDateStr) {
   if (!bot || chatIds.length === 0) {
     console.log('[cron] Skipping report dispatch: Bot or Chat ID missing');
     return;
   }
 
+  const dateStr = reportDateStr || getEthiopianDateString();
+
   try {
-    console.log('[cron] Compiling detailed daily sales report...');
-    const todayStr = getEthiopianDateString();
+    console.log(`[cron] Compiling daily sales report for ${dateStr}...`);
 
-    // Cron runs at 00:00, so report on the day that just ended
-    const [y, m, d] = todayStr.split('-').map(Number);
-    const yesterday = new Date(Date.UTC(y, m - 1, d - 1));
-    const reportDateStr = yesterday.toISOString().slice(0, 10);
-
-    const reportData = await generateDailyReportData(reportDateStr);
+    const reportData = await generateDailyReportData(dateStr);
     const sym = getServerCurrencySymbol(reportData.currency);
 
     const textSummaryMessage = [
       '📊 <b>DAILY SALES REPORT (EAT)</b>',
-      `📅 Date: <b>${reportDateStr}</b>`,
+      `📅 Date: <b>${dateStr}</b>`,
       '--------------------------------',
       `💰 <b>Total Sales:</b> ${sym}${(reportData.summary.totalValue || 0).toFixed(2)}`,
       `🧾 <b>Total Orders:</b> ${reportData.summary.totalRecords}`,
       `📦 <b>Total Items Sold:</b> ${reportData.summary.totalItems}`,
     ].join('\n');
 
-    const detailMessages = buildDetailedReportMessages(reportData, sym);
     const productSummary = buildProductSummaryMessage(reportData, sym);
 
     for (const chatId of chatIds) {
       // 1. Summary
       await bot.telegram.sendMessage(chatId, textSummaryMessage, { parse_mode: 'HTML' });
 
-      // 2. Detailed transactions (split across multiple messages if needed)
-      for (const msg of detailMessages) {
-        await bot.telegram.sendMessage(chatId, msg, { parse_mode: 'HTML' });
-      }
-
-      // 3. Product summary
+      // 2. Product summary
       await bot.telegram.sendMessage(chatId, productSummary, { parse_mode: 'HTML' });
     }
 
     console.log('[cron] Automated dispatch successfully completed.');
   } catch (err) {
     console.error('[cron] Automated dispatch crashed:', err.message);
+    throw err;
   }
+}
+
+/**
+ * Main automated task scheduler — reports on the day that just ended.
+ */
+export async function sendDailyReport() {
+  const todayStr = getEthiopianDateString();
+  // Cron runs at 00:00, so report on the day that just ended
+  const [y, m, d] = todayStr.split('-').map(Number);
+  const yesterday = new Date(Date.UTC(y, m - 1, d - 1));
+  const reportDateStr = yesterday.toISOString().slice(0, 10);
+
+  await sendDailyReportForDate(reportDateStr);
 }
 
 // 5. Scheduler Rule: 00:00 (Midnight) Ethiopian Time
