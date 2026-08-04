@@ -1,6 +1,5 @@
 import { Telegraf } from 'telegraf';
 import cron from 'node-cron';
-import * as XLSX from 'xlsx'; 
 import Sale from '../models/Sale.js';
 
 // 1. Initialize Bot First
@@ -29,200 +28,99 @@ function getServerCurrencySymbol(currency) {
   }
 }
 
-// Server-side equivalent of getReportTypeLabel
-function getReportTypeLabel(type) {
-  switch (type) {
-    case 'goodIns': return 'Stock In';
-    case 'stockouts': return 'Stock Out';
-    case 'sales': return 'Sales';
-    case 'remaining': return 'Remaining Products';
-    default: return 'Report';
-  }
+function escapeHtml(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 /**
- * Ported Version of your generateReportExcel utility function (Adapted for Node.js)
- * Generates an in-memory Excel Buffer instead of writing directly to disk
+ * Build a detailed plain-text message from the daily report data.
+ * Telegram messages have a max length of 4096 characters.
  */
-function buildReportExcelBuffer(report) {
-  const wb = XLSX.utils.book_new();
-  const currencyStr = String(report?.currency || 'usd').toUpperCase(); // 🛡️ Safe fallback formatting
-  const sym = getServerCurrencySymbol(report?.currency);
-  const typeLabel = getReportTypeLabel(report?.type);
-  
-  const dateRange =
-    report?.type === 'remaining'
-      ? new Date(report.start || Date.now()).toLocaleDateString('en-US', { timeZone: 'Africa/Addis_Ababa' })
-      : `${new Date(report?.start || Date.now()).toLocaleDateString('en-US', { timeZone: 'Africa/Addis_Ababa' })} – ${new Date(report?.end || Date.now()).toLocaleDateString('en-US', { timeZone: 'Africa/Addis_Ababa' })}`;
+function buildDetailedReportMessages(report, sym) {
+  const transactions = report?.transactions || [];
 
-  const hasTransactions = report?.transactions && report.transactions.length > 0;
-  const hasRecords = report?.records && report.records.length > 0;
-  const hasBreakdown = report?.breakdown && report.breakdown.length > 0;
-
-  // ============================================================
-  // SHEET 1: Detailed Records
-  // ============================================================
-  if (hasTransactions) {
-    // SHEET 1a: By Transaction
-    const transactionRows = [];
-    for (const t of report.transactions) {
-      const totalItems = (t.items || []).reduce((sum, item) => sum + (item.quantity || 0), 0);
-      transactionRows.push({
-        'Invoice #': t.invoiceNumber || '—',
-        Date: t.date ? new Date(t.date).toLocaleString('en-US', { timeZone: 'Africa/Addis_Ababa' }) : '—',
-        Store: t.storeName || '—',
-        'Sales Person': t.salesName || '—',
-        Customer: t.customerName || '—',
-        'Total Items': totalItems,
-        'Total Amount': t.totalAmount || 0,
-      });
-    }
-    const transactionWs = XLSX.utils.json_to_sheet(transactionRows);
-    XLSX.utils.sheet_add_aoa(
-      transactionWs,
-      [[`Values shown in ${currencyStr} (${sym})`]],
-      { origin: -1 }
-    );
-    XLSX.utils.book_append_sheet(wb, transactionWs, 'By Transaction');
-
-    // SHEET 1b: All Sales (exploded detail)
-    const txRows = [];
-    for (const t of report.transactions) {
-      for (const item of t.items || []) {
-        txRows.push({
-          'Invoice #': t.invoiceNumber || '—',
-          Date: t.date ? new Date(t.date).toLocaleString('en-US', { timeZone: 'Africa/Addis_Ababa' }) : '—',
-          Store: t.storeName || '—',
-          'Sales Person': t.salesName || '—',
-          Customer: t.customerName || '—',
-          Product: item.product?.name || 'Unknown Product',
-          Quantity: item.quantity || 0,
-          Value: item.value || 0,
-          EUR: item.eur ?? 0,
-          USD: item.usd ?? 0,
-          BIRR: item.birr ?? 0,
-          VISA: item.visa ?? 0,
-        });
-      }
-    }
-    const txWs = XLSX.utils.json_to_sheet(txRows);
-    XLSX.utils.sheet_add_aoa(
-      txWs,
-      [[`Values shown in ${currencyStr} (${sym})`]],
-      { origin: -1 }
-    );
-    XLSX.utils.book_append_sheet(wb, txWs, 'All Sales');
-  } else if (hasRecords) {
-    const recordRows = [];
-    for (const r of report.records) {
-      for (const item of r.items || []) {
-        const row = {
-          Date: r.date ? new Date(r.date).toLocaleString('en-US', { timeZone: 'Africa/Addis_Ababa' }) : '—',
-          Store: r.storeName || '—',
-          Product: item.product?.name || 'Unknown Product',
-          Quantity: item.quantity || 0,
-          'Unit Price': item.price || 0,
-          Value: item.value || 0,
-        };
-        if (r.invoiceNumber) row['Invoice #'] = r.invoiceNumber;
-        if (r.customerName) row['Customer'] = r.customerName;
-        if (r.salesName) row['Sales Person'] = r.salesName;
-        if (r.status) row['Status'] = r.status;
-        if (item.eur) row['EUR'] = item.eur;
-        if (item.usd) row['USD'] = item.usd;
-        if (item.birr) row['BIRR'] = item.birr;
-        if (item.visa) row['VISA'] = item.visa;
-        recordRows.push(row);
-      }
-    }
-    const recordsWs = XLSX.utils.json_to_sheet(recordRows);
-    XLSX.utils.sheet_add_aoa(
-      recordsWs,
-      [[`Values shown in ${currencyStr} (${sym})`]],
-      { origin: -1 }
-    );
-    XLSX.utils.book_append_sheet(wb, recordsWs, 'All Records');
-  } else {
-    // 🛡️ Always generate a fallback sheet if there is no data so the workbook structure remains valid
-    const detailRows = hasBreakdown 
-      ? report.breakdown.map((item) => ({
-          Product: item.product?.name || 'Unknown',
-          Quantity: item.quantity || 0,
-          Value: item.value || 0,
-        }))
-      : [{ Product: 'No records found for today', Quantity: 0, Value: 0 }];
-
-    const detailWs = XLSX.utils.json_to_sheet(detailRows);
-    XLSX.utils.sheet_add_aoa(
-      detailWs,
-      [[`Values shown in ${currencyStr} (${sym})`]],
-      { origin: -1 }
-    );
-    XLSX.utils.book_append_sheet(wb, detailWs, 'Details');
+  if (transactions.length === 0) {
+    return ['📭 No sales transactions found for this day.'];
   }
 
-  // ============================================================
-  // SHEET 2: Summary
-  // ============================================================
-  const summaryRows = [
-    ['Inventory Report'],
-    [],
-    ['Type', typeLabel],
-    ['Date Range', dateRange],
-    ['Store', report?.storeFilter || 'All Stores'],
-    [],
-    ['Metric', 'Value'],
-    ['Total Records', report?.summary?.totalRecords || 0],
-    ['Total Items', report?.summary?.totalItems || 0],
-    [
-      'Total Value',
-      `${sym}${(report?.summary?.totalValue || 0).toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`,
-    ],
+  const header = [
+    '📋 <b>DETAILED SALES REPORT</b>',
+    '--------------------------------',
+  ].join('\n');
+
+  const chunks = [];
+  let current = header;
+
+  for (const t of transactions) {
+    const itemsText = (t.items || [])
+      .map((item) => `  • ${escapeHtml(item.product?.name || 'Unknown Product')} × ${item.quantity}`)
+      .join('\n');
+
+    const dateStr = t.date
+      ? new Date(t.date).toLocaleString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZone: 'Africa/Addis_Ababa',
+        })
+      : '—';
+
+    const block = [
+      '',
+      `🧾 <b>Invoice:</b> ${escapeHtml(t.invoiceNumber || '—')}`,
+      `🏪 <b>Store:</b> ${escapeHtml(t.storeName || '—')}`,
+      `👤 <b>Sales Person:</b> ${escapeHtml(t.salesName || 'N/A')}`,
+      `🙋 <b>Customer:</b> ${escapeHtml(t.customerName || 'N/A')}`,
+      `📅 <b>Date:</b> ${dateStr}`,
+      '<b>Items:</b>',
+      itemsText || '  • No items',
+      `💰 <b>Total:</b> ${sym}${(t.totalAmount || 0).toFixed(2)}`,
+      '--------------------------------',
+    ].join('\n');
+
+    // Telegram max message length is 4096; keep a small margin
+    if (current.length + block.length > 4000) {
+      chunks.push(current);
+      current = block;
+    } else {
+      current += block;
+    }
+  }
+
+  if (current) {
+    chunks.push(current);
+  }
+
+  return chunks;
+}
+
+/**
+ * Build a product-summary message.
+ */
+function buildProductSummaryMessage(report, sym) {
+  const breakdown = report?.breakdown || [];
+  if (breakdown.length === 0) {
+    return '📦 <b>Products Sold Summary</b>\n--------------------------------\nNo products sold.';
+  }
+
+  const lines = [
+    '📦 <b>PRODUCTS SOLD SUMMARY</b>',
+    '--------------------------------',
   ];
-  const summaryWs = XLSX.utils.aoa_to_sheet(summaryRows);
-  XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
 
-  // ============================================================
-  // SHEET 3: By Product
-  // ============================================================
-  if (hasBreakdown) {
-    const productData = report.breakdown.map((item) => ({
-      Product: item.product?.name || 'Unknown Product',
-      Quantity: item.quantity || 0,
-      Value: item.value || 0,
-    }));
-    const productWs = XLSX.utils.json_to_sheet(productData);
-    XLSX.utils.sheet_add_aoa(
-      productWs,
-      [[`Values shown in ${currencyStr} (${sym})`]],
-      { origin: -1 }
+  for (const item of breakdown) {
+    lines.push(
+      `• ${escapeHtml(item.product?.name || 'Unknown Product')}: ${item.quantity} pcs — ${sym}${(item.value || 0).toFixed(2)}`
     );
-    XLSX.utils.book_append_sheet(wb, productWs, 'By Product');
   }
 
-  // ============================================================
-  // SHEET 4: By Store
-  // ============================================================
-  if (report?.byStore && report.byStore.length > 0) {
-    const storeData = report.byStore.map((item) => ({
-      Store: item.store?.name || 'Unknown Store',
-      Records: item.records || 0,
-      Quantity: item.quantity || 0,
-      Value: item.value || 0,
-    }));
-    const storeWs = XLSX.utils.json_to_sheet(storeData);
-    XLSX.utils.sheet_add_aoa(
-      storeWs,
-      [[`Values shown in ${currencyStr} (${sym})`]],
-      { origin: -1 }
-    );
-    XLSX.utils.book_append_sheet(wb, storeWs, 'By Store');
-  }
-
-  return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+  return lines.join('\n');
 }
 
 /**
@@ -308,7 +206,7 @@ async function sendDailyReport() {
   }
 
   try {
-    console.log('[cron] Compiling detailed frontend-matched database reports...');
+    console.log('[cron] Compiling detailed daily sales report...');
     const todayStr = getEthiopianDateString();
 
     // Cron runs at 00:00, so report on the day that just ended
@@ -320,27 +218,28 @@ async function sendDailyReport() {
     const sym = getServerCurrencySymbol(reportData.currency);
 
     const textSummaryMessage = [
-      '📊 <b>DAILY DISPATCH UPDATE (EAT)</b>',
+      '📊 <b>DAILY SALES REPORT (EAT)</b>',
       `📅 Date: <b>${reportDateStr}</b>`,
       '--------------------------------',
       `💰 <b>Total Sales:</b> ${sym}${(reportData.summary.totalValue || 0).toFixed(2)}`,
       `🧾 <b>Total Orders:</b> ${reportData.summary.totalRecords}`,
       `📦 <b>Total Items Sold:</b> ${reportData.summary.totalItems}`,
-      '',
-      '📁 <i>The live front-end structured Excel sheet is generated and attached below.</i>'
     ].join('\n');
 
-    const excelBuffer = buildReportExcelBuffer(reportData);
+    const detailMessages = buildDetailedReportMessages(reportData, sym);
+    const productSummary = buildProductSummaryMessage(reportData, sym);
 
     for (const chatId of chatIds) {
+      // 1. Summary
       await bot.telegram.sendMessage(chatId, textSummaryMessage, { parse_mode: 'HTML' });
 
-      await bot.telegram.sendDocument(chatId, {
-        source: excelBuffer,
-        filename: `Sales_Report_${reportDateStr}.xlsx`
-      }, {
-        caption: `📈 Excel Sales Report Summary - ${reportDateStr}`
-      });
+      // 2. Detailed transactions (split across multiple messages if needed)
+      for (const msg of detailMessages) {
+        await bot.telegram.sendMessage(chatId, msg, { parse_mode: 'HTML' });
+      }
+
+      // 3. Product summary
+      await bot.telegram.sendMessage(chatId, productSummary, { parse_mode: 'HTML' });
     }
 
     console.log('[cron] Automated dispatch successfully completed.');
@@ -406,12 +305,4 @@ export async function sendSaleNotification(sale, store) {
   } catch (err) {
     console.error('[telegram] Failed to send sale notification:', err.message);
   }
-}
-
-function escapeHtml(text) {
-  if (!text) return '';
-  return String(text)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
 }
