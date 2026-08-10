@@ -32,6 +32,7 @@ type SaleItemForm = {
   usd: string
   birr: string
   visa: string
+  gbp: string
   image: string
   imageFile: File | null
   previewUrl?: string
@@ -50,6 +51,7 @@ const emptyItem: SaleItemForm = {
   usd: "",
   birr: "",
   visa: "",
+  gbp: "",
   image: "",
   imageFile: null,
 }
@@ -65,30 +67,32 @@ function getItemId(item_id: string | Product): string {
 }
 
 function migrateOldPrice(item: Sale["items"][number]): Omit<SaleItemForm, "item_id" | "quantity" | "image" | "imageFile"> {
-  // New format: item already has eur/usd/birr/visa
+  // New format: item already has eur/usd/birr/visa/gbp
   if (
     "eur" in item ||
     "usd" in item ||
     "birr" in item ||
-    "visa" in item
+    "visa" in item ||
+    "gbp" in item
   ) {
     return {
       eur: item.eur ? String(item.eur) : "",
       usd: item.usd ? String(item.usd) : "",
       birr: item.birr ? String(item.birr) : "",
       visa: item.visa ? String(item.visa) : "",
+      gbp: item.gbp ? String(item.gbp) : "",
     }
   }
   // Old format: item has price + currency — map to the right field
   const price = (item as unknown as { price?: number }).price ?? 0
   const currency = (item as unknown as { currency?: string }).currency || "USD"
   if (currency === "ETB") {
-    return { eur: "", usd: "", birr: String(price), visa: "" }
+    return { eur: "", usd: "", birr: String(price), visa: "", gbp: "" }
   }
   if (currency === "EUR") {
-    return { eur: String(price), usd: "", birr: "", visa: "" }
+    return { eur: String(price), usd: "", birr: "", visa: "", gbp: "" }
   }
-  return { eur: "", usd: String(price), birr: "", visa: "" }
+  return { eur: "", usd: String(price), birr: "", visa: "", gbp: "" }
 }
 
 function formatDateInputValue(isoDate: string): string {
@@ -126,11 +130,12 @@ function toPayload(form: SaleFormState, editing?: Sale | null): SalePayload {
       usd: Number(i.usd) || 0,
       birr: Number(i.birr) || 0,
       visa: Number(i.visa) || 0,
+      gbp: Number(i.gbp) || 0,
       image: i.image || "",
     }))
 
   const totalAmount = items.reduce(
-    (sum, i) => sum + (i.eur + i.usd + i.birr + i.visa),
+    (sum, i) => sum + (i.eur + i.usd + i.birr + i.visa + i.gbp),
     0
   )
 
@@ -463,12 +468,13 @@ export function SalesForm({
         Number(item.eur) > 0 ||
         Number(item.usd) > 0 ||
         Number(item.birr) > 0 ||
-        Number(item.visa) > 0
+        Number(item.visa) > 0 ||
+        Number(item.gbp) > 0
       if (!hasPrice) {
         const productName =
           products?.find((p) => p._id === item.item_id)?.name || item.item_id
         setError(
-          `${productName}: at least one of the four price fields (EUR, USD, BIRR, VISA) must be filled.`
+          `${productName}: at least one of the five price fields (EUR, USD, BIRR, VISA, GBP) must be filled.`
         )
         return
       }
@@ -704,6 +710,23 @@ export function SalesForm({
               </div>
             )
 
+            const gbpInput = (
+              <div className="grid gap-0.5">
+                <Label className="text-[10px] leading-none">GBP</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                  value={item.gbp}
+                  onChange={(e) =>
+                    setItemField(index, "gbp", e.target.value)
+                  }
+                  className="h-8 px-1.5 text-xs"
+                />
+              </div>
+            )
+
             return (
               <div key={index}>
                 {/* Mobile layout */}
@@ -736,11 +759,12 @@ export function SalesForm({
                     <div className="flex-1 min-w-0">{usdInput}</div>
                     <div className="flex-1 min-w-0">{birrInput}</div>
                     <div className="flex-1 min-w-0">{visaInput}</div>
+                    <div className="flex-1 min-w-0">{gbpInput}</div>
                   </div>
                 </div>
 
                 {/* Desktop layout */}
-                <div className="hidden sm:grid sm:grid-cols-[40px_1fr_52px_64px_64px_64px_64px_28px] sm:gap-2 sm:items-center">
+                <div className="hidden sm:grid sm:grid-cols-[40px_1fr_52px_56px_56px_56px_56px_56px_28px] sm:gap-2 sm:items-center">
                   <div className="flex items-center justify-center">
                     {photoTrigger}
                   </div>
@@ -758,6 +782,7 @@ export function SalesForm({
                   {usdInput}
                   {birrInput}
                   {visaInput}
+                  {gbpInput}
                   <Button
                     type="button"
                     variant="ghost"

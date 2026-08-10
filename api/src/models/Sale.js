@@ -15,6 +15,7 @@ const SaleItemSchema = Schema({
   usd: { type: Number, default: 0, min: 0 },
   birr: { type: Number, default: 0, min: 0 },
   visa: { type: Number, default: 0, min: 0 },
+  gbp: { type: Number, default: 0, min: 0 },
   image: { type: String },
   pedsItemIdentifierId: { type: String },
 })
@@ -27,6 +28,7 @@ const saleSchema = Schema({
     usd: { type: Number, default: 1 },
     birr: { type: Number, default: 1 },
     visa: { type: Number, default: 1 },
+    gbp: { type: Number, default: 1 },
   },
   customerName: { type: String},
   salesName: { type: String },

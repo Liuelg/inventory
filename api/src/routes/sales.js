@@ -25,13 +25,15 @@ function computeConvertedTotal(items, rates) {
     usd: rates?.usd > 0 ? rates.usd : 1,
     birr: rates?.birr > 0 ? rates.birr : 1,
     visa: rates?.visa > 0 ? rates.visa : 1,
+    gbp: rates?.gbp > 0 ? rates.gbp : 1,
   };
   return items.reduce((sum, i) => {
     const eurVal = (i.eur || 0) / safeRates.eur;
     const usdVal = (i.usd || 0) / safeRates.usd;
     const birrVal = (i.birr || 0) / safeRates.birr;
     const visaVal = (i.visa || 0) / safeRates.visa;
-    return sum + (eurVal + usdVal + birrVal + visaVal);
+    const gbpVal = (i.gbp || 0) / safeRates.gbp;
+    return sum + (eurVal + usdVal + birrVal + visaVal + gbpVal);
   }, 0);
 }
 
@@ -109,7 +111,7 @@ async function restoreItemsToStore(storeId, items) {
       store.items.push({
         item_id: item.item_id,
         quantity: item.quantity,
-        price: (item.eur || 0) + (item.usd || 0) + (item.birr || 0) + (item.visa || 0),
+        price: (item.eur || 0) + (item.usd || 0) + (item.birr || 0) + (item.visa || 0) + (item.gbp || 0),
       });
     }
   }
@@ -159,6 +161,7 @@ router.post('/', uploadSaleImages, async (req, res) => {
       usd: i.usd ?? 0,
       birr: i.birr ?? 0,
       visa: i.visa ?? 0,
+      gbp: i.gbp ?? 0,
       image: i.image,
     }));
 
@@ -283,6 +286,7 @@ router.patch('/:id', uploadSaleImages, async (req, res) => {
         usd: i.usd ?? 0,
         birr: i.birr ?? 0,
         visa: i.visa ?? 0,
+        gbp: i.gbp ?? 0,
         image: i.image,
       }));
 

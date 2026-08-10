@@ -70,6 +70,7 @@ export function generateReportExcel(report: ReportData) {
           USD: item.usd ?? 0,
           BIRR: item.birr ?? 0,
           VISA: item.visa ?? 0,
+          GBP: item.gbp ?? 0,
         })
       }
     }
@@ -170,6 +171,7 @@ export function generateReportExcel(report: ReportData) {
         if (item.usd) row["USD"] = item.usd
         if (item.birr) row["BIRR"] = item.birr
         if (item.visa) row["VISA"] = item.visa
+        if (item.gbp) row["GBP"] = item.gbp
         recordRows.push(row)
       }
     }

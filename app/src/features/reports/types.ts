@@ -29,6 +29,7 @@ export type ReportTransactionItem = {
   usd: number
   birr: number
   visa: number
+  gbp: number
 }
 
 export type ReportTransaction = {
@@ -51,6 +52,7 @@ export type ReportRecordItem = {
   usd?: number
   birr?: number
   visa?: number
+  gbp?: number
 }
 
 export type ReportRecord = {

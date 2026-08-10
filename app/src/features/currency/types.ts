@@ -1,10 +1,11 @@
-export type CurrencyCode = "eur" | "usd" | "birr" | "visa"
+export type CurrencyCode = "eur" | "usd" | "birr" | "visa" | "gbp"
 
 export type CurrencyRates = {
   eur: number
   usd: number
   birr: number
   visa: number
+  gbp: number
 }
 
 export type CurrencyRateRecord = {

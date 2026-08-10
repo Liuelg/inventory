@@ -19,12 +19,14 @@ function computeItemPriceUSD(item, rates) {
     usd: rates?.usd > 0 ? rates.usd : 1,
     birr: rates?.birr > 0 ? rates.birr : 1,
     visa: rates?.visa > 0 ? rates.visa : 1,
+    gbp: rates?.gbp > 0 ? rates.gbp : 1,
   }
   return (
     (item.eur || 0) / safeRates.eur +
     (item.usd || 0) / safeRates.usd +
     (item.birr || 0) / safeRates.birr +
-    (item.visa || 0) / safeRates.visa
+    (item.visa || 0) / safeRates.visa +
+    (item.gbp || 0) / safeRates.gbp
   )
 }
 
@@ -190,7 +192,7 @@ router.get("/store/:storeId", async (req, res, next) => {
         sales: sales.map((s) => {
           // Use the sale's stored rates for per-item conversion
           // so the displayed item prices match the sale's historical totalAmount
-          const saleRates = s.rates || { eur: 1, usd: 1, birr: 1, visa: 1 }
+          const saleRates = s.rates || { eur: 1, usd: 1, birr: 1, visa: 1, gbp: 1 }
           return {
             _id: s._id.toString(),
             invoiceNumber: s.invoiceNumber,

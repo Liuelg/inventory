@@ -8,6 +8,7 @@ export type SaleItem = {
   usd: number
   birr: number
   visa: number
+  gbp: number
   image?: string
   _id?: string
 }
@@ -39,3 +40,4 @@ export type SalePayload = {
   customerName?: string
   date_time?: string
 }
+

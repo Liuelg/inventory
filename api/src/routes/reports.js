@@ -45,12 +45,14 @@ function computeItemValueUSD(item, rates) {
     usd: rates?.usd > 0 ? rates.usd : 1,
     birr: rates?.birr > 0 ? rates.birr : 1,
     visa: rates?.visa > 0 ? rates.visa : 1,
+    gbp: rates?.gbp > 0 ? rates.gbp : 1,
   }
   const priceUSD =
     (item.eur || 0) / safeRates.eur +
     (item.usd || 0) / safeRates.usd +
     (item.birr || 0) / safeRates.birr +
-    (item.visa || 0) / safeRates.visa
+    (item.visa || 0) / safeRates.visa +
+    (item.gbp || 0) / safeRates.gbp
   return priceUSD
 }
 
@@ -60,6 +62,7 @@ function convertUSDToCurrency(amountUSD, targetCurrency, rates) {
     usd: rates?.usd > 0 ? rates.usd : 1,
     birr: rates?.birr > 0 ? rates.birr : 1,
     visa: rates?.visa > 0 ? rates.visa : 1,
+    gbp: rates?.gbp > 0 ? rates.gbp : 1,
   }
   return amountUSD * (safeRates[targetCurrency] || 1)
 }
@@ -304,6 +307,7 @@ router.get("/", async (req, res, next) => {
             usd: item.usd || 0,
             birr: item.birr || 0,
             visa: item.visa || 0,
+            gbp: item.gbp || 0,
           })
         }
       }
@@ -351,6 +355,7 @@ router.get("/", async (req, res, next) => {
           usd: item.usd || 0,
           birr: item.birr || 0,
           visa: item.visa || 0,
+          gbp: item.gbp || 0,
         }
       })
 

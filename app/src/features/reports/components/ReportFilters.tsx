@@ -28,6 +28,7 @@ const CURRENCY_LABELS: Record<CurrencyCode, string> = {
   usd: "USD ($)",
   birr: "Birr (Br)",
   visa: "Visa ($)",
+  gbp: "GBP (£)",
 }
 
 function formatDateInput(date: Date): string {

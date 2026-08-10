@@ -13,16 +13,22 @@ router.get("/latest", async (_req, res, next) => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
+    // Non-base currencies (EUR, BIRR, GBP) must all have real rates.
+    // If any is at the default of 1, we need to fetch fresh rates.
     const needsFetch =
       !latest ||
       new Date(latest.date).getTime() !== today.getTime() ||
-      (latest.rates.eur === 1 && latest.rates.usd === 1 && latest.rates.birr === 1 && latest.rates.visa === 1)
+      latest.rates.eur === 1 ||
+      latest.rates.birr === 1 ||
+      latest.rates.gbp === 1
 
     if (needsFetch) {
-      try {
-        const fallbackRates = latest?.rates || null
-        const rates = await fetchLatestRates(fallbackRates)
+      const fallbackRates = latest?.rates || null
+      const rates = await fetchLatestRates(fallbackRates)
 
+      // Only persist if the API returned real rates.
+      // If it fell back to defaults, return cached data instead.
+      if (rates.eur !== 1 && rates.birr !== 1 && rates.gbp !== 1) {
         const doc = await CurrencyRate.findOneAndUpdate(
           { date: today },
           { base: "USD", rates, date: today },
@@ -30,10 +36,9 @@ router.get("/latest", async (_req, res, next) => {
         )
 
         return res.json({ success: true, data: doc })
-      } catch (fetchErr) {
-        // Frankfurter failed — fall back to whatever we have
-        console.error("[currency] Auto-fetch from Frankfurter failed:", fetchErr.message)
       }
+
+      console.error("[currency] Auto-fetch did not return real rates.")
     }
 
     if (!latest) {
@@ -41,7 +46,7 @@ router.get("/latest", async (_req, res, next) => {
         success: true,
         data: {
           base: "USD",
-          rates: { eur: 1, usd: 1, birr: 1, visa: 1 },
+          rates: { eur: 1, usd: 1, birr: 1, visa: 1, gbp: 1 },
           date: new Date().toISOString(),
         },
       })
@@ -85,6 +90,7 @@ router.post("/", async (req, res, next) => {
         usd: Number(rates.usd) || 1,
         birr: Number(rates.birr) || 1,
         visa: Number(rates.visa) || 1,
+        gbp: Number(rates.gbp) || 1,
       },
       date: today,
     }

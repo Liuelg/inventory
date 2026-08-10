@@ -59,18 +59,20 @@ function getProductImage(item: SaleItem): string | undefined {
 }
 
 function getSaleCurrencies(sale: Sale): { label: string; total: number }[] {
-  const sums = { eur: 0, usd: 0, birr: 0, visa: 0 }
+  const sums = { eur: 0, usd: 0, birr: 0, visa: 0, gbp: 0 }
   for (const item of sale.items) {
     sums.eur += item.eur || 0
     sums.usd += item.usd || 0
     sums.birr += item.birr || 0
     sums.visa += item.visa || 0
+    sums.gbp += item.gbp || 0
   }
   const map = [
     { label: "EUR", total: sums.eur },
     { label: "USD", total: sums.usd },
     { label: "BIRR", total: sums.birr },
     { label: "VISA", total: sums.visa },
+    { label: "GBP", total: sums.gbp },
   ]
   return map.filter((c) => c.total > 0)
 }
@@ -81,6 +83,7 @@ function getItemCurrencies(item: SaleItem): { label: string; total: number }[] {
     { label: "USD", total: item.usd || 0 },
     { label: "BIRR", total: item.birr || 0 },
     { label: "VISA", total: item.visa || 0 },
+    { label: "GBP", total: item.gbp || 0 },
   ]
   return map.filter((c) => c.total > 0)
 }
@@ -101,7 +104,7 @@ function convertCurrency(
 function hasRealRates(rates?: CurrencyRates): boolean {
   if (!rates) return false
   // Rates are "real" if at least one is not the default of 1
-  return rates.eur !== 1 || rates.usd !== 1 || rates.birr !== 1 || rates.visa !== 1
+  return rates.eur !== 1 || rates.usd !== 1 || rates.birr !== 1 || rates.visa !== 1 || rates.gbp !== 1
 }
 
 function getConvertedTotal(
@@ -117,6 +120,7 @@ function getConvertedTotal(
       usd: sale.rates.usd > 0 ? sale.rates.usd : 1,
       birr: sale.rates.birr > 0 ? sale.rates.birr : 1,
       visa: sale.rates.visa > 0 ? sale.rates.visa : 1,
+      gbp: sale.rates.gbp > 0 ? sale.rates.gbp : 1,
     }
     return sale.totalAmount * safeRates[targetCurrency]
   }
@@ -129,6 +133,7 @@ function getConvertedTotal(
     total += convertCurrency(item.usd || 0, "usd", targetCurrency, latestRates)
     total += convertCurrency(item.birr || 0, "birr", targetCurrency, latestRates)
     total += convertCurrency(item.visa || 0, "visa", targetCurrency, latestRates)
+    total += convertCurrency(item.gbp || 0, "gbp", targetCurrency, latestRates)
   }
   return total
 }
@@ -142,7 +147,8 @@ function getItemConvertedTotal(
     convertCurrency(item.eur || 0, "eur", targetCurrency, latestRates) +
     convertCurrency(item.usd || 0, "usd", targetCurrency, latestRates) +
     convertCurrency(item.birr || 0, "birr", targetCurrency, latestRates) +
-    convertCurrency(item.visa || 0, "visa", targetCurrency, latestRates)
+    convertCurrency(item.visa || 0, "visa", targetCurrency, latestRates) +
+    convertCurrency(item.gbp || 0, "gbp", targetCurrency, latestRates)
   )
 }
 
@@ -152,6 +158,7 @@ function getItemPriceBreakdown(item: SaleItem): string {
   if (item.usd) parts.push(`$${item.usd}`)
   if (item.birr) parts.push(`Br${item.birr}`)
   if (item.visa) parts.push(`Visa $${item.visa}`)
+  if (item.gbp) parts.push(`£${item.gbp}`)
   return parts.join(" | ") || "—"
 }
 

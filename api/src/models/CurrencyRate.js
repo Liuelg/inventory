@@ -11,6 +11,7 @@ const CurrencyRateSchema = new Schema({
     usd: { type: Number, required: true, default: 1 },
     birr: { type: Number, required: true, default: 1 },
     visa: { type: Number, required: true, default: 1 },
+    gbp: { type: Number, required: true, default: 1 },
   },
   date: {
     type: Date,

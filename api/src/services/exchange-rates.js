@@ -7,7 +7,7 @@ const FRANKFURTER_BASE_URL = "https://api.frankfurter.app"
  * Falls back to Frankfurter if the primary API fails.
  *
  * @param {object} fallbackRates - existing rates to use as final fallback
- * @returns {Promise<{eur:number, usd:number, birr:number, visa:number}>}
+ * @returns {Promise<{eur:number, usd:number, birr:number, visa:number, gbp:number}>}
  */
 export async function fetchLatestRates(fallbackRates = null) {
   const safeFallback = {
@@ -15,6 +15,7 @@ export async function fetchLatestRates(fallbackRates = null) {
     usd: fallbackRates?.usd > 0 ? fallbackRates.usd : 1,
     birr: fallbackRates?.birr > 0 ? fallbackRates.birr : 1,
     visa: fallbackRates?.visa > 0 ? fallbackRates.visa : 1,
+    gbp: fallbackRates?.gbp > 0 ? fallbackRates.gbp : 1,
   }
 
   // Try primary source: exchangerate-api.com (supports ETB)
@@ -27,6 +28,7 @@ export async function fetchLatestRates(fallbackRates = null) {
         usd: 1, // base is USD
         birr: data.rates?.ETB || safeFallback.birr,
         visa: 1, // Visa is treated as USD
+        gbp: data.rates?.GBP || safeFallback.gbp,
       }
       return rates
     }
@@ -46,6 +48,7 @@ export async function fetchLatestRates(fallbackRates = null) {
         usd: 1,
         birr: safeFallback.birr, // Frankfurter doesn't support ETB
         visa: 1,
+        gbp: data.rates?.GBP || safeFallback.gbp,
       }
       return rates
     }

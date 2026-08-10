@@ -26,6 +26,7 @@ const CURRENCY_LABELS: Record<CurrencyCode, string> = {
   usd: "USD ($)",
   birr: "Birr (Br)",
   visa: "Visa ($)",
+  gbp: "GBP (£)",
 }
 
 const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {
@@ -33,6 +34,7 @@ const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {
   usd: "$",
   birr: "Br",
   visa: "Visa $",
+  gbp: "£",
 }
 
 type Props = {
@@ -56,6 +58,7 @@ export function CurrencySelector({ value, onChange }: Props) {
     usd: 1,
     birr: 1,
     visa: 1,
+    gbp: 1,
   })
 
   const latestRates = ratesData?.data?.rates

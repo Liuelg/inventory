@@ -19,7 +19,7 @@ import { useCategories } from "@/features/categories/hooks"
 import type { Sale, SaleLineItemRow } from "../types"
 import type { CurrencyCode } from "@/features/currency/types"
 
-const DEFAULT_RATES = { eur: 1, usd: 1, birr: 1, visa: 1 }
+const DEFAULT_RATES = { eur: 1, usd: 1, birr: 1, visa: 1, gbp: 1 }
 
 function getSaleCategoryIds(sale: Sale): string[] {
   const ids: string[] = []

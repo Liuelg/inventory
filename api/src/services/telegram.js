@@ -87,6 +87,7 @@ async function generateDailyReportData(startDateStr) {
       usd: sale.rates?.usd > 0 ? sale.rates.usd : 1,
       birr: sale.rates?.birr > 0 ? sale.rates.birr : 1,
       visa: sale.rates?.visa > 0 ? sale.rates.visa : 1,
+      gbp: sale.rates?.gbp > 0 ? sale.rates.gbp : 1,
     };
 
     for (const item of sale.items || []) {
@@ -99,7 +100,8 @@ async function generateDailyReportData(startDateStr) {
         (item.eur || 0) / safeRates.eur +
         (item.usd || 0) / safeRates.usd +
         (item.birr || 0) / safeRates.birr +
-        (item.visa || 0) / safeRates.visa;
+        (item.visa || 0) / safeRates.visa +
+        (item.gbp || 0) / safeRates.gbp;
 
       const existing = productMap.get(pId) || { product: { _id: pId, name: pName }, quantity: 0, value: 0 };
       existing.quantity += qty;
@@ -114,6 +116,7 @@ async function generateDailyReportData(startDateStr) {
         usd: item.usd || 0,
         birr: item.birr || 0,
         visa: item.visa || 0,
+        gbp: item.gbp || 0,
       });
     }
 
