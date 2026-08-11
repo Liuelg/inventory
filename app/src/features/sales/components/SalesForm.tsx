@@ -13,8 +13,15 @@ import { Search, Check, ImagePlus, X } from "lucide-react"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
 import { getProductImageUrl } from "@/features/products/utils"
-import { useStore } from "@/features/stores/hooks"
+import { useStore, useStores } from "@/features/stores/hooks"
 import { useCreateSale, useUpdateSale } from "../hooks"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import type { Sale, SalePayload } from "../types"
 import type { Product } from "@/features/products/types"
 
@@ -120,7 +127,11 @@ function getInitialState(editing?: Sale | null): SaleFormState {
   }
 }
 
-function toPayload(form: SaleFormState, editing?: Sale | null): SalePayload {
+function toPayload(
+  form: SaleFormState,
+  editing?: Sale | null,
+  storeId?: string
+): SalePayload {
   const items = form.items
     .filter((i) => i.item_id && Number(i.quantity) > 0)
     .map((i) => ({
@@ -148,6 +159,9 @@ function toPayload(form: SaleFormState, editing?: Sale | null): SalePayload {
   if (!editing) {
     // New sale: store the exact current time
     payload.date_time = new Date().toISOString()
+    if (storeId) {
+      payload.store = storeId
+    }
   } else if (form.date) {
     // Editing: use the selected date but preserve the original time component
     const [year, month, day] = form.date.split("-").map(Number)
@@ -303,9 +317,27 @@ export function SalesForm({
     getInitialState(editing)
   )
   const [error, setError] = useState<string | null>(null)
+  const [selectedStoreId, setSelectedStoreId] = useState<string>("")
   const { data: session } = useAuthSession()
   const { data: products } = useProducts()
-  const { data: userStore } = useStore(session?.store || "")
+  const { data: allStores } = useStores()
+
+  const isAdmin = session?.role === "admin"
+
+  // Determine which store's inventory to use
+  const editingStoreId = editing
+    ? typeof editing.store === "string"
+      ? editing.store
+      : editing.store?._id ?? ""
+    : ""
+
+  const activeStoreId = editing
+    ? editingStoreId
+    : isAdmin
+      ? selectedStoreId
+      : session?.store || ""
+
+  const { data: activeStore } = useStore(activeStoreId)
   const create = useCreateSale()
   const update = useUpdateSale()
   const formRef = useRef(form)
@@ -328,7 +360,7 @@ export function SalesForm({
   // Build map of available quantities from store inventory
   const storeItemsMap = useMemo(() => {
     const map = new Map<string, number>()
-    const items = (userStore?.items || []) as Array<{
+    const items = (activeStore?.items || []) as Array<{
       item_id: string | { _id: string; name?: string }
       quantity: number
     }>
@@ -342,7 +374,7 @@ export function SalesForm({
       }
     }
     return map
-  }, [userStore])
+  }, [activeStore])
 
   // Track products already in the editing sale so they remain selectable
   const editingItemIds = useMemo(() => {
@@ -361,7 +393,7 @@ export function SalesForm({
     )
   }, [products, storeItemsMap, editingItemIds])
 
-  const userStoreName = userStore?.name ?? session?.store ?? "Not assigned"
+  const activeStoreName = activeStore?.name ?? activeStoreId ?? "Not assigned"
 
   function setField<Key extends keyof SaleFormState>(
     key: Key,
@@ -443,15 +475,17 @@ export function SalesForm({
     })
   }
 
-  const isAdmin = session?.role === "admin"
-
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
 
     // Creating a sale always requires a store; editing relies on the sale's own store
-    if (!editing && !session?.store) {
-      setError("Your account is not assigned to a store. Contact an admin.")
+    if (!editing && !activeStoreId) {
+      setError(
+        isAdmin
+          ? "Please select a store."
+          : "Your account is not assigned to a store. Contact an admin."
+      )
       return
     }
     const validItems = form.items.filter(
@@ -501,7 +535,7 @@ export function SalesForm({
       return
     }
 
-    const payload = toPayload(form, editing)
+    const payload = toPayload(form, editing, isAdmin ? selectedStoreId : undefined)
     const fd = new FormData()
     fd.append("data", JSON.stringify(payload))
 
@@ -550,9 +584,31 @@ export function SalesForm({
 
           <div className="grid gap-2">
             <Label>Branch</Label>
-            <div className="rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
-              {userStoreName}
-            </div>
+            {editing ? (
+              <div className="rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
+                {activeStoreName}
+              </div>
+            ) : isAdmin ? (
+              <Select
+                value={selectedStoreId}
+                onValueChange={setSelectedStoreId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a store" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allStores?.map((s) => (
+                    <SelectItem key={s._id} value={s._id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
+                {activeStoreName}
+              </div>
+            )}
           </div>
 
           <div className="grid gap-2">

@@ -39,5 +39,6 @@ export type SalePayload = {
   totalAmount: number
   customerName?: string
   date_time?: string
+  store?: string
 }
 

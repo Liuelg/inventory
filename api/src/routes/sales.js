@@ -122,6 +122,7 @@ async function restoreItemsToStore(storeId, items) {
 
 router.post('/', uploadSaleImages, async (req, res) => {
   try {
+    const isAdmin = req.user?.role === 'admin';
     const body = mapImagesToItems(parseBody(req), req.files);
 
     // Parse date_time preserving the actual time; fallback to now if missing/invalid
@@ -130,8 +131,8 @@ router.post('/', uploadSaleImages, async (req, res) => {
       body.date_time = isNaN(d.getTime()) ? new Date() : d;
     }
 
-    // Use the logged-in user's assigned store
-    const storeId = req.user?.store;
+    // Use the logged-in user's assigned store, or allow admin to specify one
+    const storeId = isAdmin && body.store ? body.store : req.user?.store;
     if (!storeId) {
       return res.status(400).json({ message: 'Your account is not assigned to a store. Contact an admin.' });
     }
