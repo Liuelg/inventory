@@ -9,6 +9,7 @@ export type SaleItem = {
   birr: number
   visa: number
   gbp: number
+  price?: number
   image?: string
   _id?: string
 }

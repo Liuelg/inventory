@@ -23,13 +23,24 @@ import { getProductImageUrl } from "../utils"
 import type { Product } from "../types"
 
 function formatPrice(product: Product) {
-  const amount = product.price?.amount
-  if (amount === undefined || Number.isNaN(amount)) {
-    return "-"
+  const prices: string[] = []
+
+  if (product.price?.amount != null && !Number.isNaN(product.price.amount)) {
+    const currency = product.price.currency || "USD"
+    prices.push(`${product.price.amount.toFixed(2)} ${currency}`)
   }
 
-  const currency = product.price?.currency || "USD"
-  return `${amount.toFixed(2)} ${currency}`
+  if (product.prices && product.prices.length > 0) {
+    for (const p of product.prices) {
+      if (p.amount != null && !Number.isNaN(p.amount)) {
+        const currency = p.currency || "USD"
+        prices.push(`${p.amount.toFixed(2)} ${currency}`)
+      }
+    }
+  }
+
+  if (prices.length === 0) return "-"
+  return prices.join(", ")
 }
 
 interface ProductTableProps {

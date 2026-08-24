@@ -15,7 +15,7 @@ import { Pencil, Trash2 } from "lucide-react"
 import { useDeleteStock, useStocks } from "../hooks"
 import type { Stock } from "../types"
 import { ProductImageCell } from "@/components/ProductImageCell"
-import { getProductImageUrl } from "@/features/products/utils"
+import { getProductImageUrl, formatVariantLabel } from "@/features/products/utils"
 
 interface StockTableProps {
   onEdit: (stock: Stock) => void
@@ -23,7 +23,17 @@ interface StockTableProps {
 
 function getProductName(item: Stock["items"][number]) {
   if (typeof item.item_id === "string") return item.item_id
-  return item.item_id?.name ?? "—"
+  if (item.item_id?.name) {
+    return formatVariantLabel(
+      item.item_id as {
+        name: string
+        price?: { amount?: number; currency?: string } | null
+        prices?: Array<{ amount?: number; currency?: string }> | null
+      },
+      item.price
+    )
+  }
+  return "—"
 }
 
 function getProductCategory(item: Stock["items"][number]) {

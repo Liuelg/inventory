@@ -72,7 +72,7 @@ async function deductItemsFromStore(storeId, items) {
   for (const sold of items) {
     const productId = sold.item_id.toString();
     const existing = store.items.find(
-      (i) => i.item_id.toString() === productId
+      (i) => i.item_id.toString() === productId && (sold.price === undefined || i.price === sold.price)
     );
 
     if (!existing) {
@@ -102,7 +102,7 @@ async function restoreItemsToStore(storeId, items) {
   for (const item of items) {
     const productId = item.item_id.toString();
     const existing = store.items.find(
-      (i) => i.item_id.toString() === productId
+      (i) => i.item_id.toString() === productId && (item.price === undefined || i.price === item.price)
     );
 
     if (existing) {
@@ -111,7 +111,7 @@ async function restoreItemsToStore(storeId, items) {
       store.items.push({
         item_id: item.item_id,
         quantity: item.quantity,
-        price: (item.eur || 0) + (item.usd || 0) + (item.birr || 0) + (item.visa || 0) + (item.gbp || 0),
+        price: item.price ?? ((item.eur || 0) + (item.usd || 0) + (item.birr || 0) + (item.visa || 0) + (item.gbp || 0)),
       });
     }
   }
@@ -163,6 +163,7 @@ router.post('/', uploadSaleImages, async (req, res) => {
       birr: i.birr ?? 0,
       visa: i.visa ?? 0,
       gbp: i.gbp ?? 0,
+      price: i.price ?? undefined,
       image: i.image,
     }));
 
@@ -288,6 +289,7 @@ router.patch('/:id', uploadSaleImages, async (req, res) => {
         birr: i.birr ?? 0,
         visa: i.visa ?? 0,
         gbp: i.gbp ?? 0,
+        price: i.price ?? undefined,
         image: i.image,
       }));
 

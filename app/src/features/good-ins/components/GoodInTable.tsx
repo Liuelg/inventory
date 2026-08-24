@@ -60,8 +60,10 @@ function StatusBadge({ status }: { status: Stockout["status"] }) {
 }
 
 function ItemRow({ item }: { item: StockoutItemPopulated }) {
-  const name =
-    typeof item.item_id === "string" ? item.item_id : item.item_id.name
+  const product = typeof item.item_id === "string" ? null : item.item_id
+  const name = product
+    ? `${product.name} (${item.price}${product.price?.currency ? " " + product.price.currency : ""})`
+    : String(item.item_id)
   const image =
     typeof item.item_id === "string" ? undefined : item.item_id.image
   return (

@@ -1,6 +1,7 @@
 import { Telegraf } from 'telegraf';
 import cron from 'node-cron';
 import Sale from '../models/Sale.js';
+import Store from '../models/Stores.js';
 
 // 1. Initialize Bot First
 const botToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -37,16 +38,15 @@ function escapeHtml(text) {
 }
 
 /**
- * Build a product-summary message.
+ * Build a product-summary message for a single store report.
  */
-function buildProductSummaryMessage(report, sym) {
-  const breakdown = report?.breakdown || [];
+function buildStoreProductSummary(storeName, breakdown, sym) {
   if (breakdown.length === 0) {
-    return '📦 <b>Products Sold Summary</b>\n--------------------------------\nNo products sold.';
+    return `📦 <b>Products Sold — ${escapeHtml(storeName)}</b>\n--------------------------------\nNo products sold.`;
   }
 
   const lines = [
-    '📦 <b>PRODUCTS SOLD SUMMARY</b>',
+    `📦 <b>PRODUCTS SOLD — ${escapeHtml(storeName.toUpperCase())}</b>`,
     '--------------------------------',
   ];
 
@@ -60,28 +60,64 @@ function buildProductSummaryMessage(report, sym) {
 }
 
 /**
- * Compiles the database entries into the exact frontend 'ReportData' shape
+ * Build a store summary message.
  */
-async function generateDailyReportData(startDateStr) {
-  const [year, month, day] = startDateStr.split('-').map(Number);
-  const baseUtcMidnight = new Date(Date.UTC(year, month - 1, day));
-  const startRange = new Date(baseUtcMidnight.getTime() - (180 * 60000)); 
-  const endRange = new Date(baseUtcMidnight.getTime() - (180 * 60000) + (24 * 60 * 60 * 1000));
+function buildStoreSummaryMessage(dateStr, storeName, summary, sym) {
+  return [
+    '📊 <b>DAILY SALES REPORT (EAT)</b>',
+    `🏪 <b>Store:</b> ${escapeHtml(storeName)}`,
+    `📅 Date: <b>${dateStr}</b>`,
+    '--------------------------------',
+    `💰 <b>Total Sales:</b> ${sym}${(summary.totalValue || 0).toFixed(2)}`,
+    `🧾 <b>Total Orders:</b> ${summary.totalRecords}`,
+    `📦 <b>Total Items Sold:</b> ${summary.totalItems}`,
+  ].join('\n');
+}
 
-  const todaysSales = await Sale.find({
-    date_time: { $gte: startRange, $lt: endRange }
-  }).populate('items.item_id', 'name').populate('store', 'name');
+/**
+ * Build overall summary across all stores.
+ */
+function buildOverallSummaryMessage(dateStr, storeSummaries, sym) {
+  const totalValue = storeSummaries.reduce((sum, s) => sum + (s.totalValue || 0), 0);
+  const totalRecords = storeSummaries.reduce((sum, s) => sum + (s.totalRecords || 0), 0);
+  const totalItems = storeSummaries.reduce((sum, s) => sum + (s.totalItems || 0), 0);
 
-  const transactions = [];
+  const lines = [
+    '📊 <b>OVERALL DAILY SALES REPORT (EAT)</b>',
+    `📅 Date: <b>${dateStr}</b>`,
+    '--------------------------------',
+    `💰 <b>Total Sales (All Stores):</b> ${sym}${totalValue.toFixed(2)}`,
+    `🧾 <b>Total Orders (All Stores):</b> ${totalRecords}`,
+    `📦 <b>Total Items Sold (All Stores):</b> ${totalItems}`,
+    '',
+    '<b>Per-Store Breakdown:</b>',
+  ];
+
+  for (const s of storeSummaries) {
+    lines.push(
+      `• ${escapeHtml(s.storeName)}: ${sym}${(s.totalValue || 0).toFixed(2)} — ${s.totalRecords} orders — ${s.totalItems} items`
+    );
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Process sales for a single store and return summary + breakdown.
+ */
+function processStoreSales(sales, storeId) {
+  const storeSales = sales.filter((s) => {
+    const sId = s.store?._id?.toString?.() || s.store?.toString?.();
+    return sId === storeId;
+  });
+
   const productMap = new Map();
   let totalSalesValue = 0;
   let totalSalesItems = 0;
 
-  for (const sale of todaysSales) {
+  for (const sale of storeSales) {
     totalSalesValue += sale.totalAmount || 0;
-    const transactionItems = [];
 
-    // Use the sale's stored rates to compute each item's USD value
     const safeRates = {
       eur: sale.rates?.eur > 0 ? sale.rates.eur : 1,
       usd: sale.rates?.usd > 0 ? sale.rates.usd : 1,
@@ -107,51 +143,20 @@ async function generateDailyReportData(startDateStr) {
       existing.quantity += qty;
       existing.value += itemValueUSD;
       productMap.set(pId, existing);
-
-      transactionItems.push({
-        product: { _id: pId, name: pName },
-        quantity: qty,
-        value: itemValueUSD,
-        eur: item.eur || 0,
-        usd: item.usd || 0,
-        birr: item.birr || 0,
-        visa: item.visa || 0,
-        gbp: item.gbp || 0,
-      });
     }
-
-    transactions.push({
-      invoiceNumber: sale.invoiceNumber || '—',
-      date: sale.date_time?.toISOString(),
-      storeName: sale.store?.name || 'Unknown Store',
-      salesName: sale.salesName || 'N/A',
-      customerName: sale.customerName || 'N/A',
-      totalAmount: sale.totalAmount || 0,
-      items: transactionItems,
-    });
   }
 
   return {
-    type: 'sales',
-    start: startRange.toISOString(),
-    end: endRange.toISOString(),
-    storeFilter: null,
-    currency: 'usd', 
-    summary: {
-      totalRecords: todaysSales.length,
-      totalItems: totalSalesItems,
-      totalValue: totalSalesValue,
-    },
+    totalRecords: storeSales.length,
+    totalItems: totalSalesItems,
+    totalValue: totalSalesValue,
     breakdown: Array.from(productMap.values()),
-    byStore: [],
-    transactions,
-    records: [],
   };
 }
 
 /**
  * Send report for a specific date (YYYY-MM-DD).
- * If no date is provided, uses today's Ethiopian date.
+ * Sends one report per store, plus an overall summary.
  */
 export async function sendDailyReportForDate(reportDateStr) {
   if (!bot || chatIds.length === 0) {
@@ -164,29 +169,57 @@ export async function sendDailyReportForDate(reportDateStr) {
   try {
     console.log(`[cron] Compiling daily sales report for ${dateStr}...`);
 
-    const reportData = await generateDailyReportData(dateStr);
-    const sym = getServerCurrencySymbol(reportData.currency);
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const baseUtcMidnight = new Date(Date.UTC(year, month - 1, day));
+    const startRange = new Date(baseUtcMidnight.getTime() - (180 * 60000));
+    const endRange = new Date(baseUtcMidnight.getTime() - (180 * 60000) + (24 * 60 * 60 * 1000));
 
-    const textSummaryMessage = [
-      '📊 <b>DAILY SALES REPORT (EAT)</b>',
-      `📅 Date: <b>${dateStr}</b>`,
-      '--------------------------------',
-      `💰 <b>Total Sales:</b> ${sym}${(reportData.summary.totalValue || 0).toFixed(2)}`,
-      `🧾 <b>Total Orders:</b> ${reportData.summary.totalRecords}`,
-      `📦 <b>Total Items Sold:</b> ${reportData.summary.totalItems}`,
-    ].join('\n');
+    // Fetch all sales for the date with store populated
+    const todaysSales = await Sale.find({
+      date_time: { $gte: startRange, $lt: endRange }
+    }).populate('items.item_id', 'name').populate('store', 'name');
 
-    const productSummary = buildProductSummaryMessage(reportData, sym);
-
-    for (const chatId of chatIds) {
-      // 1. Summary
-      await bot.telegram.sendMessage(chatId, textSummaryMessage, { parse_mode: 'HTML' });
-
-      // 2. Product summary
-      await bot.telegram.sendMessage(chatId, productSummary, { parse_mode: 'HTML' });
+    if (todaysSales.length === 0) {
+      console.log(`[cron] No sales found for ${dateStr}. Skipping report.`);
+      return;
     }
 
-    console.log('[cron] Automated dispatch successfully completed.');
+    // Group sales by store
+    const salesByStore = new Map();
+    for (const sale of todaysSales) {
+      const storeId = sale.store?._id?.toString?.() || sale.store?.toString?.();
+      const storeName = sale.store?.name || 'Unknown Store';
+      if (!storeId) continue;
+      if (!salesByStore.has(storeId)) {
+        salesByStore.set(storeId, { storeId, storeName, sales: [] });
+      }
+      salesByStore.get(storeId).sales.push(sale);
+    }
+
+    const sym = getServerCurrencySymbol('usd');
+    const storeSummaries = [];
+
+    // Process each store's report
+    for (const [storeId, { storeName, sales }] of salesByStore) {
+      const report = processStoreSales(sales, storeId);
+      storeSummaries.push({ storeName, ...report });
+
+      const summaryMsg = buildStoreSummaryMessage(dateStr, storeName, report, sym);
+      const productMsg = buildStoreProductSummary(storeName, report.breakdown, sym);
+
+      for (const chatId of chatIds) {
+        await bot.telegram.sendMessage(chatId, summaryMsg, { parse_mode: 'HTML' });
+        await bot.telegram.sendMessage(chatId, productMsg, { parse_mode: 'HTML' });
+      }
+    }
+
+    // Send overall summary
+    const overallMsg = buildOverallSummaryMessage(dateStr, storeSummaries, sym);
+    for (const chatId of chatIds) {
+      await bot.telegram.sendMessage(chatId, overallMsg, { parse_mode: 'HTML' });
+    }
+
+    console.log(`[cron] Automated dispatch completed for ${salesByStore.size} store(s).`);
   } catch (err) {
     console.error('[cron] Automated dispatch crashed:', err.message);
     throw err;

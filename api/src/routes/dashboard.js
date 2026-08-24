@@ -105,7 +105,7 @@ router.get("/store/:storeId", async (req, res, next) => {
     const storeId = req.params.storeId
 
     const store = await Store.findById(storeId)
-      .populate("items.item_id", "name image category")
+      .populate("items.item_id", "name image category price prices")
       .populate("items.group", "name image")
       .populate("manager_id", "name email")
 

@@ -11,6 +11,8 @@ export type StockoutItemPopulated = {
     name: string
     category?: string
     image?: string
+    price?: { amount?: number; currency?: string }
+    prices?: Array<{ amount?: number; currency?: string }>
   }
   quantity: number
   price: number

@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
   try {
     const stores = await Store.find()
       .populate('manager_id', 'name email') // Pulls in manager's name and email
-      .populate('items.item_id', 'name price'); // Pulls in nested product details
+      .populate('items.item_id', 'name price prices'); // Pulls in nested product details
 
     // Find sales users assigned to each store
     const storeIds = stores.map(s => s._id.toString());
@@ -56,7 +56,7 @@ router.get('/:id', async (req, res) => {
   try {
     const store = await Store.findById(req.params.id)
       .populate('manager_id')
-      .populate('items.item_id', 'name image category')
+      .populate('items.item_id', 'name image category price prices')
       .populate('items.group', 'name image');
 
     if (!store) return res.status(404).json({ message: 'Store not found' });

@@ -18,6 +18,7 @@ import { ArrowLeftIcon, Trash2 } from "lucide-react"
 import { useDeleteStoreItem } from "@/features/stores/hooks"
 import type { StoreSale, StoreRemainingProduct } from "@/features/dashboard/types"
 import { ProductImageCell } from "@/components/ProductImageCell"
+import { formatInventoryItemLabel, getPriceCurrency } from "@/features/products/utils"
 
 function formatCurrency(amount: number) {
   return amount.toFixed(2)
@@ -42,7 +43,11 @@ function buildUnifiedRows(
       key: `${p.product._id}-${index}`,
       _id: p.product._id,
       image: p.product.image || null,
-      name: p.product.name,
+      name: formatInventoryItemLabel(
+        p.product.name,
+        p.price,
+        getPriceCurrency(p.product, p.price)
+      ),
       category: typeof p.product.category === "string" ? p.product.category : "—",
       quantity: p.quantity,
       price: p.price,

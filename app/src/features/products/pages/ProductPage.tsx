@@ -11,11 +11,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Plus, Search, Merge } from "lucide-react"
-import { useProducts, useMergeDuplicateProducts } from "../hooks"
+import { Plus, Search} from "lucide-react"
+import { useProducts} from "../hooks"
 import { useCategories } from "@/features/categories/hooks"
 import { useSubCategories } from "@/features/sub-categories/hooks"
-import { useAuthSession } from "@/hooks/use-auth-session"
 import type { Product } from "../types"
 
 function getCategoryId(product: Product): string {
@@ -42,9 +41,8 @@ export function ProductPage() {
   const { data: products, isLoading } = useProducts()
   const { data: categories } = useCategories()
   const { data: subCategories } = useSubCategories()
-  const { data: session } = useAuthSession()
-  const isAdmin = session?.role === "admin"
-  const mergeDuplicates = useMergeDuplicateProducts()
+ 
+ 
 
   const visibleSubCategories = useMemo(() => {
     if (!subCategories) return []
@@ -97,17 +95,6 @@ export function ProductPage() {
           <p className="text-sm text-gray-500">Manage products and pricing.</p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-          {isAdmin && (
-            <Button
-              variant="outline"
-              onClick={() => mergeDuplicates.mutate()}
-              disabled={mergeDuplicates.isPending}
-              className="w-full sm:w-auto"
-            >
-              <Merge className="mr-1 h-4 w-4" />
-              {mergeDuplicates.isPending ? "Merging..." : "Merge Duplicates"}
-            </Button>
-          )}
           <Button onClick={openAdd} className="w-full sm:w-auto">
             <Plus data-icon="inline-start" />
             Add Product

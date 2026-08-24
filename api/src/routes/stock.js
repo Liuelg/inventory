@@ -8,10 +8,9 @@ router.post('/', async (req, res, next) => {
   try {
     const body = req.body
 
-    // Enforce product prices from database
     const items = await Promise.all(body.items.map(async (i) => {
       const product = await Product.findById(i.item_id)
-      const price = product?.price?.amount ?? 0
+      const price = i.price ?? product?.price?.amount ?? 0
       return {
         item_id: i.item_id,
         quantity: i.quantity,
@@ -87,7 +86,7 @@ router.patch('/:id', async (req, res, next) => {
     if (body.items !== undefined) {
       const items = await Promise.all(body.items.map(async (i) => {
         const product = await Product.findById(i.item_id)
-        const price = product?.price?.amount ?? 0
+        const price = i.price ?? product?.price?.amount ?? 0
         return {
           item_id: i.item_id,
           quantity: i.quantity,

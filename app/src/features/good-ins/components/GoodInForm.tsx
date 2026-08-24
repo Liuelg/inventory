@@ -20,6 +20,8 @@ import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
 import { useStores } from "@/features/stores/hooks"
 import { useCreateGoodIn, useUpdateGoodIn } from "../hooks"
+import { formatProductLabel, getProductPrices } from "@/features/products/utils"
+import type { Product } from "@/features/products/types"
 import type { GoodIn, GoodInPayload } from "../types"
 
 interface GoodInFormProps {
@@ -66,7 +68,7 @@ function getInitialState(editing?: GoodIn | null): GoodInFormState {
 
 function toPayload(form: GoodInFormState, userId: string): GoodInPayload {
   const items = form.items
-    .filter((i) => i.item_id && i.quantity && i.price)
+    .filter((i) => i.item_id && Number(i.quantity) > 0 && i.price)
     .map((i) => ({
       item_id: i.item_id,
       quantity: Number(i.quantity),
@@ -82,6 +84,16 @@ function toPayload(form: GoodInFormState, userId: string): GoodInPayload {
     is_accepted: form.is_accepted,
     accepted_at: form.is_accepted ? new Date().toISOString() : null,
   }
+}
+
+function getPriceOptions(product: Product | undefined) {
+  if (!product) return []
+  return getProductPrices(product)
+}
+
+function formatPriceOption(p: { amount?: number; currency?: string }): string {
+  if (p.amount == null) return "—"
+  return `${p.amount} ${p.currency || ""}`.trim()
 }
 
 export function GoodInForm({
@@ -125,6 +137,15 @@ export function GoodInForm({
     setForm((prev) => {
       const items = [...prev.items]
       items[index] = { ...items[index], [key]: value }
+      if (key === "item_id" && value) {
+        const product = products?.find((p) => p._id === value)
+        const priceOptions = getPriceOptions(product)
+        if (priceOptions.length > 0 && priceOptions[0].amount != null) {
+          items[index].price = String(priceOptions[0].amount)
+        } else {
+          items[index].price = ""
+        }
+      }
       return { ...prev, items }
     })
   }
@@ -240,63 +261,86 @@ export function GoodInForm({
 
           <Label>Items</Label>
 
-          {form.items.map((item, index) => (
-            <div
-              key={index}
-              className="grid grid-cols-[auto_90px_90px_36px] gap-3 items-end"
-            >
-              <div className="grid gap-1">
-                <Label className="text-xs">Product</Label>
-                <Select
-                  value={item.item_id}
-                  onValueChange={(v) => setItemField(index, "item_id", v)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select product" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sortedProducts.map((p) => (
-                      <SelectItem key={p._id} value={p._id}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-1">
-                <Label className="text-xs">Qty</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={item.quantity}
-                  onChange={(e) =>
-                    setItemField(index, "quantity", e.target.value)
-                  }
-                />
-              </div>
-              <div className="grid gap-1">
-                <Label className="text-xs">Price</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={item.price}
-                  onChange={(e) =>
-                    setItemField(index, "price", e.target.value)
-                  }
-                />
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => removeItem(index)}
-                disabled={form.items.length <= 1}
+          {form.items.map((item, index) => {
+            const product = products?.find((p) => p._id === item.item_id)
+            const priceOptions = getPriceOptions(product)
+
+            return (
+              <div
+                key={index}
+                className="grid grid-cols-[auto_90px_90px_36px] gap-3 items-end"
               >
-                <span className="text-destructive">×</span>
-              </Button>
-            </div>
-          ))}
+                <div className="grid gap-1">
+                  <Label className="text-xs">Product</Label>
+                  <Select
+                    value={item.item_id}
+                    onValueChange={(v) => setItemField(index, "item_id", v)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select product" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sortedProducts.map((p) => (
+                        <SelectItem key={p._id} value={p._id} textValue={formatProductLabel(p)}>
+                          {formatProductLabel(p)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-1">
+                  <Label className="text-xs">Qty</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={item.quantity}
+                    onChange={(e) =>
+                      setItemField(index, "quantity", e.target.value)
+                    }
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <Label className="text-xs">Price</Label>
+                  {priceOptions.length > 1 ? (
+                    <Select
+                      value={item.price}
+                      onValueChange={(v) => setItemField(index, "price", v)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select price" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {priceOptions.map((p, idx) => (
+                          <SelectItem key={idx} value={String(p.amount)}>
+                            {formatPriceOption(p)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={item.price}
+                      onChange={(e) =>
+                        setItemField(index, "price", e.target.value)
+                      }
+                    />
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => removeItem(index)}
+                  disabled={form.items.length <= 1}
+                >
+                  <span className="text-destructive">×</span>
+                </Button>
+              </div>
+            )
+          })}
 
           <Button
             type="button"

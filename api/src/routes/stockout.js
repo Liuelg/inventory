@@ -15,12 +15,11 @@ async function addItemsToStore(storeId, items) {
 
   for (const incoming of items) {
     const existing = store.items.find(
-      (i) => i.item_id.toString() === incoming.item_id.toString()
+      (i) => i.item_id.toString() === incoming.item_id.toString() && i.price === incoming.price
     )
 
     if (existing) {
       existing.quantity += incoming.quantity
-      existing.price = incoming.price
       if (incoming.group) {
         existing.group = incoming.group
       }
@@ -44,7 +43,7 @@ router.post('/', async (req, res, next) => {
     const body = req.body
     const items = await Promise.all(body.items.map(async (i) => {
       const product = await Product.findById(i.item_id)
-      const price = product?.price?.amount ?? 0
+      const price = i.price ?? product?.price?.amount ?? 0
       return {
         item_id: i.item_id,
         quantity: i.quantity,
@@ -61,7 +60,7 @@ router.post('/', async (req, res, next) => {
       note: body.note
     })
     await stockout.save()
-    await stockout.populate('items.item_id', 'name category image')
+    await stockout.populate('items.item_id', 'name category image price prices')
     await stockout.populate('store', 'name address')
     await stockout.populate('created_by', 'name email')
     res.status(201).json({ success: true, data: stockout })
@@ -78,7 +77,7 @@ router.get('/', async (req, res, next) => {
     if (req.query.status) filter.status = req.query.status
 
     const stockouts = await Stockout.find(filter)
-      .populate('items.item_id', 'name category image')
+      .populate('items.item_id', 'name category image price prices')
       .populate('store', 'name address')
       .populate('created_by', 'name email')
       .populate('accepted_by', 'name email')
@@ -93,7 +92,7 @@ router.get('/', async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
   try {
     const stockout = await Stockout.findById(req.params.id)
-      .populate('items.item_id', 'name category image')
+      .populate('items.item_id', 'name category image price prices')
       .populate('store', 'name address')
       .populate('created_by', 'name email')
       .populate('accepted_by', 'name email')
@@ -162,7 +161,7 @@ router.patch('/:id/accept', async (req, res, next) => {
     stockout.accepted_at = new Date()
     await stockout.save()
 
-    await stockout.populate('items.item_id', 'name category image')
+    await stockout.populate('items.item_id', 'name category image price prices')
     await stockout.populate('store', 'name address')
     await stockout.populate('created_by', 'name email')
     await stockout.populate('accepted_by', 'name email')
@@ -220,7 +219,7 @@ router.patch('/:id', async (req, res, next) => {
     const newItems = body.items
       ? await Promise.all(body.items.map(async (i) => {
         const product = await Product.findById(i.item_id)
-        const price = product?.price?.amount ?? 0
+        const price = i.price ?? product?.price?.amount ?? 0
         return {
           item_id: i.item_id,
           quantity: i.quantity,
@@ -241,7 +240,7 @@ router.patch('/:id', async (req, res, next) => {
       { $set: update },
       { new: true, runValidators: true }
     )
-      .populate('items.item_id', 'name category image')
+      .populate('items.item_id', 'name category image price prices')
       .populate('store', 'name address')
       .populate('created_by', 'name email')
 

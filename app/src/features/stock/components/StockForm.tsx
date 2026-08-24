@@ -10,10 +10,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
-import { getProductImageUrl } from "@/features/products/utils"
+import { getProductImageUrl, formatProductLabel, getProductPrices } from "@/features/products/utils"
 import type { Product } from "@/features/products/types"
 import { useCreateStock, useStocks, useUpdateStock } from "../hooks"
 import type { Stock, StockPayload, StockItem } from "../types"
@@ -29,6 +36,7 @@ type StockItemForm = {
   _key: string
   item_id: string
   quantity: string
+  price: string
   group?: string | null
 }
 
@@ -45,7 +53,7 @@ function nextKey(): string {
 }
 
 function createEmptyItem(): StockItemForm {
-  return { _key: nextKey(), item_id: "", quantity: "1", group: null }
+  return { _key: nextKey(), item_id: "", quantity: "1", price: "", group: null }
 }
 
 const initialState: StockFormState = {
@@ -67,19 +75,12 @@ function getInitialState(editing?: Stock | null): StockFormState {
           item_id:
             typeof i.item_id === "string" ? i.item_id : i.item_id?._id ?? "",
           quantity: String(i.quantity),
+          price: String(i.price ?? ""),
         }))
       : [createEmptyItem()],
     description: editing.description ?? "",
     note: editing.note ?? "",
   }
-}
-
-function getProductPrice(
-  products: Product[] | undefined,
-  itemId: string
-): number | undefined {
-  const product = products?.find((p) => p._id === itemId)
-  return product?.price?.amount
 }
 
 function getProductImage(
@@ -95,11 +96,12 @@ function mergeDuplicateItems(
 ): { item_id: string; quantity: number; price: number; group?: string | null }[] {
   const map = new Map<string, { item_id: string; quantity: number; price: number; group?: string | null }>()
   for (const item of items) {
-    const existing = map.get(item.item_id)
+    const key = `${item.item_id}-${item.price}`
+    const existing = map.get(key)
     if (existing) {
       existing.quantity += item.quantity
     } else {
-      map.set(item.item_id, { ...item })
+      map.set(key, { ...item })
     }
   }
   return Array.from(map.values())
@@ -108,22 +110,18 @@ function mergeDuplicateItems(
 function toPayload(
   form: StockFormState,
   userId: string,
-  products: Product[] | undefined
 ): StockPayload {
   const rawItems = form.items.filter(
     (i) => i.item_id && Number(i.quantity) > 0
   )
 
   const items = mergeDuplicateItems(
-    rawItems.map((i) => {
-      const price = getProductPrice(products, i.item_id) ?? 0
-      return {
-        item_id: i.item_id,
-        quantity: Number(i.quantity),
-        price,
-        group: i.group || null,
-      }
-    })
+    rawItems.map((i) => ({
+      item_id: i.item_id,
+      quantity: Number(i.quantity),
+      price: Number(i.price) || 0,
+      group: i.group || null,
+    }))
   )
 
   const totalAmount = items.reduce(
@@ -153,7 +151,7 @@ function getGroupId(
   return group._id ?? null
 }
 
-type DropdownItem = { type: "product"; id: string; name: string; image?: string }
+type DropdownItem = { type: "product"; id: string; name: string; image?: string; price?: Product["price"] }
 
 function ProductSearchSelect({
   products,
@@ -176,6 +174,7 @@ function ProductSearchSelect({
       id: p._id,
       name: p.name,
       image: p.image,
+      price: p.price,
     }))
   }, [products])
 
@@ -195,7 +194,7 @@ function ProductSearchSelect({
     return () => document.removeEventListener("mousedown", handleDocClick)
   }, [])
 
-  const selectedLabel = selectedProduct?.name || (value ? "" : "Select product")
+  const selectedLabel = selectedProduct ? formatProductLabel(selectedProduct) : (value ? "" : "Select product")
   const selectedImage = selectedProduct?.image
 
   return (
@@ -260,7 +259,7 @@ function ProductSearchSelect({
                     ) : (
                       <div className="h-6 w-6 rounded bg-muted shrink-0" />
                     )}
-                    <span className="flex-1 truncate text-left">{item.name}</span>
+                    <span className="flex-1 truncate text-left">{formatProductLabel(item)}</span>
                     {isSelected ? <Check className="h-4 w-4 shrink-0" /> : null}
                   </button>
                 )
@@ -332,8 +331,11 @@ export function StockForm({
       const currentRow = prev.items.find((i) => i._key === rowKey)
       if (!currentRow) return prev
 
+      const product = products?.find((p) => p._id === productId)
+      const defaultPrice = getProductPrices(product ?? { price: undefined, prices: undefined })[0]?.amount ?? ""
+
       const existingRow = prev.items.find(
-        (i) => i._key !== rowKey && i.item_id === productId
+        (i) => i._key !== rowKey && i.item_id === productId && i.price === String(defaultPrice)
       )
 
       if (existingRow) {
@@ -357,7 +359,7 @@ export function StockForm({
       }
 
       const items = prev.items.map((item) =>
-        item._key === rowKey ? { ...item, item_id: productId } : item
+        item._key === rowKey ? { ...item, item_id: productId, price: String(defaultPrice) } : item
       )
       return { ...prev, items }
     })
@@ -383,13 +385,16 @@ export function StockForm({
       const newItems = [...prev.items.filter((i) => i.item_id)]
       const itemMap = new Map<string, StockItemForm>()
       for (const item of newItems) {
-        itemMap.set(item.item_id, item)
+        const key = `${item.item_id}-${item.price}`
+        itemMap.set(key, item)
       }
 
       let addedCount = 0
       let incrementedCount = 0
       for (const product of products) {
-        const existing = itemMap.get(product._id)
+        const defaultPrice = getProductPrices(product)[0]?.amount ?? ""
+        const key = `${product._id}-${defaultPrice}`
+        const existing = itemMap.get(key)
         if (existing) {
           existing.quantity = String(Number(existing.quantity) + qtyNum)
           incrementedCount++
@@ -398,9 +403,10 @@ export function StockForm({
             _key: nextKey(),
             item_id: product._id,
             quantity: qtyStr,
+            price: String(defaultPrice),
             group: null,
           })
-          itemMap.set(product._id, newItems[newItems.length - 1])
+          itemMap.set(key, newItems[newItems.length - 1])
           addedCount++
         }
       }
@@ -426,7 +432,7 @@ export function StockForm({
   async function handleCreateWithDedup(userId: string) {
     if (!existingStocks || existingStocks.length === 0) {
       // No existing stock at all — just create
-      const payload = toPayload(form, userId, products)
+      const payload = toPayload(form, userId)
       await create.mutateAsync(payload)
       return
     }
@@ -435,15 +441,12 @@ export function StockForm({
     const formItems = mergeDuplicateItems(
       form.items
         .filter((i) => i.item_id && Number(i.quantity) > 0)
-        .map((i) => {
-          const price = getProductPrice(products, i.item_id) ?? 0
-          return {
-            item_id: i.item_id,
-            quantity: Number(i.quantity),
-            price,
-            group: i.group || null,
-          }
-        })
+        .map((i) => ({
+          item_id: i.item_id,
+          quantity: Number(i.quantity),
+          price: Number(i.price) || 0,
+          group: i.group || null,
+        }))
     )
 
     // For each item, check if it already exists in stock
@@ -515,11 +518,12 @@ export function StockForm({
 
       // Also add any brand-new items that weren't in this stock entry
       for (const [itemId, additionalQty] of itemUpdates) {
+        const formItem = form.items.find((i) => i.item_id === itemId)
+        const price = Number(formItem?.price) || 0
         const alreadyInStock = stock.items.some(
-          (item) => getItemIdString(item) === itemId
+          (item) => getItemIdString(item) === itemId && item.price === price
         )
         if (!alreadyInStock) {
-          const price = getProductPrice(products, itemId) ?? 0
           const groupId = itemGroups?.get(itemId) ?? null
           updatedItems.push({
             item_id: itemId,
@@ -584,7 +588,7 @@ export function StockForm({
 
     try {
       if (editing) {
-        const payload = toPayload(form, userId, products)
+        const payload = toPayload(form, userId)
         await update.mutateAsync(
           { id: editing._id, payload },
         )
@@ -636,73 +640,111 @@ export function StockForm({
           <div className="space-y-3">
             <Label className="font-semibold text-sm block border-b pb-1.5">Items</Label>
             
-            <div className="grid gap-3 px-1 text-xs font-medium text-muted-foreground hidden sm:grid grid-cols-[48px_1fr_100px_40px]">
+            <div className="grid gap-3 px-1 text-xs font-medium text-muted-foreground hidden sm:grid grid-cols-[48px_1fr_120px_100px_40px]">
               <div>Image</div>
               <div>Product</div>
+              <div>Price</div>
               <div>Qty</div>
               <div></div>
             </div>
 
             <div className="flex flex-col gap-3">
-              {form.items.map((item) => (
-                <div
-                  key={item._key}
-                  className="grid grid-cols-1 gap-3 items-center border p-3 rounded-lg sm:border-0 sm:p-0 sm:rounded-none sm:grid-cols-[48px_1fr_100px_40px]"
-                >
-                  <div className="flex items-center justify-center">
-                    <div className="h-10 w-10 rounded-md border bg-muted overflow-hidden">
-                      {item.item_id && getProductImage(products, item.item_id) ? (
-                        <img
-                          src={getProductImage(products, item.item_id)}
-                          alt=""
-                          className="h-full w-full object-cover"
+              {form.items.map((item) => {
+                const product = products?.find((p) => p._id === item.item_id)
+                const priceOptions = product ? getProductPrices(product) : []
+
+                return (
+                  <div
+                    key={item._key}
+                    className="grid grid-cols-1 gap-3 items-center border p-3 rounded-lg sm:border-0 sm:p-0 sm:rounded-none sm:grid-cols-[48px_1fr_120px_100px_40px]"
+                  >
+                    <div className="flex items-center justify-center">
+                      <div className="h-10 w-10 rounded-md border bg-muted overflow-hidden">
+                        {item.item_id && getProductImage(products, item.item_id) ? (
+                          <img
+                            src={getProductImage(products, item.item_id)}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="grid gap-1">
+                      <span className="text-xs font-medium text-muted-foreground sm:hidden">Product</span>
+                      <ProductSearchSelect
+                        products={products ?? []}
+                        value={item.item_id}
+                        onChange={(v) => handleProductSelect(item._key, v)}
+                      />
+                    </div>
+
+                    <div className="grid gap-1">
+                      <span className="text-xs font-medium text-muted-foreground sm:hidden">Price</span>
+                      {priceOptions.length > 1 ? (
+                        <Select
+                          value={item.price}
+                          onValueChange={(v) => setItemField(item._key, "price", v)}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select price" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {priceOptions.map((p, idx) => (
+                              <SelectItem key={idx} value={String(p.amount)}>
+                                {p.amount} {p.currency || ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={item.price}
+                          onChange={(e) =>
+                            setItemField(item._key, "price", e.target.value)
+                          }
                         />
-                      ) : null}
+                      )}
+                    </div>
+
+                    <div className="grid gap-1">
+                      <label
+                        htmlFor={`stock-qty-${item._key}`}
+                        className="text-xs font-medium text-muted-foreground sm:hidden"
+                      >
+                        Qty
+                      </label>
+                      <Input
+                        id={`stock-qty-${item._key}`}
+                        name={`stock-qty-${item._key}`}
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        value={item.quantity}
+                        onChange={(e) =>
+                          setItemField(item._key, "quantity", e.target.value)
+                        }
+                      />
+                    </div>
+
+                    <div className="flex justify-end pt-3 sm:pt-0">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeItem(item._key)}
+                        disabled={form.items.length <= 1}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
-                  <div className="grid gap-1">
-                    <span className="text-xs font-medium text-muted-foreground sm:hidden">Product</span>
-                    <ProductSearchSelect
-                      products={products ?? []}
-                      value={item.item_id}
-                      onChange={(v) => handleProductSelect(item._key, v)}
-                    />
-                  </div>
-
-                  <div className="grid gap-1">
-                    <label
-                      htmlFor={`stock-qty-${item._key}`}
-                      className="text-xs font-medium text-muted-foreground sm:hidden"
-                    >
-                      Qty
-                    </label>
-                    <Input
-                      id={`stock-qty-${item._key}`}
-                      name={`stock-qty-${item._key}`}
-                      type="number"
-                      min="0"
-                      placeholder="0"
-                      value={item.quantity}
-                      onChange={(e) =>
-                        setItemField(item._key, "quantity", e.target.value)
-                      }
-                    />
-                  </div>
-
-                  <div className="flex justify-end pt-3 sm:pt-0">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9 text-muted-foreground hover:text-destructive"
-                      onClick={() => removeItem(item._key)}
-                      disabled={form.items.length <= 1}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
 
             <div className="flex flex-wrap gap-2 mt-1 items-end">

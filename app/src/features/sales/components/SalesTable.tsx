@@ -31,6 +31,7 @@ import { useDeleteSale } from "../hooks"
 import { useAuthSession } from "@/hooks/use-auth-session"
 import { ProductImageCell } from "@/components/ProductImageCell"
 import { getCurrencySymbol } from "./CurrencySelector"
+import { formatVariantLabel } from "@/features/products/utils"
 import type { Sale, SaleItem, SaleLineItemRow } from "../types"
 import type { CurrencyCode, CurrencyRates } from "@/features/currency/types"
 
@@ -46,7 +47,10 @@ function getTotalItems(sale: Sale) {
 
 function getProductName(item: SaleItem): string {
   if (typeof item.item_id === "object" && item.item_id !== null) {
-    return item.item_id.name || "Unknown"
+    if (item.price != null) {
+      return formatVariantLabel(item.item_id, item.price)
+    }
+    return formatVariantLabel(item.item_id, 0)
   }
   return "Unknown"
 }

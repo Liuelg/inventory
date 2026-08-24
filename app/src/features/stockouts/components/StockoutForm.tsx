@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select.tsx"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
-import { getProductImageUrl } from "@/features/products/utils"
+import { getProductImageUrl, getProductPrices } from "@/features/products/utils"
 import { useStores } from "@/features/stores/hooks"
 import { useCreateStockout, useUpdateStockout } from "../hooks"
 import type { Product } from "@/features/products/types"
@@ -43,7 +43,7 @@ type StockoutFormState = {
   note: string
 }
 
-const emptyItem: StockoutItemForm = { item_id: "", quantity: "1", price: ""}
+const emptyItem: StockoutItemForm = { item_id: "", quantity: "1", price: "" }
 
 const initialState: StockoutFormState = {
   storeId: "",
@@ -59,18 +59,11 @@ function getInitialState(editing?: Stockout | null): StockoutFormState {
       ? editing.items.map((i) => ({
         item_id: typeof i.item_id === "string" ? i.item_id : i.item_id._id,
         quantity: String(i.quantity),
-        price: String(i.price),      }))
+        price: String(i.price),
+      }))
       : [{ ...emptyItem }],
     note: editing.note ?? "",
   }
-}
-
-function getProductPrice(
-  products: Product[] | undefined,
-  itemId: string
-): number | undefined {
-  const product = products?.find((p) => p._id === itemId)
-  return product?.price?.amount
 }
 
 function getProductImage(
@@ -84,15 +77,13 @@ function getProductImage(
 function toPayload(
   form: StockoutFormState,
   userId: string,
-  products: Product[] | undefined
 ): StockoutPayload {
   const items = form.items
     .filter((i) => i.item_id && Number(i.quantity) > 0)
     .map((i) => ({
       item_id: i.item_id,
       quantity: Number(i.quantity),
-      price: getProductPrice(products, i.item_id) ?? Number(i.price) ?? 0,
-      
+      price: Number(i.price) || 0,
     }))
 
   return {
@@ -102,6 +93,16 @@ function toPayload(
     date: new Date().toISOString(),
     note: form.note || undefined,
   }
+}
+
+function getPriceOptions(product: Product | undefined) {
+  if (!product) return []
+  return getProductPrices(product)
+}
+
+function formatPriceOption(p: { amount?: number; currency?: string }): string {
+  if (p.amount == null) return "—"
+  return `${p.amount} ${p.currency || ""}`.trim()
 }
 
 export function StockoutForm({
@@ -146,8 +147,13 @@ export function StockoutForm({
       const items = [...prev.items]
       items[index] = { ...items[index], [key]: value }
       if (key === "item_id" && value) {
-        const price = getProductPrice(products, value)
-        items[index].price = price !== undefined ? String(price) : ""
+        const product = products?.find((p) => p._id === value)
+        const priceOptions = getPriceOptions(product)
+        if (priceOptions.length > 0 && priceOptions[0].amount != null) {
+          items[index].price = String(priceOptions[0].amount)
+        } else {
+          items[index].price = ""
+        }
       }
       return { ...prev, items }
     })
@@ -159,8 +165,6 @@ export function StockoutForm({
       items: [...prev.items, { ...emptyItem }],
     }))
   }
-
-  
 
   function removeItem(index: number) {
     setForm((prev) => {
@@ -193,13 +197,12 @@ export function StockoutForm({
       return
     }
 
-    // Only allow editing pending stockouts
     if (editing && editing.status !== "pending") {
       setError("Only pending stockouts can be edited.")
       return
     }
 
-    const payload = toPayload(form, userId, products)
+    const payload = toPayload(form, userId)
     if (editing) {
       update.mutate(
         { id: editing._id, payload },
@@ -268,31 +271,64 @@ export function StockoutForm({
             />
           </div>
 
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-            <Label>Items</Label>
-            {!editing && (
-              <div className="w-full sm:w-[280px]">
-                
-              </div>
-            )}
-          </div>
+          <Label>Items</Label>
 
-          {form.items.map((item, index) => (
-            <div
-              key={index}
-              className="flex flex-col gap-3 rounded-lg border p-3 sm:grid sm:grid-cols-[48px_1fr_90px_40px] sm:gap-3 sm:items-center sm:border-0 sm:p-0"
-            >
-              <div className="flex items-center gap-3 sm:justify-center">
-                <div className="h-10 w-10 shrink-0 rounded-md border bg-muted overflow-hidden">
-                  {item.item_id && getProductImage(products, item.item_id) ? (
-                    <img
-                      src={getProductImage(products, item.item_id)}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  ) : null}
+          {form.items.map((item, index) => {
+            const product = products?.find((p) => p._id === item.item_id)
+            const priceOptions = getPriceOptions(product)
+
+            return (
+              <div
+                key={index}
+                className="flex flex-col gap-3 rounded-lg border p-3 sm:grid sm:grid-cols-[48px_1fr_140px_90px_40px] sm:gap-3 sm:items-center sm:border-0 sm:p-0"
+              >
+                <div className="flex items-center gap-3 sm:justify-center">
+                  <div className="h-10 w-10 shrink-0 rounded-md border bg-muted overflow-hidden">
+                    {item.item_id && getProductImage(products, item.item_id) ? (
+                      <img
+                        src={getProductImage(products, item.item_id)}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : null}
+                  </div>
+                  <div className="flex-1 sm:hidden">
+                    <Label className="text-xs">Product</Label>
+                    <Select
+                      value={item.item_id}
+                      onValueChange={(v) => setItemField(index, "item_id", v)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select product" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sortedProducts.map((p) => (
+                          <SelectItem key={p._id} value={p._id} textValue={p.name}>
+                            <div className="flex items-center gap-2">
+                              {p.image ? (
+                                <img src={getProductImageUrl(p.image)} alt="" className="h-6 w-6 rounded object-cover" />
+                              ) : (
+                                <div className="h-6 w-6 rounded bg-muted" />
+                              )}
+                              <span>{p.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => removeItem(index)}
+                    disabled={form.items.length <= 1}
+                    className="sm:hidden"
+                  >
+                    <span className="text-destructive">×</span>
+                  </Button>
                 </div>
-                <div className="flex-1 sm:hidden">
+                <div className="hidden sm:grid gap-1">
                   <Label className="text-xs">Product</Label>
                   <Select
                     value={item.item_id}
@@ -316,77 +352,63 @@ export function StockoutForm({
                       ))}
                     </SelectContent>
                   </Select>
-                  {item.item_id && (
-                    <span className="text-xs text-muted-foreground">
-                      Price: {getProductPrice(sortedProducts, item.item_id)?.toFixed(2) ?? "—"}
-                    </span>
+                </div>
+
+                <div className="grid gap-1">
+                  <Label className="text-xs">Price</Label>
+                  {priceOptions.length > 1 ? (
+                    <Select
+                      value={item.price}
+                      onValueChange={(v) => setItemField(index, "price", v)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select price" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {priceOptions.map((p, idx) => (
+                          <SelectItem key={idx} value={String(p.amount)}>
+                            {formatPriceOption(p)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={item.price}
+                      onChange={(e) => setItemField(index, "price", e.target.value)}
+                    />
                   )}
                 </div>
+
+                <div className="grid gap-1">
+                  <Label className="text-xs">Qty</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={item.quantity}
+                    onChange={(e) =>
+                      setItemField(index, "quantity", e.target.value)
+                    }
+                  />
+                </div>
+
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon-sm"
                   onClick={() => removeItem(index)}
                   disabled={form.items.length <= 1}
-                  className="sm:hidden"
+                  className="hidden sm:flex"
                 >
                   <span className="text-destructive">×</span>
                 </Button>
               </div>
-              <div className="hidden sm:grid gap-1">
-                <Label className="text-xs">Product</Label>
-                <Select
-                  value={item.item_id}
-                  onValueChange={(v) => setItemField(index, "item_id", v)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select product" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sortedProducts.map((p) => (
-                      <SelectItem key={p._id} value={p._id} textValue={p.name}>
-                        <div className="flex items-center gap-2">
-                          {p.image ? (
-                            <img src={getProductImageUrl(p.image)} alt="" className="h-6 w-6 rounded object-cover" />
-                          ) : (
-                            <div className="h-6 w-6 rounded bg-muted" />
-                          )}
-                          <span>{p.name}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {item.item_id && (
-                  <span className="text-xs text-muted-foreground">
-                    Price: {getProductPrice(products, item.item_id)?.toFixed(2) ?? "—"}
-                  </span>
-                )}
-              </div>
-              <div className="grid gap-1">
-                <Label className="text-xs">Qty</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={item.quantity}
-                  onChange={(e) =>
-                    setItemField(index, "quantity", e.target.value)
-                  }
-                />
-              </div>
-
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => removeItem(index)}
-                disabled={form.items.length <= 1}
-                className="hidden sm:flex"
-              >
-                <span className="text-destructive">×</span>
-              </Button>
-            </div>
-          ))}
+            )
+          })}
 
           <Button
             type="button"

@@ -12,7 +12,7 @@ import {
 import { Search, Check, ImagePlus, X } from "lucide-react"
 import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useProducts } from "@/features/products/hooks"
-import { getProductImageUrl } from "@/features/products/utils"
+import { getProductImageUrl, getPriceCurrency } from "@/features/products/utils"
 import { useStore, useStores } from "@/features/stores/hooks"
 import { useCreateSale, useUpdateSale } from "../hooks"
 import {
@@ -40,6 +40,7 @@ type SaleItemForm = {
   birr: string
   visa: string
   gbp: string
+  storePrice: string
   image: string
   imageFile: File | null
   previewUrl?: string
@@ -59,6 +60,7 @@ const emptyItem: SaleItemForm = {
   birr: "",
   visa: "",
   gbp: "",
+  storePrice: "",
   image: "",
   imageFile: null,
 }
@@ -74,6 +76,7 @@ function getItemId(item_id: string | Product): string {
 }
 
 function migrateOldPrice(item: Sale["items"][number]): Omit<SaleItemForm, "item_id" | "quantity" | "image" | "imageFile"> {
+  const storePrice = item.price ? String(item.price) : ""
   // New format: item already has eur/usd/birr/visa/gbp
   if (
     "eur" in item ||
@@ -83,6 +86,7 @@ function migrateOldPrice(item: Sale["items"][number]): Omit<SaleItemForm, "item_
     "gbp" in item
   ) {
     return {
+      storePrice,
       eur: item.eur ? String(item.eur) : "",
       usd: item.usd ? String(item.usd) : "",
       birr: item.birr ? String(item.birr) : "",
@@ -94,12 +98,12 @@ function migrateOldPrice(item: Sale["items"][number]): Omit<SaleItemForm, "item_
   const price = (item as unknown as { price?: number }).price ?? 0
   const currency = (item as unknown as { currency?: string }).currency || "USD"
   if (currency === "ETB") {
-    return { eur: "", usd: "", birr: String(price), visa: "", gbp: "" }
+    return { storePrice, eur: "", usd: "", birr: String(price), visa: "", gbp: "" }
   }
   if (currency === "EUR") {
-    return { eur: String(price), usd: "", birr: "", visa: "", gbp: "" }
+    return { storePrice, eur: String(price), usd: "", birr: "", visa: "", gbp: "" }
   }
-  return { eur: "", usd: String(price), birr: "", visa: "", gbp: "" }
+  return { storePrice, eur: "", usd: String(price), birr: "", visa: "", gbp: "" }
 }
 
 function formatDateInputValue(isoDate: string): string {
@@ -142,6 +146,7 @@ function toPayload(
       birr: Number(i.birr) || 0,
       visa: Number(i.visa) || 0,
       gbp: Number(i.gbp) || 0,
+      price: i.storePrice ? Number(i.storePrice) : undefined,
       image: i.image || "",
     }))
 
@@ -180,28 +185,36 @@ function toPayload(
   return payload
 }
 
-function ProductSearchSelect({
-  products,
-  storeItemsMap,
+type StoreVariant = {
+  key: string
+  productId: string
+  name: string
+  image?: string
+  price: number
+  currency?: string
+  quantity: number
+}
+
+function VariantSearchSelect({
+  variants,
   value,
   onChange,
 }: {
-  products: Product[]
-  storeItemsMap: Map<string, number>
+  variants: StoreVariant[]
   value: string
-  onChange: (id: string) => void
+  onChange: (key: string) => void
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const selectedProduct = products.find((p) => p._id === value)
+  const selectedVariant = variants.find((v) => v.key === value)
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return products
-    return products.filter((p) => p.name.toLowerCase().includes(q))
-  }, [products, query])
+    if (!q) return variants
+    return variants.filter((v) => v.name.toLowerCase().includes(q))
+  }, [variants, query])
 
   useEffect(() => {
     function handleDocClick(e: MouseEvent) {
@@ -213,8 +226,12 @@ function ProductSearchSelect({
     return () => document.removeEventListener("mousedown", handleDocClick)
   }, [])
 
-  const selectedLabel = selectedProduct?.name || (value ? "" : "Select product")
-  const selectedImage = selectedProduct?.image
+  const selectedLabel = selectedVariant
+    ? `${selectedVariant.name} (${selectedVariant.price}${selectedVariant.currency ? " " + selectedVariant.currency : ""})`
+    : value
+      ? "Select product"
+      : "Select product"
+  const selectedImage = selectedVariant?.image
 
   return (
     <div ref={containerRef} className="relative">
@@ -227,7 +244,7 @@ function ProductSearchSelect({
           if (!open) setQuery("")
         }}
       >
-        {selectedProduct ? (
+        {selectedVariant ? (
           <div className="flex items-center gap-2 overflow-hidden">
             {selectedImage ? (
               <img
@@ -264,34 +281,35 @@ function ProductSearchSelect({
                 No products found.
               </p>
             ) : (
-              filtered.map((p) => {
-                const isSelected = p._id === value
-                const available = storeItemsMap.get(p._id) || 0
+              filtered.map((v) => {
+                const isSelected = v.key === value
                 return (
                   <button
-                    key={p._id}
+                    key={v.key}
                     type="button"
                     className={`flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground ${
                       isSelected ? "bg-accent text-accent-foreground" : ""
                     }`}
                     onClick={() => {
-                      onChange(p._id)
+                      onChange(v.key)
                       setOpen(false)
                       setQuery("")
                     }}
                   >
-                    {p.image ? (
+                    {v.image ? (
                       <img
-                        src={getProductImageUrl(p.image)}
+                        src={getProductImageUrl(v.image)}
                         alt=""
                         className="h-6 w-6 rounded object-cover shrink-0"
                       />
                     ) : (
                       <div className="h-6 w-6 rounded bg-muted shrink-0" />
                     )}
-                    <span className="flex-1 truncate text-left">{p.name}</span>
+                    <span className="flex-1 truncate text-left">
+                      {v.name} ({v.price}{v.currency ? " " + v.currency : ""})
+                    </span>
                     <span className="text-muted-foreground text-xs shrink-0">
-                      ({available} in stock)
+                      ({v.quantity} in stock)
                     </span>
                     {isSelected ? (
                       <Check className="h-4 w-4 shrink-0" />
@@ -357,41 +375,74 @@ export function SalesForm({
     }
   }, [])
 
-  // Build map of available quantities from store inventory
-  const storeItemsMap = useMemo(() => {
-    const map = new Map<string, number>()
+  // Build flattened list of store variants for the dropdown
+  const storeVariants = useMemo(() => {
+    if (!products) return []
+    const variantMap = new Map<string, StoreVariant>()
+
     const items = (activeStore?.items || []) as Array<{
       item_id: string | { _id: string; name?: string }
       quantity: number
+      price?: number
     }>
+
     for (const item of items) {
-      const id =
+      const productId =
         typeof item.item_id === "string"
           ? item.item_id
           : item.item_id?._id ?? ""
-      if (id) {
-        map.set(id, item.quantity)
+      if (!productId || item.quantity <= 0) continue
+      const product = products.find((p) => p._id === productId)
+      if (!product) continue
+
+      const price = item.price ?? 0
+      const key = `${productId}|${price}`
+      variantMap.set(key, {
+        key,
+        productId,
+        name: product.name,
+        image: product.image,
+        price,
+        currency: getPriceCurrency(product, price),
+        quantity: item.quantity,
+      })
+    }
+
+    // For editing: ensure sale items' variants remain selectable
+    if (editing) {
+      for (const saleItem of editing.items) {
+        const productId = getItemId(saleItem.item_id)
+        const product = products.find((p) => p._id === productId)
+        if (!product) continue
+        const price = saleItem.price ?? 0
+        const key = `${productId}|${price}`
+        if (!variantMap.has(key)) {
+          variantMap.set(key, {
+            key,
+            productId,
+            name: product.name,
+            image: product.image,
+            price,
+            currency: getPriceCurrency(product, price),
+            quantity: 0,
+          })
+        }
       }
     }
-    return map
-  }, [activeStore])
 
-  // Track products already in the editing sale so they remain selectable
-  const editingItemIds = useMemo(() => {
-    return new Set(editing?.items.map((i) => getItemId(i.item_id)) || [])
-  }, [editing])
-
-  // Filter products to only those in store with stock > 0 (or already in sale)
-  const availableProducts = useMemo(() => {
-    return (
-      products?.filter((p) => {
-        const available = storeItemsMap.get(p._id)
-        if (available !== undefined && available > 0) return true
-        if (editingItemIds.has(p._id)) return true
-        return false
-      }) || []
+    return Array.from(variantMap.values()).sort(
+      (a, b) => a.name.localeCompare(b.name) || a.price - b.price
     )
-  }, [products, storeItemsMap, editingItemIds])
+  }, [products, activeStore, editing])
+
+  // Build a quick lookup map for validation
+  const variantByKey = useMemo(() => {
+    const map = new Map<string, StoreVariant>()
+    for (const v of storeVariants) {
+      map.set(v.key, v)
+    }
+    return map
+  }, [storeVariants])
 
   const activeStoreName = activeStore?.name ?? activeStoreId ?? "Not assigned"
 
@@ -414,10 +465,15 @@ export function SalesForm({
     })
   }
 
-  function handleProductChange(index: number, productId: string) {
+  function handleVariantChange(index: number, variantKey: string) {
+    const [productId, price] = variantKey.split("|")
     setForm((prev) => {
       const items = [...prev.items]
-      items[index] = { ...items[index], item_id: productId }
+      items[index] = {
+        ...items[index],
+        item_id: productId || "",
+        storePrice: price || "",
+      }
       return { ...prev, items }
     })
   }
@@ -517,11 +573,12 @@ export function SalesForm({
     // Validate stock availability (skip for admins when editing — backend handles it)
     if (!isAdmin || !editing) {
       for (const item of validItems) {
-        const available = storeItemsMap.get(item.item_id) || 0
+        const key = `${item.item_id}|${item.storePrice}`
+        const variant = variantByKey.get(key)
+        const available = variant?.quantity ?? 0
         const requested = Number(item.quantity)
         if (requested > available) {
-          const productName =
-            products?.find((p) => p._id === item.item_id)?.name || item.item_id
+          const productName = variant?.name || item.item_id
           setError(
             `${productName}: requested ${requested} but only ${available} available in store.`
           )
@@ -679,16 +736,16 @@ export function SalesForm({
               <div className="grid gap-0.5">
                 <Label className="text-[10px] leading-none">
                   Qty
-                  {item.item_id && (
+                  {item.item_id && item.storePrice && (
                     <span className="text-muted-foreground ml-0.5">
-                      /{storeItemsMap.get(item.item_id) ?? 0}
+                      /{variantByKey.get(`${item.item_id}|${item.storePrice}`)?.quantity ?? 0}
                     </span>
                   )}
                 </Label>
                 <Input
                   type="number"
                   min="1"
-                  max={storeItemsMap.get(item.item_id) ?? undefined}
+                  max={variantByKey.get(`${item.item_id}|${item.storePrice}`)?.quantity ?? undefined}
                   value={item.quantity}
                   onChange={(e) =>
                     setItemField(index, "quantity", e.target.value)
@@ -790,11 +847,10 @@ export function SalesForm({
                   <div className="flex items-center gap-2">
                     <div className="flex-1 min-w-0">
                       <Label className="text-xs">Product</Label>
-                      <ProductSearchSelect
-                        products={availableProducts}
-                        storeItemsMap={storeItemsMap}
-                        value={item.item_id}
-                        onChange={(v) => handleProductChange(index, v)}
+                      <VariantSearchSelect
+                        variants={storeVariants}
+                        value={`${item.item_id}|${item.storePrice}`}
+                        onChange={(v) => handleVariantChange(index, v)}
                       />
                     </div>
                     <Button
@@ -826,11 +882,10 @@ export function SalesForm({
                   </div>
                   <div className="grid gap-0.5 min-w-0">
                     <Label className="text-[10px] leading-none">Product</Label>
-                    <ProductSearchSelect
-                      products={availableProducts}
-                      storeItemsMap={storeItemsMap}
-                      value={item.item_id}
-                      onChange={(v) => handleProductChange(index, v)}
+                    <VariantSearchSelect
+                      variants={storeVariants}
+                      value={`${item.item_id}|${item.storePrice}`}
+                      onChange={(v) => handleVariantChange(index, v)}
                     />
                   </div>
                   {qtyInput}
@@ -859,12 +914,12 @@ export function SalesForm({
             variant="outline"
             size="sm"
             onClick={addItem}
-            disabled={availableProducts.length === 0}
+            disabled={storeVariants.length === 0}
           >
             + Add Item
           </Button>
 
-          {availableProducts.length === 0 && !editing && (
+          {storeVariants.length === 0 && !editing && (
             <p className="text-muted-foreground text-xs">
               No products available in store inventory.
             </p>

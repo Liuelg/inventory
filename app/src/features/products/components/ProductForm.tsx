@@ -20,6 +20,7 @@ import { useCategories } from "@/features/categories/hooks"
 import { useSubCategoriesByCategory } from "@/features/sub-categories/hooks"
 import { useCreateProduct, useUpdateProduct } from "../hooks"
 import type { Product, ProductPayload } from "../types"
+import { Trash2, Plus } from "lucide-react"
 
 interface ProductFormProps {
   open: boolean
@@ -28,24 +29,29 @@ interface ProductFormProps {
   onSuccess?: () => void
 }
 
+type PriceRow = {
+  amount: string
+  currency: string
+}
+
 type ProductFormState = {
   name: string
   description: string
   category: string
   subCategory: string
-  amount: string
-  currency: string
+  prices: PriceRow[]
   previousPrice: string
   tags: string
 }
+
+const emptyPriceRow: PriceRow = { amount: "", currency: "USD" }
 
 const initialState: ProductFormState = {
   name: "",
   description: "",
   category: "",
   subCategory: "",
-  amount: "",
-  currency: "USD",
+  prices: [{ ...emptyPriceRow }],
   previousPrice: "",
   tags: "",
 }
@@ -61,14 +67,33 @@ function getInitialState(editing?: Product | null): ProductFormState {
     return initialState
   }
 
+  const prices: PriceRow[] = []
+  if (editing.price?.amount != null) {
+    prices.push({
+      amount: String(editing.price.amount),
+      currency: editing.price.currency ?? "USD",
+    })
+  }
+  if (editing.prices) {
+    for (const p of editing.prices) {
+      if (p.amount != null) {
+        prices.push({
+          amount: String(p.amount),
+          currency: p.currency ?? "USD",
+        })
+      }
+    }
+  }
+  if (prices.length === 0) {
+    prices.push({ ...emptyPriceRow })
+  }
+
   return {
     name: editing.name ?? "",
     description: editing.description ?? "",
     category: getId(editing.category),
     subCategory: getId(editing.subCategory),
-    amount:
-      editing.price?.amount !== undefined ? String(editing.price.amount) : "",
-    currency: editing.price?.currency ?? "USD",
+    prices,
     previousPrice:
       editing.previous_prices !== undefined
         ? String(editing.previous_prices)
@@ -78,10 +103,6 @@ function getInitialState(editing?: Product | null): ProductFormState {
 }
 
 function toPayload(form: ProductFormState, isAdmin: boolean): ProductPayload {
-  const amount = form.amount.trim() ? Number(form.amount) : undefined
-  const previousPrice = form.previousPrice.trim()
-    ? Number(form.previousPrice)
-    : undefined
   const tags = form.tags
     .split(",")
     .map((value) => value.trim())
@@ -96,12 +117,26 @@ function toPayload(form: ProductFormState, isAdmin: boolean): ProductPayload {
   }
 
   if (isAdmin) {
-    if (amount !== undefined || form.currency.trim()) {
+    const validPrices = form.prices
+      .map((p) => ({
+        amount: p.amount.trim() ? Number(p.amount) : undefined,
+        currency: p.currency.trim() || "USD",
+      }))
+      .filter((p) => p.amount !== undefined)
+
+    if (validPrices.length > 0) {
       payload.price = {
-        amount,
-        currency: form.currency.trim() || "USD",
+        amount: validPrices[0].amount,
+        currency: validPrices[0].currency,
+      }
+      if (validPrices.length > 1) {
+        payload.prices = validPrices.slice(1)
       }
     }
+
+    const previousPrice = form.previousPrice.trim()
+      ? Number(form.previousPrice)
+      : undefined
     if (previousPrice !== undefined) {
       payload.previous_prices = previousPrice
     }
@@ -144,6 +179,29 @@ export function ProductForm({
         next.subCategory = ""
       }
       return next
+    })
+  }
+
+  function setPriceRow(index: number, key: keyof PriceRow, value: string) {
+    setForm((prev) => {
+      const prices = [...prev.prices]
+      prices[index] = { ...prices[index], [key]: value }
+      return { ...prev, prices }
+    })
+  }
+
+  function addPriceRow() {
+    setForm((prev) => ({
+      ...prev,
+      prices: [...prev.prices, { ...emptyPriceRow }],
+    }))
+  }
+
+  function removePriceRow(index: number) {
+    setForm((prev) => {
+      if (prev.prices.length <= 1) return prev
+      const prices = prev.prices.filter((_, i) => i !== index)
+      return { ...prev, prices }
     })
   }
 
@@ -241,32 +299,57 @@ export function ProductForm({
           </div>
 
           {isAdmin && (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <Label htmlFor="product-amount">Price Amount</Label>
-                <Input
-                  id="product-amount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={form.amount}
-                  onChange={(e) => setField("amount", e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="product-currency">Currency</Label>
-
-                <select
-                  id="product-currency"
-                  value={form.currency}
-                  onChange={(e) => setField("currency", e.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            <div className="grid gap-3">
+              <Label className="font-semibold">Prices</Label>
+              <div className="flex flex-col gap-2">
+                {form.prices.map((row, index) => (
+                  <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-end">
+                    <div className="grid gap-1">
+                      <Label className="text-xs text-muted-foreground">Amount</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={row.amount}
+                        onChange={(e) => setPriceRow(index, "amount", e.target.value)}
+                      />
+                    </div>
+                    <div className="grid gap-1">
+                      <Label className="text-xs text-muted-foreground">Currency</Label>
+                      <select
+                        value={row.currency}
+                        onChange={(e) => setPriceRow(index, "currency", e.target.value)}
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="USD">USD</option>
+                        <option value="ETB">ETB</option>
+                        <option value="EUR">EUR</option>
+                        <option value="GBP">GBP</option>
+                      </select>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removePriceRow(index)}
+                      disabled={form.prices.length <= 1}
+                      className="h-9 w-9 text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addPriceRow}
+                  className="w-fit"
                 >
-                  <option value="">Select currency</option>
-                  <option value="USD">USD</option>
-                  <option value="ETB">ETB</option>
-                </select>
+                  <Plus className="mr-1 h-4 w-4" />
+                  Add Price
+                </Button>
               </div>
             </div>
           )}

@@ -12,6 +12,8 @@ export type StockItem = {
         name?: string
         category?: string | { _id: string; name?: string }
         image?: string
+        price?: { amount?: number; currency?: string }
+        prices?: Array<{ amount?: number; currency?: string }>
       }
   quantity: number
   remaining: number

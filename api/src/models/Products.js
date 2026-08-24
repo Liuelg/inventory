@@ -9,6 +9,10 @@ const productSchema = new Schema({
     amount: Number,
     currency: { type: String, default: 'USD' }
   },
+  prices: [{
+    amount: Number,
+    currency: { type: String, default: 'USD' }
+  }],
   previous_prices: Number,
   tags: [String],
   image: String,

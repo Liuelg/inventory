@@ -16,6 +16,7 @@ const SaleItemSchema = Schema({
   birr: { type: Number, default: 0, min: 0 },
   visa: { type: Number, default: 0, min: 0 },
   gbp: { type: Number, default: 0, min: 0 },
+  price: { type: Number, min: 0 },
   image: { type: String },
   pedsItemIdentifierId: { type: String },
 })

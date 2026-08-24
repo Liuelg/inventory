@@ -4,6 +4,7 @@ import { useAuthSession } from "@/hooks/use-auth-session.ts"
 import { useStore } from "@/features/stores/hooks"
 import { useCategories } from "@/features/categories/hooks"
 import { ProductImageCell } from "@/components/ProductImageCell"
+import { formatInventoryItemLabel, getPriceCurrency } from "@/features/products/utils"
 
 type PopulatedStoreItem = {
   item_id: {
@@ -11,6 +12,7 @@ type PopulatedStoreItem = {
     name: string
     category?: string | { name: string } | null
     price?: { amount: number; currency: string }
+    prices?: Array<{ amount?: number; currency?: string }>
     image?: string | null
   }
   quantity: number
@@ -51,7 +53,13 @@ export function MyStorePage() {
             image={item.item_id?.image || undefined}
             altName={item.item_id?.name || "Product image"}
           />
-          <span className="font-medium">{item.item_id?.name || "Unknown"}</span>
+          <span className="font-medium">
+            {formatInventoryItemLabel(
+              item.item_id?.name || "Unknown",
+              item.price,
+              item.item_id ? getPriceCurrency(item.item_id, item.price) : undefined
+            )}
+          </span>
         </div>
       ),
     },

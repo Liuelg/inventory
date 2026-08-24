@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog.tsx"
 import { useDeleteStockout, useStockouts } from "../hooks"
 import type { Stockout, StockoutItemPopulated } from "../types"
+import { formatVariantLabel } from "@/features/products/utils"
 import { Pencil, Trash2, Eye } from "lucide-react"
 
 function getStoreName(store: Stockout["store"]) {
@@ -51,8 +52,10 @@ function StatusBadge({ status }: { status: Stockout["status"] }) {
 }
 
 function ItemRow({ item }: { item: StockoutItemPopulated }) {
-  const name =
-    typeof item.item_id === "string" ? item.item_id : item.item_id.name
+  const product = typeof item.item_id === "string" ? null : item.item_id
+  const name: string = product
+    ? formatVariantLabel(product, item.price)
+    : String(item.item_id)
   return (
     <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
       <span className="font-medium">{name}</span>
