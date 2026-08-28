@@ -93,6 +93,18 @@ router.patch("/:id", async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
+    // Cascade price update to store items so My Store reflects current product prices
+    if (
+      body.price?.amount !== undefined &&
+      body.price.amount !== oldProduct.price?.amount
+    ) {
+      await Store.updateMany(
+        { "items.item_id": req.params.id },
+        { $set: { "items.$[elem].price": body.price.amount } },
+        { arrayFilters: [{ "elem.item_id": req.params.id }] }
+      );
+    }
+
     if (body.image === "" && oldProduct.image) {
       deleteImage(oldProduct.image);
     }

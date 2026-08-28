@@ -72,8 +72,13 @@ router.post('/', async (req, res, next) => {
 // List all stockouts
 router.get('/', async (req, res, next) => {
   try {
+    const isAdmin = req.user?.role === 'admin'
     const filter = {}
-    if (req.query.store) filter.store = req.query.store
+    if (!isAdmin && req.user?.store) {
+      filter.store = req.user.store
+    } else if (req.query.store) {
+      filter.store = req.query.store
+    }
     if (req.query.status) filter.status = req.query.status
 
     const stockouts = await Stockout.find(filter)
@@ -91,7 +96,12 @@ router.get('/', async (req, res, next) => {
 // Get single stockout
 router.get('/:id', async (req, res, next) => {
   try {
-    const stockout = await Stockout.findById(req.params.id)
+    const isAdmin = req.user?.role === 'admin'
+    const query = isAdmin
+      ? { _id: req.params.id }
+      : { _id: req.params.id, store: req.user?.store }
+
+    const stockout = await Stockout.findOne(query)
       .populate('items.item_id', 'name category image price prices')
       .populate('store', 'name address')
       .populate('created_by', 'name email')
@@ -111,7 +121,12 @@ router.get('/:id', async (req, res, next) => {
 router.patch('/:id/accept', async (req, res, next) => {
   try {
     const { accepted_by } = req.body
-    const stockout = await Stockout.findById(req.params.id)
+    const isAdmin = req.user?.role === 'admin'
+    const query = isAdmin
+      ? { _id: req.params.id }
+      : { _id: req.params.id, store: req.user?.store }
+
+    const stockout = await Stockout.findOne(query)
 
     if (!stockout) {
       return res.status(404).json({ success: false, message: 'Stockout not found' })
@@ -175,7 +190,12 @@ router.patch('/:id/accept', async (req, res, next) => {
 // Reject a stockout
 router.patch('/:id/reject', async (req, res, next) => {
   try {
-    const stockout = await Stockout.findById(req.params.id)
+    const isAdmin = req.user?.role === 'admin'
+    const query = isAdmin
+      ? { _id: req.params.id }
+      : { _id: req.params.id, store: req.user?.store }
+
+    const stockout = await Stockout.findOne(query)
 
     if (!stockout) {
       return res.status(404).json({ success: false, message: 'Stockout not found' })
@@ -205,7 +225,12 @@ router.patch('/:id/reject', async (req, res, next) => {
 // Update a pending stockout
 router.patch('/:id', async (req, res, next) => {
   try {
-    const stockout = await Stockout.findById(req.params.id)
+    const isAdmin = req.user?.role === 'admin'
+    const query = isAdmin
+      ? { _id: req.params.id }
+      : { _id: req.params.id, store: req.user?.store }
+
+    const stockout = await Stockout.findOne(query)
 
     if (!stockout) {
       return res.status(404).json({ success: false, message: 'Stockout not found' })
@@ -253,13 +278,16 @@ router.patch('/:id', async (req, res, next) => {
 // Delete a stockout
 router.delete('/:id', async (req, res, next) => {
   try {
-    const stockout = await Stockout.findById(req.params.id)
+    const isAdmin = req.user?.role === 'admin'
+    const query = isAdmin
+      ? { _id: req.params.id }
+      : { _id: req.params.id, store: req.user?.store }
 
-    if (!stockout) {
+    const deletedStockout = await Stockout.findOneAndDelete(query)
+
+    if (!deletedStockout) {
       return res.status(404).json({ success: false, message: 'Stockout not found' })
     }
-
-    await Stockout.findByIdAndDelete(req.params.id)
 
     res.json({ success: true, message: 'Stockout deleted successfully' })
   } catch (err) {
