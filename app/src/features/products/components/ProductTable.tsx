@@ -22,27 +22,6 @@ import { useDeleteProduct } from "../hooks"
 import { getProductImageUrl } from "../utils"
 import type { Product } from "../types"
 
-function formatPrice(product: Product) {
-  const prices: string[] = []
-
-  if (product.price?.amount != null && !Number.isNaN(product.price.amount)) {
-    const currency = product.price.currency || "USD"
-    prices.push(`${product.price.amount.toFixed(2)} ${currency}`)
-  }
-
-  if (product.prices && product.prices.length > 0) {
-    for (const p of product.prices) {
-      if (p.amount != null && !Number.isNaN(p.amount)) {
-        const currency = p.currency || "USD"
-        prices.push(`${p.amount.toFixed(2)} ${currency}`)
-      }
-    }
-  }
-
-  if (prices.length === 0) return "-"
-  return prices.join(", ")
-}
-
 interface ProductTableProps {
   products: Product[]
   isLoading?: boolean
@@ -98,11 +77,6 @@ export function ProductTable({ products, isLoading, onEdit }: ProductTableProps)
         typeof product.subCategory === "string"
           ? product.subCategory || "-"
           : product.subCategory?.name || "-",
-    },
-    {
-      header: "Price",
-      cell: (product) => formatPrice(product),
-      className: "whitespace-nowrap",
     },
     {
       header: "Actions",
