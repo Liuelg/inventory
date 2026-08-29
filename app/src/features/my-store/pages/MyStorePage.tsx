@@ -126,7 +126,7 @@ export function MyStorePage() {
       <DataTable
         data={items}
         columns={columns}
-        keyExtractor={(item) => item.item_id._id}
+        keyExtractor={(item) => item._id || item.item_id._id}
         loading={isLoading}
         emptyMessage="No products in stock."
       />

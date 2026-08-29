@@ -3,6 +3,13 @@ import type { ReportData, ReportType } from "./types"
 import { getCurrencySymbol } from "@/features/sales/components/CurrencySelector"
 import type { CurrencyCode } from "@/features/currency/types"
 
+function formatProductLabel(name: string, price?: number): string {
+  if (price != null && !Number.isNaN(price)) {
+    return `${name} (${price.toFixed(2)})`
+  }
+  return name
+}
+
 function autoFitColumns(ws: XLSX.WorkSheet) {
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1 }) as unknown[][]
   if (!rows.length) return
@@ -63,7 +70,7 @@ export function generateReportExcel(report: ReportData) {
           Date: t.date ? new Date(t.date).toLocaleDateString() : "—",
           Store: t.storeName,
           "Sales Person": t.salesName || "—",
-          Product: item.product.name,
+          Product: formatProductLabel(item.product.name, item.product.price),
           Quantity: item.quantity,
           Value: item.value,
           EUR: item.eur ?? 0,
@@ -110,7 +117,7 @@ export function generateReportExcel(report: ReportData) {
     // ---------------------------------------------------------
     // SHEET 1c: By Sales Person — what each person sold
     // ---------------------------------------------------------
-    const salesPersonMap = new Map<string, Map<string, { quantity: number; value: number }>>()
+    const salesPersonMap = new Map<string, Map<string, { quantity: number; value: number; price?: number }>>()
     for (const t of report.transactions) {
       const person = t.salesName || "—"
       if (!salesPersonMap.has(person)) {
@@ -118,10 +125,11 @@ export function generateReportExcel(report: ReportData) {
       }
       const productMap = salesPersonMap.get(person)!
       for (const item of t.items) {
-        const existing = productMap.get(item.product.name) || { quantity: 0, value: 0 }
+        const key = item.product.name
+        const existing = productMap.get(key) || { quantity: 0, value: 0, price: item.product.price }
         existing.quantity += item.quantity || 0
         existing.value += item.value || 0
-        productMap.set(item.product.name, existing)
+        productMap.set(key, existing)
       }
     }
 
@@ -130,7 +138,7 @@ export function generateReportExcel(report: ReportData) {
       for (const [productName, data] of products) {
         salesPersonRows.push({
           "Sales Person": person,
-          Product: productName,
+          Product: formatProductLabel(productName, data.price),
           Quantity: data.quantity,
           Value: data.value,
         })
@@ -159,7 +167,7 @@ export function generateReportExcel(report: ReportData) {
         const row: Record<string, string | number> = {
           Date: r.date ? new Date(r.date).toLocaleDateString() : "—",
           Store: r.storeName,
-          Product: item.product.name,
+          Product: formatProductLabel(item.product.name, item.product.price),
           Quantity: item.quantity,
           "Unit Price": item.price,
           Value: item.value,
@@ -186,7 +194,7 @@ export function generateReportExcel(report: ReportData) {
   } else if (hasBreakdown) {
     // Fallback for remaining products or if no detailed records available
     const detailRows = report.breakdown.map((item) => ({
-      Product: item.product.name,
+      Product: formatProductLabel(item.product.name, item.product.price),
       Quantity: item.quantity,
       Value: item.value,
     }))
@@ -230,7 +238,7 @@ export function generateReportExcel(report: ReportData) {
   // ============================================================
   if (hasBreakdown) {
     const productData = report.breakdown.map((item) => ({
-      Product: item.product.name,
+      Product: formatProductLabel(item.product.name, item.product.price),
       Quantity: item.quantity,
       Value: item.value,
     }))

@@ -161,6 +161,7 @@ router.get("/store/:storeId", async (req, res, next) => {
         const cat = product?.category
         const catId = cat && typeof cat !== "string" ? cat._id.toString() : cat
         return {
+          storeItemId: item._id?.toString?.() || "—",
           product: {
             _id: product?._id?.toString?.() || "—",
             name: product?.name || "—",

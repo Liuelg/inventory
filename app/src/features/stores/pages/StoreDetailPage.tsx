@@ -26,7 +26,8 @@ function formatCurrency(amount: number) {
 
 type UnifiedRow = {
   key: string
-  _id: string
+  storeItemId: string
+  productId: string
   image: string | null
   name: string
   category: string
@@ -39,9 +40,10 @@ function buildUnifiedRows(
 ): UnifiedRow[] {
   return products
     .filter((p) => p.product._id)
-    .map((p, index) => ({
-      key: `${p.product._id}-${index}`,
-      _id: p.product._id,
+    .map((p) => ({
+      key: p.storeItemId,
+      storeItemId: p.storeItemId,
+      productId: p.product._id,
       image: p.product.image || null,
       name: formatInventoryItemLabel(
         p.product.name,
@@ -75,7 +77,7 @@ export function StoreDetailPage() {
 
   async function handleDelete() {
     if (!id || !deleteRow) return
-    await deleteItem.mutateAsync({ storeId: id, itemId: deleteRow._id })
+    await deleteItem.mutateAsync({ storeId: id, itemId: deleteRow.storeItemId })
     setDeleteRow(null)
   }
 

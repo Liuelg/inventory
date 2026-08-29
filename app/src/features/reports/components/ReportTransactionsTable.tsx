@@ -9,6 +9,12 @@ import {
 import type { ReportTransaction } from "../types"
 import type { CurrencyCode } from "@/features/currency/types"
 
+function formatProductLabel(name: string, price?: number): string {
+  if (price != null && !Number.isNaN(price)) {
+    return `${name} (${price.toFixed(2)})`
+  }
+  return name
+}
 
 type Props = {
   data: ReportTransaction[]
@@ -69,7 +75,7 @@ export function ReportTransactionsTable({ data }: Props) {
                 return (
                   <TableRow key={idx}>
                     <TableCell className="font-medium text-sm">
-                      {item.product.name}
+                      {formatProductLabel(item.product.name, item.product.price)}
                     </TableCell>
                     <TableCell className="text-right">
                       {item.quantity}

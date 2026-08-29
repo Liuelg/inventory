@@ -30,6 +30,7 @@ export type StoreSale = {
 }
 
 export type StoreRemainingProduct = {
+  storeItemId: string
   product: {
     _id: string
     name: string

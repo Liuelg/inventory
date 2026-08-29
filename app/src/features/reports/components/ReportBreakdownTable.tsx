@@ -9,7 +9,12 @@ import {
 import type { ReportBreakdownItem } from "../types"
 import type { CurrencyCode } from "@/features/currency/types"
 
-
+function formatProductLabel(name: string, price?: number): string {
+  if (price != null && !Number.isNaN(price)) {
+    return `${name} (${price.toFixed(2)})`
+  }
+  return name
+}
 
 type Props = {
   data: ReportBreakdownItem[]
@@ -38,7 +43,7 @@ export function ReportBreakdownTable({ data }: Props) {
         <TableBody>
           {[...data].sort((a, b) => a.product.name.localeCompare(b.product.name)).map((item) => (
             <TableRow key={item.product._id}>
-              <TableCell className="font-medium">{item.product.name}</TableCell>
+              <TableCell className="font-medium">{formatProductLabel(item.product.name, item.product.price)}</TableCell>
               <TableCell className="text-right">{item.quantity}</TableCell>
             </TableRow>
           ))}

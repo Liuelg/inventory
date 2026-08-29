@@ -128,7 +128,7 @@ router.delete('/:id/items/:itemId', authMiddleware, async (req, res) => {
     if (!store) return res.status(404).json({ message: 'Store not found' })
 
     const itemId = req.params.itemId
-    store.items = store.items.filter((i) => i.item_id.toString() !== itemId)
+    store.items = store.items.filter((i) => i._id.toString() !== itemId)
     await store.save()
 
     res.json({ success: true, message: 'Item removed from store' })

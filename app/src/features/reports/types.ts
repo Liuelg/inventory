@@ -9,7 +9,7 @@ export type ReportSummary = {
 }
 
 export type ReportBreakdownItem = {
-  product: { _id: string; name: string }
+  product: { _id: string; name: string; price?: number }
   quantity: number
   value: number
 }
@@ -22,7 +22,7 @@ export type ReportByStoreItem = {
 }
 
 export type ReportTransactionItem = {
-  product: { _id: string; name: string }
+  product: { _id: string; name: string; price?: number }
   quantity: number
   value: number
   eur: number
@@ -44,7 +44,7 @@ export type ReportTransaction = {
 }
 
 export type ReportRecordItem = {
-  product: { _id: string; name: string }
+  product: { _id: string; name: string; price?: number }
   quantity: number
   price: number
   value: number

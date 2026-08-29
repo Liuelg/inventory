@@ -116,7 +116,7 @@ router.get("/", async (req, res, next) => {
 
           if (productId) {
             const existing = productMap.get(productId) || {
-              product: { _id: productId, name: productName },
+              product: { _id: productId, name: productName, price: item.price || 0 },
               quantity: 0,
               value: 0,
             }
@@ -300,7 +300,7 @@ router.get("/", async (req, res, next) => {
 
         if (isSales) {
           transactionItems.push({
-            product: { _id: productId || "—", name: productName },
+            product: { _id: productId || "—", name: productName, price: item.price || 0 },
             quantity: qty,
             value: itemValueUSD,
             eur: item.eur || 0,
@@ -347,7 +347,7 @@ router.get("/", async (req, res, next) => {
           ? computeItemValueUSD(item, recordRates)
           : qty * (item.price || 0)
         return {
-          product: { _id: productId, name: productName },
+          product: { _id: productId, name: productName, price: item.price || 0 },
           quantity: qty,
           price: item.price || 0,
           value: itemValueUSD,
