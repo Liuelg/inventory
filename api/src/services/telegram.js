@@ -22,11 +22,24 @@ function getEthiopianDateString() {
 // Server-side equivalent of getCurrencySymbol
 function getServerCurrencySymbol(currency) {
   switch (String(currency || 'usd').toLowerCase()) {
-    case 'birr': return 'ETB';
+    case 'birr': return 'Br';
     case 'eur': return '€';
+    case 'gbp': return '£';
+    case 'visa': return 'Visa $';
     case 'usd': return '$';
     default: return '$';
   }
+}
+
+function convertUSDToCurrency(amountUSD, targetCurrency, rates) {
+  const safeRates = {
+    eur: rates?.eur > 0 ? rates.eur : 1,
+    usd: rates?.usd > 0 ? rates.usd : 1,
+    birr: rates?.birr > 0 ? rates.birr : 1,
+    visa: rates?.visa > 0 ? rates.visa : 1,
+    gbp: rates?.gbp > 0 ? rates.gbp : 1,
+  };
+  return amountUSD * (safeRates[targetCurrency] || 1);
 }
 
 function escapeHtml(text) {
@@ -177,7 +190,7 @@ export async function sendDailyReportForDate(reportDateStr) {
     // Fetch all sales for the date with store populated
     const todaysSales = await Sale.find({
       date_time: { $gte: startRange, $lt: endRange }
-    }).populate('items.item_id', 'name').populate('store', 'name');
+    }).populate('items.item_id', 'name').populate('store', 'name defaultCurrency');
 
     if (todaysSales.length === 0) {
       console.log(`[cron] No sales found for ${dateStr}. Skipping report.`);
@@ -189,23 +202,42 @@ export async function sendDailyReportForDate(reportDateStr) {
     for (const sale of todaysSales) {
       const storeId = sale.store?._id?.toString?.() || sale.store?.toString?.();
       const storeName = sale.store?.name || 'Unknown Store';
+      const storeCurrency = sale.store?.defaultCurrency || 'usd';
       if (!storeId) continue;
       if (!salesByStore.has(storeId)) {
-        salesByStore.set(storeId, { storeId, storeName, sales: [] });
+        salesByStore.set(storeId, { storeId, storeName, storeCurrency, sales: [] });
       }
       salesByStore.get(storeId).sales.push(sale);
     }
 
-    const sym = getServerCurrencySymbol('usd');
     const storeSummaries = [];
 
     // Process each store's report
-    for (const [storeId, { storeName, sales }] of salesByStore) {
+    for (const [storeId, { storeName, storeCurrency, sales }] of salesByStore) {
       const report = processStoreSales(sales, storeId);
-      storeSummaries.push({ storeName, ...report });
+      const sym = getServerCurrencySymbol(storeCurrency);
 
-      const summaryMsg = buildStoreSummaryMessage(dateStr, storeName, report, sym);
-      const productMsg = buildStoreProductSummary(storeName, report.breakdown, sym);
+      // Convert totals and breakdown to store's default currency
+      const convertedTotal = convertUSDToCurrency(
+        report.totalValue,
+        storeCurrency,
+        sales[0]?.rates || {}
+      );
+      const convertedBreakdown = report.breakdown.map((item) => ({
+        ...item,
+        value: convertUSDToCurrency(item.value, storeCurrency, sales[0]?.rates || {}),
+      }));
+
+      const convertedReport = {
+        ...report,
+        totalValue: convertedTotal,
+        breakdown: convertedBreakdown,
+      };
+
+      storeSummaries.push({ storeName, storeCurrency, ...convertedReport });
+
+      const summaryMsg = buildStoreSummaryMessage(dateStr, storeName, convertedReport, sym);
+      const productMsg = buildStoreProductSummary(storeName, convertedBreakdown, sym);
 
       for (const chatId of chatIds) {
         await bot.telegram.sendMessage(chatId, summaryMsg, { parse_mode: 'HTML' });
@@ -213,8 +245,25 @@ export async function sendDailyReportForDate(reportDateStr) {
       }
     }
 
-    // Send overall summary
-    const overallMsg = buildOverallSummaryMessage(dateStr, storeSummaries, sym);
+    // Send overall summary using each store's own currency in the breakdown
+    const overallLines = [
+      '📊 <b>OVERALL DAILY SALES REPORT (EAT)</b>',
+      `📅 Date: <b>${dateStr}</b>`,
+      '--------------------------------',
+      `🧾 <b>Total Orders (All Stores):</b> ${storeSummaries.reduce((sum, s) => sum + (s.totalRecords || 0), 0)}`,
+      `📦 <b>Total Items Sold (All Stores):</b> ${storeSummaries.reduce((sum, s) => sum + (s.totalItems || 0), 0)}`,
+      '',
+      '<b>Per-Store Breakdown:</b>',
+    ];
+
+    for (const s of storeSummaries) {
+      const sSym = getServerCurrencySymbol(s.storeCurrency);
+      overallLines.push(
+        `• ${escapeHtml(s.storeName)}: ${sSym}${(s.totalValue || 0).toFixed(2)} — ${s.totalRecords} orders — ${s.totalItems} items`
+      );
+    }
+
+    const overallMsg = overallLines.join('\n');
     for (const chatId of chatIds) {
       await bot.telegram.sendMessage(chatId, overallMsg, { parse_mode: 'HTML' });
     }
@@ -274,6 +323,14 @@ export async function sendSaleNotification(sale, store) {
     })
     .join('\n');
 
+  const storeCurrency = store?.defaultCurrency || 'usd';
+  const sym = getServerCurrencySymbol(storeCurrency);
+  const convertedTotal = convertUSDToCurrency(
+    sale.totalAmount || 0,
+    storeCurrency,
+    sale.rates || {}
+  );
+
   const message = [
     '🛒 <b>New Sale</b>',
     '',
@@ -285,7 +342,7 @@ export async function sendSaleNotification(sale, store) {
     '<b>Items:</b>',
     itemsText || '  • No items',
     '',
-    `💰 <b>Total Amount:</b> $${(sale.totalAmount || 0).toFixed(2)}`,
+    `💰 <b>Total Amount:</b> ${sym}${convertedTotal.toFixed(2)}`,
   ].join('\n');
 
   try {

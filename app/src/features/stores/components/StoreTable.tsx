@@ -62,6 +62,16 @@ export function StoreTable({ onEdit }: StoreTableProps) {
       cell: (store) => store.address || "-",
     },
     {
+      header: "Currency",
+      cell: (store) =>
+        store.defaultCurrency ? (
+          <span className="font-medium uppercase">{store.defaultCurrency}</span>
+        ) : (
+          <span className="text-muted-foreground text-xs">-</span>
+        ),
+      className: "w-[80px]",
+    },
+    {
       header: "PEDS",
       cell: (store) =>
         store.pedsEnabled ? (

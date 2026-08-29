@@ -61,6 +61,14 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
     return "Store"
   }, [isAdmin])
 
+  const handleStoreChange = (storeId: string) => {
+    setStore(storeId)
+    const selected = storesData?.find((s) => s._id === storeId)
+    if (selected?.defaultCurrency) {
+      setCurrency(selected.defaultCurrency as CurrencyCode)
+    }
+  }
+
   const handleGenerate = () => {
     const params: ReportParams = {
       type,
@@ -123,7 +131,7 @@ export function ReportFilters({ onGenerate, isLoading }: Props) {
           <Label htmlFor="report-store">{storeLabel}</Label>
           <Select
             value={isAdmin ? store : userStore || "all"}
-            onValueChange={setStore}
+            onValueChange={handleStoreChange}
             disabled={!isAdmin}
           >
             <SelectTrigger id="report-store">

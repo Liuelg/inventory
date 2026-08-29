@@ -35,6 +35,7 @@ const storeSchema = Schema({
   pedsMachineId: { type: String, default: '' },
   pedsUsername: { type: String, default: '' },
   pedsPassword: { type: String, default: '' },
+  defaultCurrency: { type: String, enum: ['eur', 'usd', 'birr', 'visa', 'gbp'], default: 'usd' },
 });
 
 export default model('Store', storeSchema);

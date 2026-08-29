@@ -115,14 +115,15 @@ router.get("/", async (req, res, next) => {
           const productName = item.item_id?.name || "Unknown Product"
 
           if (productId) {
-            const existing = productMap.get(productId) || {
-              product: { _id: productId, name: productName, price: item.price || 0 },
+            const key = `${productId}|${price}`
+            const existing = productMap.get(key) || {
+              product: { _id: productId, name: productName, price },
               quantity: 0,
               value: 0,
             }
             existing.quantity += qty
             existing.value += itemValue
-            productMap.set(productId, existing)
+            productMap.set(key, existing)
           }
         }
       } else {
@@ -131,7 +132,7 @@ router.get("/", async (req, res, next) => {
         const stocks = await Stock.find().populate("items.item_id", "name category")
         const acceptedStockouts = await Stockout.find({ status: "accepted" }).populate("items.item_id", "name category")
 
-        // Map: productId -> { received, sentOut, totalValue, productName }
+        // Map: productId|price -> { received, sentOut, productName }
         const calcMap = new Map()
 
         for (const stock of stocks) {
@@ -139,17 +140,15 @@ router.get("/", async (req, res, next) => {
             const productId = item.item_id?._id?.toString?.() || item.item_id?.toString?.()
             if (!productId) continue
 
-            const existing = calcMap.get(productId) || {
+            const price = item.price || 0
+            const key = `${productId}|${price}`
+            const existing = calcMap.get(key) || {
               productName: item.item_id?.name || "Unknown Product",
               received: 0,
               sentOut: 0,
-              valueSum: 0,
-              valueCount: 0,
             }
             existing.received += item.quantity || 0
-            existing.valueSum += (item.price || 0) * (item.quantity || 0)
-            existing.valueCount += item.quantity || 0
-            calcMap.set(productId, existing)
+            calcMap.set(key, existing)
           }
         }
 
@@ -158,25 +157,28 @@ router.get("/", async (req, res, next) => {
             const productId = item.item_id?._id?.toString?.() || item.item_id?.toString?.()
             if (!productId) continue
 
-            const existing = calcMap.get(productId)
+            const price = item.price || 0
+            const key = `${productId}|${price}`
+            const existing = calcMap.get(key)
             if (existing) {
               existing.sentOut += item.quantity || 0
             }
           }
         }
 
-        for (const [productId, data] of calcMap) {
+        for (const [key, data] of calcMap) {
           const remaining = data.received - data.sentOut
           if (remaining <= 0) continue
 
-          const avgPrice = data.valueCount > 0 ? data.valueSum / data.valueCount : 0
-          const itemValue = remaining * avgPrice
+          const [productId, priceStr] = key.split("|")
+          const price = Number(priceStr) || 0
+          const itemValue = remaining * price
 
           totalItems += remaining
           totalValue += itemValue
 
-          productMap.set(productId, {
-            product: { _id: productId, name: data.productName },
+          productMap.set(key, {
+            product: { _id: productId, name: data.productName, price },
             quantity: remaining,
             value: itemValue,
           })

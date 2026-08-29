@@ -9,8 +9,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useCreateStore, useUpdateStore, useTestPedsConnection } from "../hooks"
 import type { Store, StorePayload } from "../types"
+import type { CurrencyCode } from "@/features/currency/types"
 import { Loader2, CheckCircle2, XCircle } from "lucide-react"
 
 interface StoreFormProps {
@@ -19,6 +27,14 @@ interface StoreFormProps {
   editing?: Store | null
   onSuccess?: () => void
 }
+
+const CURRENCY_OPTIONS: { value: CurrencyCode; label: string }[] = [
+  { value: "usd", label: "USD ($)" },
+  { value: "birr", label: "Birr (Br)" },
+  { value: "eur", label: "EUR (€)" },
+  { value: "visa", label: "Visa ($)" },
+  { value: "gbp", label: "GBP (£)" },
+]
 
 type StoreFormState = {
   name: string
@@ -30,6 +46,7 @@ type StoreFormState = {
   pedsMachineId: string
   pedsUsername: string
   pedsPassword: string
+  defaultCurrency: CurrencyCode
 }
 
 const initialState: StoreFormState = {
@@ -42,6 +59,7 @@ const initialState: StoreFormState = {
   pedsMachineId: "",
   pedsUsername: "",
   pedsPassword: "",
+  defaultCurrency: "usd",
 }
 
 function getManagerName(store: Store): string {
@@ -70,6 +88,7 @@ function getInitialState(editing?: Store | null): StoreFormState {
     pedsMachineId: editing.pedsMachineId ?? "",
     pedsUsername: editing.pedsUsername ?? "",
     pedsPassword: editing.pedsPassword ?? "",
+    defaultCurrency: (editing.defaultCurrency as CurrencyCode) || "usd",
   }
 }
 
@@ -84,6 +103,7 @@ function toPayload(form: StoreFormState): StorePayload {
     pedsMachineId: form.pedsMachineId.trim() || undefined,
     pedsUsername: form.pedsUsername.trim() || undefined,
     pedsPassword: form.pedsPassword || undefined,
+    defaultCurrency: form.defaultCurrency,
   }
 }
 
@@ -202,6 +222,27 @@ export function StoreForm({
               value={form.address}
               onChange={(e) => setField("address", e.target.value)}
             />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="store-currency">Default Currency</Label>
+            <Select
+              value={form.defaultCurrency}
+              onValueChange={(v) =>
+                setField("defaultCurrency", v as CurrencyCode)
+              }
+            >
+              <SelectTrigger id="store-currency">
+                <SelectValue placeholder="Select currency" />
+              </SelectTrigger>
+              <SelectContent>
+                {CURRENCY_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {editing ? (

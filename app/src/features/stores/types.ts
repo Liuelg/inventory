@@ -36,6 +36,7 @@ export type Store = {
   pedsMachineId?: string
   pedsUsername?: string
   pedsPassword?: string
+  defaultCurrency?: string
 }
 
 export type StorePayload = {
@@ -49,4 +50,5 @@ export type StorePayload = {
   pedsMachineId?: string
   pedsUsername?: string
   pedsPassword?: string
+  defaultCurrency?: string
 }
