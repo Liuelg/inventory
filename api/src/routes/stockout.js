@@ -122,11 +122,11 @@ router.patch('/:id/accept', async (req, res, next) => {
   try {
     const { accepted_by } = req.body
     const isAdmin = req.user?.role === 'admin'
-    const query = isAdmin
-      ? { _id: req.params.id }
-      : { _id: req.params.id, store: req.user?.store }
+    if (isAdmin) {
+      return res.status(403).json({ success: false, message: 'Admins cannot approve stock ins' })
+    }
 
-    const stockout = await Stockout.findOne(query)
+    const stockout = await Stockout.findOne({ _id: req.params.id, store: req.user?.store })
 
     if (!stockout) {
       return res.status(404).json({ success: false, message: 'Stockout not found' })
@@ -191,11 +191,11 @@ router.patch('/:id/accept', async (req, res, next) => {
 router.patch('/:id/reject', async (req, res, next) => {
   try {
     const isAdmin = req.user?.role === 'admin'
-    const query = isAdmin
-      ? { _id: req.params.id }
-      : { _id: req.params.id, store: req.user?.store }
+    if (isAdmin) {
+      return res.status(403).json({ success: false, message: 'Admins cannot reject stock ins' })
+    }
 
-    const stockout = await Stockout.findOne(query)
+    const stockout = await Stockout.findOne({ _id: req.params.id, store: req.user?.store })
 
     if (!stockout) {
       return res.status(404).json({ success: false, message: 'Stockout not found' })

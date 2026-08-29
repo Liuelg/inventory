@@ -82,6 +82,7 @@ function ItemRow({ item }: { item: StockoutItemPopulated }) {
 export function GoodInTable() {
   const { data: stockouts, isLoading } = useStockouts()
   const { data: session } = useAuthSession()
+  const isAdmin = session?.role === "admin"
   const accept = useAcceptStockout()
   const reject = useRejectStockout()
   const [viewing, setViewing] = useState<Stockout | null>(null)
@@ -136,7 +137,7 @@ export function GoodInTable() {
         const isPending = s.status === "pending"
         return (
           <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-            {isPending ? (
+            {isPending && !isAdmin ? (
               <>
                 <Button
                   variant="ghost"
@@ -256,7 +257,7 @@ export function GoodInTable() {
                 ))}
               </div>
 
-              {viewing.status === "pending" ? (
+              {viewing.status === "pending" && !isAdmin ? (
                 <div className="flex justify-end gap-2 pt-2">
                   <Button
                     variant="outline"
