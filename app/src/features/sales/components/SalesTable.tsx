@@ -216,8 +216,8 @@ export function SalesTable({ sales, lineItems, isLoading, onEdit, displayCurrenc
       className: "max-w-[100px] sm:max-w-[180px] !whitespace-normal align-top break-words",
     },
     {
-      header: "Customer",
-      cell: (sale) => sale.customerName || "-",
+      header: "Remarks",
+      cell: (sale) => sale.remarks || "-",
       className: "hidden sm:table-cell",
     },
     {
@@ -329,8 +329,8 @@ export function SalesTable({ sales, lineItems, isLoading, onEdit, displayCurrenc
       className: "max-w-[100px] sm:max-w-[180px] !whitespace-normal align-top break-words",
     },
     {
-      header: "Customer",
-      cell: (row) => row.sale.customerName || "-",
+      header: "Remarks",
+      cell: (row) => row.sale.remarks || "-",
       className: "hidden sm:table-cell",
     },
     {
@@ -441,10 +441,6 @@ export function SalesTable({ sales, lineItems, isLoading, onEdit, displayCurrenc
               <DialogHeader>
                 <DialogTitle>Sale #{detailSale.invoiceNumber}</DialogTitle>
                 <DialogDescription>
-                  {detailSale.customerName
-                    ? `Customer: ${detailSale.customerName}`
-                    : "No customer name"}
-                  {" · "}
                   {detailSale.date_time
                     ? new Date(detailSale.date_time).toLocaleString()
                     : "—"}
@@ -470,6 +466,14 @@ export function SalesTable({ sales, lineItems, isLoading, onEdit, displayCurrenc
                     {getTotalItems(detailSale)}
                   </span>
                 </div>
+                {detailSale.remarks && (
+                  <div className="col-span-2">
+                    <span className="text-muted-foreground">Remarks:</span>{" "}
+                    <span className="font-medium">
+                      {detailSale.remarks}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="mt-2">

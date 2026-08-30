@@ -58,6 +58,7 @@ const saleSchema = Schema({
   pedsMachineId: { type: String },
   source: { type: String, enum: ['ims', 'peds'], default: 'ims' },
   unresolvedPedsItems: { type: [Schema.Types.Mixed], default: [] },
+  remarks: { type: String },
 }, { timestamps: true });
 
 saleSchema.index({ store: 1 })

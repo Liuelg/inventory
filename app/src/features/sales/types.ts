@@ -25,6 +25,7 @@ export type Sale = {
   processedBy: string | { _id: string; name?: string; email?: string }
   date_time: string
   invoiceNumber: string
+  remarks?: string
   createdAt?: string
   updatedAt?: string
 }
@@ -41,5 +42,6 @@ export type SalePayload = {
   customerName?: string
   date_time?: string
   store?: string
+  remarks?: string
 }
 

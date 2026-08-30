@@ -47,8 +47,8 @@ type SaleItemForm = {
 }
 
 type SaleFormState = {
-  customerName: string
   date: string
+  remarks: string
   items: SaleItemForm[]
 }
 
@@ -66,8 +66,8 @@ const emptyItem: SaleItemForm = {
 }
 
 const initialState: SaleFormState = {
-  customerName: "",
   date: "",
+  remarks: "",
   items: [{ ...emptyItem }],
 }
 
@@ -117,8 +117,8 @@ function formatDateInputValue(isoDate: string): string {
 function getInitialState(editing?: Sale | null): SaleFormState {
   if (!editing) return { ...initialState }
   return {
-    customerName: editing.customerName ?? "",
     date: editing.date_time ? formatDateInputValue(editing.date_time) : "",
+    remarks: editing.remarks ?? "",
     items: editing.items.length
       ? editing.items.map((i) => ({
           item_id: getItemId(i.item_id),
@@ -156,7 +156,7 @@ function toPayload(
   )
 
   const payload: SalePayload = {
-    customerName: form.customerName.trim() || undefined,
+    remarks: form.remarks.trim() || undefined,
     items,
     totalAmount,
   }
@@ -668,16 +668,6 @@ export function SalesForm({
             )}
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="sale-customer">Customer Name</Label>
-            <Input
-              id="sale-customer"
-              placeholder="Customer name"
-              value={form.customerName}
-              onChange={(e) => setField("customerName", e.target.value)}
-            />
-          </div>
-
           {editing && (
             <div className="grid gap-2">
               <Label htmlFor="sale-date">Sale Date</Label>
@@ -689,6 +679,16 @@ export function SalesForm({
               />
             </div>
           )}
+
+          <div className="grid gap-2">
+            <Label htmlFor="sale-remarks">Remarks</Label>
+            <Input
+              id="sale-remarks"
+              placeholder="Add any notes or remarks..."
+              value={form.remarks}
+              onChange={(e) => setField("remarks", e.target.value)}
+            />
+          </div>
 
           <Label>Items</Label>
 
