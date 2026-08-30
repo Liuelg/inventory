@@ -64,8 +64,9 @@ function buildStoreProductSummary(storeName, breakdown, sym) {
   ];
 
   for (const item of breakdown) {
+    const unitPrice = item.quantity > 0 ? (item.value || 0) / item.quantity : 0;
     lines.push(
-      `• ${escapeHtml(item.product?.name || 'Unknown Product')}: ${item.quantity} pcs — ${sym}${(item.value || 0).toFixed(2)}`
+      `• ${escapeHtml(item.product?.name || 'Unknown Product')}(${sym}${unitPrice.toFixed(2)}): ${item.quantity} pcs — ${sym}${(item.value || 0).toFixed(2)}`
     );
   }
 
@@ -316,15 +317,32 @@ export async function sendSaleNotification(sale, store) {
       })
     : new Date().toLocaleString('en-US', { timeZone: 'Africa/Addis_Ababa' });
 
+  const storeCurrency = store?.defaultCurrency || 'usd';
+  const sym = getServerCurrencySymbol(storeCurrency);
+
+  const safeRates = {
+    eur: sale.rates?.eur > 0 ? sale.rates.eur : 1,
+    usd: sale.rates?.usd > 0 ? sale.rates.usd : 1,
+    birr: sale.rates?.birr > 0 ? sale.rates.birr : 1,
+    visa: sale.rates?.visa > 0 ? sale.rates.visa : 1,
+    gbp: sale.rates?.gbp > 0 ? sale.rates.gbp : 1,
+  };
+
   const itemsText = (sale.items || [])
     .map((item) => {
       const name = item.item_id?.name || 'Unknown Product';
-      return `  • ${escapeHtml(name)} × ${item.quantity}`;
+      const itemValueUSD =
+        (item.eur || 0) / safeRates.eur +
+        (item.usd || 0) / safeRates.usd +
+        (item.birr || 0) / safeRates.birr +
+        (item.visa || 0) / safeRates.visa +
+        (item.gbp || 0) / safeRates.gbp;
+      const itemTotal = convertUSDToCurrency(itemValueUSD, storeCurrency, sale.rates || {});
+      const unitPrice = item.quantity > 0 ? itemTotal / item.quantity : 0;
+      return `  • ${escapeHtml(name)}(${sym}${unitPrice.toFixed(2)}) × ${item.quantity} — ${sym}${itemTotal.toFixed(2)}`;
     })
     .join('\n');
 
-  const storeCurrency = store?.defaultCurrency || 'usd';
-  const sym = getServerCurrencySymbol(storeCurrency);
   const convertedTotal = convertUSDToCurrency(
     sale.totalAmount || 0,
     storeCurrency,
