@@ -16,6 +16,16 @@ function getProductName(item: SaleItem): string {
   return "Unknown Product"
 }
 
+function getItemProductId(item: SaleItem): string | null {
+  if (typeof item.item_id === "object" && item.item_id !== null) {
+    return item.item_id._id || null
+  }
+  if (typeof item.item_id === "string") {
+    return item.item_id || null
+  }
+  return null
+}
+
 function convertCurrency(
   amount: number,
   from: CurrencyCode,
@@ -92,7 +102,8 @@ function autoFitColumns(ws: XLSX.WorkSheet) {
 export function exportSalesToExcel(
   sales: Sale[],
   displayCurrency: CurrencyCode,
-  rates: CurrencyRates
+  rates: CurrencyRates,
+  productFilter?: string
 ) {
   const wb = XLSX.utils.book_new()
   const sym = getCurrencySymbol(displayCurrency)
@@ -101,9 +112,17 @@ export function exportSalesToExcel(
   // ── Sheet 1: By Sale ──
   const saleRows: Record<string, string | number>[] = []
   for (const sale of sales) {
-    const products = sale.items.map(getProductName).join(", ")
-    const totalItems = sale.items.reduce((sum, item) => sum + item.quantity, 0)
-    const convertedTotal = getConvertedTotal(sale, displayCurrency, rates)
+    let items = sale.items
+    if (productFilter) {
+      items = sale.items.filter((item) => getItemProductId(item) === productFilter)
+      if (items.length === 0) continue
+    }
+    const products = items.map(getProductName).join(", ")
+    const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
+    const convertedTotal = items.reduce(
+      (sum, item) => sum + getItemConvertedTotal(item, displayCurrency, rates),
+      0
+    )
     saleRows.push({
       "Invoice #": sale.invoiceNumber || "—",
       Date: sale.date_time ? new Date(sale.date_time).toLocaleDateString() : "—",
@@ -127,6 +146,7 @@ export function exportSalesToExcel(
   const itemRows: Record<string, string | number>[] = []
   for (const sale of sales) {
     for (const item of sale.items) {
+      if (productFilter && getItemProductId(item) !== productFilter) continue
       const converted = getItemConvertedTotal(item, displayCurrency, rates)
       itemRows.push({
         "Invoice #": sale.invoiceNumber || "—",
@@ -162,6 +182,7 @@ export function exportSalesToExcel(
     }
     const productMap = personMap.get(person)!
     for (const item of sale.items) {
+      if (productFilter && getItemProductId(item) !== productFilter) continue
       const name = getProductName(item)
       const converted = getItemConvertedTotal(item, displayCurrency, rates)
       const existing = productMap.get(name) || { quantity: 0, value: 0 }

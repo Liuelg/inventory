@@ -138,7 +138,8 @@ export function SalesPage() {
 
   const handleExport = () => {
     if (filteredSales.length === 0) return
-    exportSalesToExcel(filteredSales, displayCurrency, rates)
+    const productFilter = product !== "all" ? product : undefined
+    exportSalesToExcel(filteredSales, displayCurrency, rates, productFilter)
   }
 
   return (
