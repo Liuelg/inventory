@@ -9,11 +9,16 @@ function getStoreName(store: Sale["store"]): string {
   return store.name || store._id || "-"
 }
 
-function getProductName(item: SaleItem): string {
-  if (typeof item.item_id === "object" && item.item_id !== null) {
-    return item.item_id.name || "Unknown Product"
+function getProductLabel(item: SaleItem): string {
+  const name =
+    typeof item.item_id === "object" && item.item_id !== null
+      ? item.item_id.name || "Unknown Product"
+      : "Unknown Product"
+  const price = item.price
+  if (price != null && price > 0) {
+    return `${name} (${price.toFixed(2)})`
   }
-  return "Unknown Product"
+  return name
 }
 
 function getItemProductId(item: SaleItem): string | null {
@@ -83,7 +88,7 @@ export function exportSalesToExcel(
       items = sale.items.filter((item) => getItemProductId(item) === productFilter)
       if (items.length === 0) continue
     }
-    const products = items.map(getProductName).join(", ")
+    const products = items.map(getProductLabel).join(", ")
     const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
     const convertedTotal = items.reduce(
       (sum, item) => sum + getItemConvertedTotal(item, displayCurrency, rates),
@@ -119,7 +124,7 @@ export function exportSalesToExcel(
         Date: sale.date_time ? new Date(sale.date_time).toLocaleDateString() : "—",
         "Sales Person": sale.salesName || "—",
         Store: getStoreName(sale.store),
-        Product: getProductName(item),
+        Product: getProductLabel(item),
         Qty: item.quantity,
         [`Total (${sym})`]: Number(converted.toFixed(2)),
         EUR: item.eur || 0,
@@ -149,7 +154,7 @@ export function exportSalesToExcel(
     const productMap = personMap.get(person)!
     for (const item of sale.items) {
       if (productFilter && getItemProductId(item) !== productFilter) continue
-      const name = getProductName(item)
+      const name = getProductLabel(item)
       const converted = getItemConvertedTotal(item, displayCurrency, rates)
       const existing = productMap.get(name) || { quantity: 0, value: 0 }
       existing.quantity += item.quantity || 0
