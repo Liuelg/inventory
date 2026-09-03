@@ -12,38 +12,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Plus, ListFilter, X } from "lucide-react"
+import { Plus, ListFilter, X, Download } from "lucide-react"
 import { useCurrencyRates } from "@/features/currency/hooks"
 import { useSales } from "../hooks"
-import { useCategories } from "@/features/categories/hooks"
+import { useProducts } from "@/features/products/hooks"
+import { exportSalesToExcel } from "../utils"
 import type { Sale, SaleLineItemRow } from "../types"
 import type { CurrencyCode } from "@/features/currency/types"
 
 const DEFAULT_RATES = { eur: 1, usd: 1, birr: 1, visa: 1, gbp: 1 }
 
-function getSaleCategoryIds(sale: Sale): string[] {
+function getSaleProductIds(sale: Sale): string[] {
   const ids: string[] = []
   for (const item of sale.items) {
     if (typeof item.item_id === "object" && item.item_id !== null) {
-      const cat = item.item_id.category
-      if (typeof cat === "string") {
-        if (cat) ids.push(cat)
-      } else if (cat && typeof cat === "object" && "_id" in cat) {
-        ids.push(cat._id)
-      }
+      const id = item.item_id._id
+      if (id) ids.push(id)
+    } else if (typeof item.item_id === "string") {
+      if (item.item_id) ids.push(item.item_id)
     }
   }
   return [...new Set(ids)]
 }
 
-function getItemCategoryId(item: Sale["items"][number]): string | null {
+function getItemProductId(item: Sale["items"][number]): string | null {
   if (typeof item.item_id === "object" && item.item_id !== null) {
-    const cat = item.item_id.category
-    if (typeof cat === "string") {
-      return cat || null
-    } else if (cat && typeof cat === "object" && "_id" in cat) {
-      return cat._id
-    }
+    return item.item_id._id || null
+  }
+  if (typeof item.item_id === "string") {
+    return item.item_id || null
   }
   return null
 }
@@ -59,19 +56,19 @@ export function SalesPage() {
   const [salesPerson, setSalesPerson] = useState<string>("all")
   const [startDate, setStartDate] = useState<string>("")
   const [endDate, setEndDate] = useState<string>("")
-  const [category, setCategory] = useState<string>("all")
+  const [product, setProduct] = useState<string>("all")
 
   const activeFilterCount = useMemo(() => {
     let count = 0
     if (salesPerson !== "all") count++
     if (startDate) count++
     if (endDate) count++
-    if (category !== "all") count++
+    if (product !== "all") count++
     return count
-  }, [salesPerson, startDate, endDate, category])
+  }, [salesPerson, startDate, endDate, product])
 
   const { data: sales, isLoading } = useSales()
-  const { data: categories } = useCategories()
+  const { data: products } = useProducts()
 
   const rates = ratesData?.data?.rates ?? DEFAULT_RATES
 
@@ -104,20 +101,20 @@ export function SalesPage() {
       result = result.filter((s) => new Date(s.date_time) <= end)
     }
 
-    if (category && category !== "all") {
-      result = result.filter((s) => getSaleCategoryIds(s).includes(category))
+    if (product && product !== "all") {
+      result = result.filter((s) => getSaleProductIds(s).includes(product))
     }
 
     return result
-  }, [sales, salesPerson, startDate, endDate, category])
+  }, [sales, salesPerson, startDate, endDate, product])
 
   const lineItems: SaleLineItemRow[] | undefined = useMemo(() => {
-    if (category === "all" || !category) return undefined
+    if (product === "all" || !product) return undefined
     const rows: SaleLineItemRow[] = []
     for (const sale of filteredSales) {
       for (let i = 0; i < sale.items.length; i++) {
         const item = sale.items[i]
-        if (getItemCategoryId(item) === category) {
+        if (getItemProductId(item) === product) {
           rows.push({
             _id: `${sale._id}-${item._id ?? i}`,
             sale,
@@ -127,7 +124,7 @@ export function SalesPage() {
       }
     }
     return rows
-  }, [filteredSales, category])
+  }, [filteredSales, product])
 
   const openAdd = () => {
     setEditing(null)
@@ -137,6 +134,11 @@ export function SalesPage() {
   const openEdit = (sale: Sale) => {
     setEditing(sale)
     setFormOpen(true)
+  }
+
+  const handleExport = () => {
+    if (filteredSales.length === 0) return
+    exportSalesToExcel(filteredSales, displayCurrency, rates)
   }
 
   return (
@@ -165,6 +167,16 @@ export function SalesPage() {
             value={displayCurrency}
             onChange={setDisplayCurrency}
           />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={filteredSales.length === 0}
+            className="w-full sm:w-auto"
+          >
+            <Download className="mr-1 h-4 w-4" />
+            Export
+          </Button>
           <Button onClick={openAdd} className="w-full sm:w-auto">
             <Plus data-icon="inline-start" />
             Add Sale
@@ -213,17 +225,17 @@ export function SalesPage() {
 
           <div className="grid gap-1.5 w-full sm:w-[200px]">
             <Label className="text-xs text-muted-foreground">
-              Product Category
+              Product
             </Label>
-            <Select value={category} onValueChange={setCategory}>
+            <Select value={product} onValueChange={setProduct}>
               <SelectTrigger>
-                <SelectValue placeholder="All categories" />
+                <SelectValue placeholder="All products" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All</SelectItem>
-                {categories?.map((c) => (
-                  <SelectItem key={c._id} value={c._id}>
-                    {c.name}
+                {products?.map((p) => (
+                  <SelectItem key={p._id} value={p._id}>
+                    {p.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -239,7 +251,7 @@ export function SalesPage() {
                   setSalesPerson("all")
                   setStartDate("")
                   setEndDate("")
-                  setCategory("all")
+                  setProduct("all")
                 }}
               >
                 <X className="mr-1 h-4 w-4" />

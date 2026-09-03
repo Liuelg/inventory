@@ -64,7 +64,7 @@ function buildStoreProductSummary(storeName, breakdown, sym) {
   ];
 
   for (const item of breakdown) {
-    const unitPrice = item.quantity > 0 ? (item.value || 0) / item.quantity : 0;
+    const unitPrice = item.stockoutPrice > 0 ? item.stockoutPrice : (item.quantity > 0 ? (item.value || 0) / item.quantity : 0);
     lines.push(
       `• ${escapeHtml(item.product?.name || 'Unknown Product')}(${sym}${unitPrice.toFixed(2)}): ${item.quantity} pcs — ${sym}${(item.value || 0).toFixed(2)}`
     );
@@ -145,6 +145,8 @@ function processStoreSales(sales, storeId) {
       totalSalesItems += qty;
       const pName = item.item_id?.name || 'Unknown Product';
       const pId = item.item_id?._id?.toString() || '—';
+      const stockoutPrice = item.price || 0;
+      const key = `${pId}__${stockoutPrice}`;
 
       const itemValueUSD =
         (item.eur || 0) / safeRates.eur +
@@ -153,10 +155,10 @@ function processStoreSales(sales, storeId) {
         (item.visa || 0) / safeRates.visa +
         (item.gbp || 0) / safeRates.gbp;
 
-      const existing = productMap.get(pId) || { product: { _id: pId, name: pName }, quantity: 0, value: 0 };
+      const existing = productMap.get(key) || { product: { _id: pId, name: pName }, quantity: 0, value: 0, stockoutPrice };
       existing.quantity += qty;
       existing.value += itemValueUSD;
-      productMap.set(pId, existing);
+      productMap.set(key, existing);
     }
   }
 
@@ -338,8 +340,8 @@ export async function sendSaleNotification(sale, store) {
         (item.visa || 0) / safeRates.visa +
         (item.gbp || 0) / safeRates.gbp;
       const itemTotal = convertUSDToCurrency(itemValueUSD, storeCurrency, sale.rates || {});
-      const unitPrice = item.quantity > 0 ? itemTotal / item.quantity : 0;
-      return `  • ${escapeHtml(name)}(${sym}${unitPrice.toFixed(2)}) × ${item.quantity} — ${sym}${itemTotal.toFixed(2)}`;
+      const stockoutPrice = item.price || 0;
+      return `  • ${escapeHtml(name)}(${sym}${stockoutPrice.toFixed(2)}) × ${item.quantity} — ${sym}${itemTotal.toFixed(2)}`;
     })
     .join('\n');
 
