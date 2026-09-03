@@ -52,40 +52,6 @@ function getItemConvertedTotal(
   )
 }
 
-function getConvertedTotal(
-  sale: Sale,
-  targetCurrency: CurrencyCode,
-  latestRates: CurrencyRates
-): number {
-  if (sale.rates) {
-    const hasRealRates =
-      sale.rates.eur !== 1 ||
-      sale.rates.usd !== 1 ||
-      sale.rates.birr !== 1 ||
-      sale.rates.visa !== 1 ||
-      sale.rates.gbp !== 1
-    if (hasRealRates) {
-      const safeRates = {
-        eur: sale.rates.eur > 0 ? sale.rates.eur : 1,
-        usd: sale.rates.usd > 0 ? sale.rates.usd : 1,
-        birr: sale.rates.birr > 0 ? sale.rates.birr : 1,
-        visa: sale.rates.visa > 0 ? sale.rates.visa : 1,
-        gbp: sale.rates.gbp > 0 ? sale.rates.gbp : 1,
-      }
-      return sale.totalAmount * safeRates[targetCurrency]
-    }
-  }
-  let total = 0
-  for (const item of sale.items) {
-    total += convertCurrency(item.eur || 0, "eur", targetCurrency, latestRates)
-    total += convertCurrency(item.usd || 0, "usd", targetCurrency, latestRates)
-    total += convertCurrency(item.birr || 0, "birr", targetCurrency, latestRates)
-    total += convertCurrency(item.visa || 0, "visa", targetCurrency, latestRates)
-    total += convertCurrency(item.gbp || 0, "gbp", targetCurrency, latestRates)
-  }
-  return total
-}
-
 function autoFitColumns(ws: XLSX.WorkSheet) {
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1 }) as unknown[][]
   if (!rows.length) return
